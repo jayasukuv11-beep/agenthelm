@@ -78,10 +78,15 @@ function VerifyOTPContent() {
     setError(null);
     try {
       const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("rate limit") || (error as any).status === 429) {
+          throw new Error("Too many requests. Please wait a minute.");
+        }
+        throw error;
+      }
       setResendCooldown(60);
     } catch (err: any) {
-      setError("Failed to resend OTP.");
+      setError(err.message || "Failed to resend OTP.");
     } finally {
       setLoading(false);
     }

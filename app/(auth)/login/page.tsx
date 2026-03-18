@@ -18,18 +18,15 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Rate Limiting Logic Let's check localStorage for attempts
+  // Rate Limiting Logic
   useEffect(() => {
     const checkRateLimit = () => {
-      const attempts = JSON.parse(localStorage.getItem("otp_attempts") || "[]");
-      const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
-      const recentAttempts = attempts.filter((t: number) => t > fiveMinsAgo);
-      
-      if (recentAttempts.length >= 3) {
-        const oldestRecent = Math.min(...recentAttempts);
-        const timeUntilNext = Math.ceil((oldestRecent + 5 * 60 * 1000 - Date.now()) / 1000);
-        if (timeUntilNext > 0) {
-          setCooldown(timeUntilNext);
+      const lastSent = localStorage.getItem("otp_last_sent");
+      if (lastSent) {
+        const timeSince = Date.now() - parseInt(lastSent);
+        const remaining = Math.ceil((60 * 1000 - timeSince) / 1000);
+        if (remaining > 0) {
+          setCooldown(remaining);
         }
       }
     };
@@ -56,20 +53,6 @@ export default function LoginPage() {
     setError(null);
     setSuccess(false);
 
-    // Update attempts
-    const attempts = JSON.parse(localStorage.getItem("otp_attempts") || "[]");
-    const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
-    const recentAttempts = attempts.filter((t: number) => t > fiveMinsAgo);
-    
-    if (recentAttempts.length >= 3) {
-      setError("Too many attempts. Please try again later.");
-      setLoading(false);
-      return;
-    }
-
-    recentAttempts.push(Date.now());
-    localStorage.setItem("otp_attempts", JSON.stringify(recentAttempts));
-
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -78,10 +61,17 @@ export default function LoginPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("rate limit") || (error as any).status === 429) {
+          throw new Error("Too many requests. Please wait a minute before trying again.");
+        }
+        throw error;
+      }
 
       setSuccess(true);
-      // Optional: auto-redirect to verify-otp page with email as query param
+      localStorage.setItem("otp_last_sent", Date.now().toString());
+      setCooldown(60);
+
       setTimeout(() => {
         router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
       }, 2000);
