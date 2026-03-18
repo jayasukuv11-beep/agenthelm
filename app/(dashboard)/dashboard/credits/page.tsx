@@ -151,7 +151,7 @@ export default function CreditsPage() {
   const testMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
 
   useEffect(() => {
-    const key = "agentdock_upgrade_dismissed";
+    const key = "agenthelm_upgrade_dismissed";
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
     if (raw) {
       try {

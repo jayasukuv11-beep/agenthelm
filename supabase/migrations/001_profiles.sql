@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION generate_connect_key()
 RETURNS TRIGGER AS $$
 DECLARE
   chars TEXT := 'abcdefghijklmnopqrstuvwxyz0123456789';
-  result TEXT := 'agd_live_';
+  result TEXT := 'ahe_live_';
   i INT;
 BEGIN
   FOR i IN 1..16 LOOP

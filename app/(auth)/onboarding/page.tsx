@@ -232,7 +232,7 @@ export default function OnboardingPage() {
                 Your connect key is ready!
               </CardTitle>
               <CardDescription className="text-gray-400">
-                Use this key to connect any agent to AgentDock.
+                Use this key to connect any agent to AgentHelm.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -246,9 +246,9 @@ export default function OnboardingPage() {
 
               <div className="bg-black/50 p-4 rounded-md border border-[#1f2937]">
                 <pre className="text-sm font-mono text-gray-300 overflow-x-auto">
-<code className="text-blue-400">pip install</code> agentdock-sdk{"\n\n"}
-<code className="text-purple-400">import</code> agentdock{"\n"}
-dock = agentdock.connect(<span className="text-yellow-300">"{connectKey || "YOUR_KEY"}"</span>)
+<code className="text-blue-400">pip install</code> agenthelm-sdk{"\n\n"}
+<code className="text-purple-400">import</code> agenthelm{"\n"}
+dock = agenthelm.connect(<span className="text-yellow-300">"{connectKey || "YOUR_KEY"}"</span>)
                 </pre>
               </div>
 

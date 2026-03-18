@@ -84,7 +84,7 @@ export default function SettingsPage() {
           id: "test-user-id",
           email: "test@example.com",
           full_name: "Test User",
-          connect_key: "agd_live_abcdef1234567890",
+          connect_key: "ahe_live_abcdef1234567890",
           plan: "free",
           telegram_chat_id: null,
           notifications_prefs: {
@@ -141,7 +141,7 @@ export default function SettingsPage() {
 
   const handleRegenerateKey = async () => {
     if (!profile) return;
-    const newKey = "agd_live_" + nanoid(16);
+    const newKey = "ahe_live_" + nanoid(16);
     
     if (testMode) {
       setProfile({ ...profile, connect_key: newKey });
@@ -305,7 +305,7 @@ export default function SettingsPage() {
       <Card className="bg-[#111111] border-[#1f2937] rounded-xl overflow-hidden">
         <CardHeader className="border-b border-[#1f2937] pb-4">
           <CardTitle className="text-lg">Connect Key</CardTitle>
-          <CardDescription>Use this key to connect your agents to AgentDock</CardDescription>
+          <CardDescription>Use this key to connect your agents to AgentHelm</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
           <div className="bg-black border border-[#1f2937] rounded-lg p-4 font-mono text-sm text-[#10b981] break-all tracking-wider">
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                 variant="ghost" 
                 size="icon" 
                 onClick={() => {
-                  navigator.clipboard.writeText(`pip install agentdock-sdk\n\nimport agentdock\ndock = agentdock.connect("${profile.connect_key}", name="My Agent")`);
+                  navigator.clipboard.writeText(`pip install agenthelm-sdk\n\nimport agenthelm\ndock = agenthelm.connect("${profile.connect_key}", name="My Agent")`);
                   toast({ title: "Snippet copied" });
                 }}
                 className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -337,9 +337,9 @@ export default function SettingsPage() {
                 <Copy className="w-4 h-4" />
               </Button>
               <pre className="text-xs text-gray-300 font-mono space-y-4 overflow-x-auto">
-                <code>{`# Python\npip install agentdock-sdk\n\nimport agentdock\ndock = agentdock.connect("${profile.connect_key}", name="My Agent")`}</code>
+                <code>{`# Python\npip install agenthelm-sdk\n\nimport agenthelm\ndock = agenthelm.connect("${profile.connect_key}", name="My Agent")`}</code>
                 <div className="h-px bg-gray-800 my-4" />
-                <code>{`# Node.js\nnpm install agentdock-sdk\n\nconst dock = require('agentdock-sdk')\ndock.connect("${profile.connect_key}", { name: "My Agent" })`}</code>
+                <code>{`# Node.js\nnpm install agenthelm-sdk\n\nconst dock = require('agenthelm-sdk')\ndock.connect("${profile.connect_key}", { name: "My Agent" })`}</code>
               </pre>
             </div>
           </div>
@@ -369,7 +369,7 @@ export default function SettingsPage() {
                 and control agents with commands.
               </p>
               <Button 
-                onClick={() => window.open(`https://t.me/AgentDockBot?start=${profile.connect_key}`, '_blank')}
+                onClick={() => window.open(`https://t.me/AgentHelmBot?start=${profile.connect_key}`, '_blank')}
                 className="bg-[#10b981] hover:bg-[#059669] text-white w-full sm:w-auto px-8"
               >
                 Connect Telegram <ExternalLink className="ml-2 w-4 h-4" />
@@ -378,7 +378,7 @@ export default function SettingsPage() {
                 <p className="text-xs font-bold text-gray-300 uppercase tracking-widest">How to connect:</p>
                 <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
                   <li>Click the green button above</li>
-                  <li>Telegram opens with @AgentDockBot</li>
+                  <li>Telegram opens with @AgentHelmBot</li>
                   <li>Press "Start" or send /start</li>
                 </ol>
               </div>
@@ -389,7 +389,7 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-6">
               <p className="text-sm text-gray-300">
-                Telegram is linked to your AgentDock account.
+                Telegram is linked to your AgentHelm account.
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleTestAlert} className="border-[#1f2937] hover:bg-gray-800">

@@ -100,7 +100,7 @@ export default function LoginPage() {
             <span className="text-4xl font-bold text-[#10b981]">⚡</span>
           </div>
           <CardTitle className="text-2xl tracking-tight text-white mb-2">
-            Sign in to AgentDock
+            Sign in to AgentHelm
           </CardTitle>
           <CardDescription className="text-gray-400">
             Enter your email to receive a secure login code

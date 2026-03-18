@@ -1,8 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 
 export async function validateConnectKey(key: string | null) {
-  if (!key) {
-    return { error: 'Missing connect key', status: 401 }
+  if (!key || (!key.startsWith('ahe_') && !key.startsWith('agd_'))) {
+    return { error: 'Invalid connect key format', status: 401 }
+  }
+
+  // Bypass for local testing if no real Supabase credentials exist
+  if (process.env.TEST_MODE === 'true' && key === 'ahe_live_testkey12345') {
+    return {
+      userId: '00000000-0000-0000-0000-000000000000',
+      plan: 'studio',
+      supabaseAdmin: createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder',
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      )
+    }
   }
 
   // Using service role key for SDK API routes bypassing RLS

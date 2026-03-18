@@ -1,6 +1,7 @@
 {
-  "name": "agentdock",
+  "name": "agenthelm",
   "version": "0.1.0",
+  "description": "AgentHelm — AI Agent Control Plane",
   "private": true,
   "scripts": {
     "dev": "next dev",

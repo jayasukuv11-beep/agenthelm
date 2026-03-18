@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     // Verify agent belongs to user
     const { data: agent } = await supabaseAdmin!
       .from('agents')
-      .select('id, user_id')
+      .select('id, user_id, name')
       .eq('id', agent_id)
       .eq('user_id', userId)
       .single()
@@ -65,8 +65,7 @@ export async function POST(req: Request) {
 
     // Handle incoming chat replies from the SDK
     if (type === 'chat_reply') {
-      // Find the user_id for this agent (defense-in-depth)
-      const agentUserId = agent?.user_id
+      const agentUserId = (agent as { user_id: string }).user_id
       await supabaseAdmin!
         .from('agent_chats')
         .insert({
@@ -78,9 +77,16 @@ export async function POST(req: Request) {
         })
     }
 
+    // Run anomaly check in background — do NOT await (never slow down SDK)
+    const agentName = (agent as { name: string }).name
+    setImmediate(async () => {
+      const { checkAnomalies } = await import('@/lib/anomaly')
+      await checkAnomalies(agent_id, userId!, agentName)
+    })
+
     return NextResponse.json({ success: true })
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Log error:', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }

@@ -1,0 +1,51 @@
+{
+  "name": "agenthelm-sdk",
+  "version": "0.1.0",
+  "description": "Monitor your AI agents from AgentHelm — add one line, see everything",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && node build-esm.js",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "monitoring",
+    "observability",
+    "agenthelm",
+    "llm",
+    "telemetry"
+  ],
+  "author": "AgentHelm",
+  "license": "MIT",
+  "homepage": "https://agenthelm.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agenthelm/sdk"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

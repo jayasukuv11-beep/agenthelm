@@ -60,7 +60,7 @@ export default function DashboardPage() {
             errorMessage: "ConnectionError: failed to reach upstream model",
           },
         ];
-        setConnectKey("agd_live_aaaaaaaaaaaaaaaa");
+        setConnectKey("ahe_live_aaaaaaaaaaaaaaaa");
         setAgents(mockAgents);
         setStats({ total: mockAgents.length, running: 1, tokens: 12345, cost: 0.0123 });
         setLoading(false);
@@ -204,7 +204,7 @@ export default function DashboardPage() {
               <div className="space-y-2">
                  <p className="text-sm font-medium text-gray-300">1. Install SDK</p>
                  <div className="bg-black/50 p-3 rounded-md border border-[#1f2937] flex items-center justify-between">
-                    <code className="text-sm font-mono text-gray-300">pip install agentdock-sdk</code>
+                    <code className="text-sm font-mono text-gray-300">pip install agenthelm-sdk</code>
                  </div>
               </div>
               <div className="space-y-2">

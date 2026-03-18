@@ -33,7 +33,7 @@ export default function DashboardLayout({
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-2">
             <span className="text-2xl font-bold text-[#10b981]">⚡</span>
-            <span className="text-xl font-bold tracking-tight">AgentDock</span>
+            <span className="text-xl font-bold tracking-tight">AgentHelm</span>
           </Link>
         </div>
         

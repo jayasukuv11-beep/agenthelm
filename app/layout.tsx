@@ -7,8 +7,8 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AgentDock — AI Agent Command Center",
-  description: "Monitor, chat with, and control all your AI agents from one place.",
+  title: "AgentHelm — AI Agent Control Plane",
+  description: "Monitor, control and debug your AI agents with one line of code. Free for 3 agents.",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark scroll-smooth">
       <body className={`${inter.className} bg-[#09090b] text-white antialiased`}>
         {children}
         <Toaster />

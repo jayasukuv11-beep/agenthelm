@@ -35,7 +35,7 @@ export async function POST() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: profile.telegram_chat_id,
-          text: "✅ <b>AgentDock Test Alert</b>\n\nYour Telegram connection is working perfectly! You'll receive real-time updates for your agents here.",
+          text: "✅ <b>AgentHelm Test Alert</b>\n\nYour Telegram connection is working perfectly! You'll receive real-time updates for your agents here.",
           parse_mode: "HTML",
         }),
       }

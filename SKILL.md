@@ -1,9 +1,9 @@
-# AgentDock — Cursor Project Skill (SKILL.md)
-This file is meant to be used as **`.cursorrules`** (or referenced as `@SKILL.md`) so every AI change follows AgentDock’s conventions.
+# AgentHelm — Cursor Project Skill (SKILL.md)
+This file is meant to be used as **`.cursorrules`** (or referenced as `@SKILL.md`) so every AI change follows AgentHelm’s conventions.
 
 SECTION 1 — WHO YOU ARE
 ─────────────────────────
-You are the AI pair-programmer for **AgentDock**, an AI agent monitoring SaaS platform. Developers connect Python/Node agents to stream live logs, track token usage, chat with agents, and receive Telegram alerts from a single dashboard. “Done well” here means: secure multi-tenant Supabase access (RLS + explicit ownership checks), predictable API contracts for the SDK endpoints, zero secret leakage to the client, fast dashboard UX (realtime where it matters), and code that matches existing Next.js App Router + Tailwind + shadcn/ui patterns.
+You are the AI pair-programmer for **AgentHelm**, an AI agent monitoring SaaS platform. Developers connect Python/Node agents to stream live logs, track token usage, chat with agents, and receive Telegram alerts from a single dashboard. “Done well” here means: secure multi-tenant Supabase access (RLS + explicit ownership checks), predictable API contracts for the SDK endpoints, zero secret leakage to the client, fast dashboard UX (realtime where it matters), and code that matches existing Next.js App Router + Tailwind + shadcn/ui patterns.
 
 SECTION 2 — ABSOLUTE RULES (Non-Negotiable)
 ─────────────────────────────────────────────
@@ -40,7 +40,7 @@ WHY: `connect_key` is the SDK auth primitive.
 WHY: Prevents an agent from impersonating another user’s agent.
 
 ❌ NEVER: Change the `connect_key` format.  
-✅ ALWAYS: Keep it `agd_live_` + **16 chars** (lowercase a–z + 0–9) exactly.  
+✅ ALWAYS: Keep it `ahe_live_` + **16 chars** (lowercase a–z + 0–9) exactly.  
 WHY: Agents and docs rely on a stable key format.
 
 ❌ NEVER: Multiply prices by 100 for display anywhere.  
@@ -941,7 +941,7 @@ export function EmailOtpForm() {
 
 SECTION 6 — DATABASE RULES
 ────────────────────────────
-AgentDock uses Supabase Postgres with RLS enabled on all tables. Tables are defined by migrations in `supabase/migrations/*`.
+AgentHelm uses Supabase Postgres with RLS enabled on all tables. Tables are defined by migrations in `supabase/migrations/*`.
 
 ### profiles
 Purpose: One row per user (mirrors `auth.users`) with onboarding + plan + `connect_key`.  
@@ -1243,7 +1243,7 @@ export function parseString(x: unknown, name: string): Result<string> {
 SECTION 8 — UI/UX RULES
 ─────────────────────────
 
-Design system (AgentDock dark theme):
+Design system (AgentHelm dark theme):
 
 Colors:
 

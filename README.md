@@ -18,16 +18,18 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# AgentHelm — AI Agent Control Plane
 
-## Learn More
+Monitor, control and debug your AI agents in real time. Add one line of code to any Python or Node.js agent and see everything on one dashboard.
 
-To learn more about Next.js, take a look at the following resources:
+## Features
+- **Real-time Logs**: Stream logs from your agents directly to the web dashboard.
+- **Token Tracking**: Track token usage and costs across different LLM providers.
+- **Remote Control**: Send commands and chat with your agents via the dashboard or Telegram.
+- **Telegram Alerts**: Get notified instantly when your agent crashes or encounters an anomaly.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Getting Started
+Visit [agenthelm.dev](https://agenthelm.dev) to create your account and get your connect key.
 
 ## Deploy on Vercel
 
