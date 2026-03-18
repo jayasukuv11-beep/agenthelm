@@ -524,7 +524,7 @@ async function handleCredits(chatId: number, userId: string): Promise<void> {
     `💳 <b>Credits — ${now.toLocaleString('default', { month: 'long' })}</b>\n\n` +
       `Tokens used: <b>${totalTokens.toLocaleString()}</b> / ${limit.toLocaleString()}\n` +
       `<code>[${bar}] ${percent}%</code>\n\n` +
-      `Est. cost: $${totalCost.toFixed(4)}\n` +
+      `Est. cost: ₹${totalCost.toFixed(4)}\n` +
       `Resets in: ${daysLeft} days\n\n` +
       `Plan: ${(profile?.plan ?? 'free').toUpperCase()}`,
     'HTML'

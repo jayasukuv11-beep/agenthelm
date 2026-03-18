@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Activity, Zap, DollarSign } from "lucide-react";
+import { Users, Activity, Zap, IndianRupee } from "lucide-react";
 
 interface StatsRowProps {
   totalAgents: number;
@@ -49,10 +49,10 @@ export function StatsRow({ totalAgents, runningAgents, tokensUsed, cost }: Stats
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-400">Est. Cost</p>
-            <DollarSign className="w-4 h-4 text-blue-400" />
+            <IndianRupee className="w-4 h-4 text-blue-400" />
           </div>
           <div className="text-2xl font-bold text-white">
-            ${cost.toFixed(4)}
+            ₹{cost.toFixed(4)}
           </div>
         </CardContent>
       </Card>
