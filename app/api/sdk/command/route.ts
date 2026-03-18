@@ -3,6 +3,18 @@ export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 
+// Handle CORS preflight
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  })
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)

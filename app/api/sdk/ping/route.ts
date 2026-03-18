@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
 
+// Handle CORS preflight
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  })
+}
+
 // In-memory rate limiting map for MVP (store key -> { count, windowStart })
 const RATE_LIMITS = new Map<string, { count: number, start: number }>()
 

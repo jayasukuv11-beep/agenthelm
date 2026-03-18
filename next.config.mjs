@@ -5,6 +5,20 @@ const nextConfig = {
   images: {
     domains: ["zuiceudkenboukonzdsu.supabase.co"],
   },
+
+  // ✅ ADD THIS — allows external agents/browsers to call SDK routes
+  async headers() {
+    return [
+      {
+        source: "/api/sdk/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
+        ],
+      },
+    ]
+  },
 }
 
 // NOTE:
