@@ -1,38 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
 # AgentHelm — AI Agent Control Plane
 
-Monitor, control and debug your AI agents in real time. Add one line of code to any Python or Node.js agent and see everything on one dashboard.
+Monitor, control and debug your AI agents in real time.
+Add one line of code to any Python agent and see everything on one dashboard.
 
-## Features
-- **Real-time Logs**: Stream logs from your agents directly to the web dashboard.
-- **Token Tracking**: Track token usage and costs across different LLM providers.
-- **Remote Control**: Send commands and chat with your agents via the dashboard or Telegram.
-- **Telegram Alerts**: Get notified instantly when your agent crashes or encounters an anomaly.
+![AgentHelm Dashboard](https://agenthelm.vercel.app/og-image.png)
 
-## Getting Started
-Visit [agenthelm.dev](https://agenthelm.dev) to create your account and get your connect key.
+## ✨ Features
 
-## Deploy on Vercel
+- **Real-time Logs** — Stream logs from agents directly to dashboard
+- **Token Tracking** — Track usage and costs across LLM providers
+- **Remote Control** — Send commands and chat with agents from dashboard
+- **Telegram Alerts** — Get notified instantly when agent crashes
+- **Multi-agent** — Monitor unlimited agents from one place
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 Quick Start (Python)
+
+### 1. Install SDK
+pip install agenthelm-sdk
+
+### 2. Connect your agent
+from agenthelm import Agent
+
+agent = Agent(
+    key="ahe_live_...",        # from agenthelm.vercel.app
+    name="My Agent",
+    agent_type="python"
+)
+
+agent.log("Agent started!", level="info")
+agent.output({"result": "done", "tokens": 312}, label="summary")
+agent.track_tokens(used=312, model="gpt-4", cost_per_1k=0.03)
+agent.warn("High memory usage")
+agent.error("Something failed")
+agent.stop()
+
+### 3. View on dashboard
+Go to https://agenthelm.vercel.app/dashboard
+
+---
+
+## 📦 SDK Methods
+
+| Method | Description |
+|---|---|
+| `agent.log(msg, level)` | Send log — info/warning/error/success |
+| `agent.output(data, label)` | Send structured dict output |
+| `agent.track_tokens(used, model, cost_per_1k)` | Track token usage + cost |
+| `agent.warn(msg)` | Shortcut for warning log |
+| `agent.error(msg)` | Shortcut for error log |
+| `agent.success(msg)` | Shortcut for success log |
+| `agent.stop()` | Mark agent as stopped |
+
+---
+
+## 🛠 Self-host
+
+### Prerequisites
+- Node.js 18+
+- Supabase account
+- Vercel account
+
+### Setup
+git clone https://github.com/jayasukuv11-beep/agenthelm
+cd agenthelm
+npm install
+
+### Environment Variables
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+GEMINI_API_KEY=your_gemini_key
+TELEGRAM_BOT_TOKEN=your_telegram_token
+NEXT_PUBLIC_APP_URL=https://your-domain.com
+ENCRYPTION_KEY=your_32_char_secret
+
+### Deploy
+npm run build
+# or deploy to Vercel
+
+---
+
+## 📚 Links
+
+- 🌐 Dashboard: https://agenthelm.vercel.app
+- 📦 PyPI: https://pypi.org/project/agenthelm-sdk
+- 🐛 Issues: https://github.com/jayasukuv11-beep/agenthelm/issues
+
+---
+
+## 📄 License
+MIT
