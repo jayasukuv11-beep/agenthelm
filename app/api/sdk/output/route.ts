@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
 
+// ✅ USD to INR conversion
+const USD_TO_INR = 84.5
+
 // Handle CORS preflight
 export async function OPTIONS() {
   return new Response(null, {
@@ -12,6 +15,51 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type",
     },
   })
+}
+
+function getCostPerToken(model: string | null): number {
+  if (!model) return 0
+  const m = model.toLowerCase()
+
+  // Google Gemini
+  if (m.includes('gemini-2.0-flash-lite'))  return 0.0000000375
+  if (m.includes('gemini-2.0-flash'))        return 0.0000001
+  if (m.includes('gemini-1.5-flash-8b'))     return 0.0000000375
+  if (m.includes('gemini-1.5-flash'))        return 0.000000075
+  if (m.includes('gemini-1.5-pro'))          return 0.0000035
+  if (m.includes('gemini'))                  return 0.0000001
+
+  // OpenAI
+  if (m.includes('gpt-4o-mini'))             return 0.00000015
+  if (m.includes('gpt-4o'))                  return 0.000005
+  if (m.includes('gpt-4'))                   return 0.00003
+  if (m.includes('gpt-3.5'))                 return 0.0000005
+
+  // Anthropic Claude
+  if (m.includes('claude-3-5-sonnet'))       return 0.000003
+  if (m.includes('claude-3-5-haiku'))        return 0.0000008
+  if (m.includes('sonnet'))                  return 0.000015
+  if (m.includes('haiku'))                   return 0.00000025
+  if (m.includes('opus'))                    return 0.000015
+
+  // NVIDIA NIM / Meta Llama
+  if (m.includes('llama-3.1-8b'))            return 0.0000002
+  if (m.includes('llama-3.1-70b'))           return 0.00000095
+  if (m.includes('llama-3.3-70b'))           return 0.00000095
+  if (m.includes('llama-3.1-405b'))          return 0.000005
+  if (m.includes('llama'))                   return 0.0000002
+
+  // Mistral
+  if (m.includes('mistral-7b'))              return 0.0000002
+  if (m.includes('mixtral'))                 return 0.0000006
+  if (m.includes('mistral'))                 return 0.0000002
+
+  // Moonshot Kimi
+  if (m.includes('kimi-k2'))                 return 0.000002
+  if (m.includes('kimi'))                    return 0.000002
+
+  // Default
+  return 0.000001
 }
 
 export async function POST(req: Request) {
@@ -36,7 +84,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
     }
 
-    // Store complex output as formatted message and raw JSON data
+    // Store output log
     await supabaseAdmin!
       .from('agent_logs')
       .insert({
@@ -49,12 +97,10 @@ export async function POST(req: Request) {
         model: model || null
       })
 
-    // If tokens are tracked here directly instead of the 'tokens' type log, insert to credits
+    // ✅ Track cost in INR
     if (tokens_used > 0) {
-      let cost_usd = 0;
-      if (model?.includes('gemini-flash')) cost_usd = tokens_used * 0.0000001;
-      else if (model?.includes('gpt-4')) cost_usd = tokens_used * 0.00003;
-      else if (model?.includes('sonnet')) cost_usd = tokens_used * 0.000015;
+      const cost_usd     = tokens_used * getCostPerToken(model)
+      const cost_inr     = cost_usd * USD_TO_INR  // ✅ convert to ₹
 
       await supabaseAdmin!
         .from('credit_usage')
@@ -63,7 +109,7 @@ export async function POST(req: Request) {
           agent_id,
           tokens_used,
           model,
-          cost_usd
+          cost_usd: cost_inr  // storing ₹ value here
         })
     }
 
