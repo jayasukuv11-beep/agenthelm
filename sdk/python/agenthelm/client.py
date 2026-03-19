@@ -15,10 +15,10 @@ import requests
 from .queue import OfflineQueue
 
 # Default API URL — can be overridden for self-hosted
-DEFAULT_BASE_URL = "https://agenthelm.dev/api/sdk"
+DEFAULT_BASE_URL = "https://agenthelm.vercel.app"
 
 
-class AgentHelm:
+class Agent:
     """
     AgentHelm SDK — Connect any Python agent to AgentHelm.
     
@@ -40,7 +40,7 @@ class AgentHelm:
         ping_interval: int = 30,
         command_poll_interval: int = 5,
         verbose: bool = True,
-        timeout: int = 5
+        timeout: int = 10
     ):
         """
         Initialize AgentHelm connection.
@@ -57,10 +57,10 @@ class AgentHelm:
             verbose: Print connection status to console
             timeout: HTTP request timeout in seconds
         """
-        if not key or not key.startswith("agd_"):
+        if not key or not key.startswith("ahe_live_"):
             raise ValueError(
                 "Invalid AgentHelm key. "
-                "Keys must start with 'agd_'. "
+                "Keys must start with 'ahe_live_'. "
                 "Get your key at agenthelm.dev/dashboard/settings"
             )
         
@@ -70,7 +70,7 @@ class AgentHelm:
         self._version = version
         self._base_url = base_url.rstrip("/")
         self._verbose = verbose
-        self._timeout = timeout
+        self._timeout = 10
         self._ping_interval = ping_interval
         self._command_poll_interval = command_poll_interval
         
@@ -80,6 +80,7 @@ class AgentHelm:
         self._connected = False
         self._tokens_today = 0
         self._tokens_session = 0
+        self._ping_timer: Optional[threading.Timer] = None
         
         # Command + chat handlers
         self._command_handlers: Dict[str, Callable] = {}
@@ -93,11 +94,7 @@ class AgentHelm:
         
         # Start background threads (all daemon=True)
         if auto_ping:
-            threading.Thread(
-                target=self._ping_loop,
-                daemon=True,
-                name="agenthelm-ping"
-            ).start()
+            self._start_ping_timer()
         
         threading.Thread(
             target=self._command_loop,
@@ -132,16 +129,20 @@ class AgentHelm:
             dock.log("Warning: rate limit approaching", level="warning")
             dock.log("Error occurred", level="error")
         """
-        payload = {
-            "key": self._key,
-            "agent_id": self._agent_id,
-            "type": "log",
-            "level": level,
-            "message": str(message),
-            "data": data,
-            "timestamp": self._now()
-        }
-        self._send("/log", payload)
+        try:
+            payload = {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "type": "log",
+                "level": level,
+                "message": str(message),
+                "data": data,
+                "timestamp": self._now()
+            }
+            self._send("/api/sdk/log", payload)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to log: {e}")
     
     def output(
         self,
@@ -159,17 +160,42 @@ class AgentHelm:
             dock.output({"leads_found": 12, "hot_leads": 5})
             dock.output({"orders": 3, "revenue": 1499}, label="daily_summary")
         """
-        payload = {
-            "key": self._key,
-            "agent_id": self._agent_id,
-            "type": "output",
-            "level": "success",
-            "message": f"[{label}] {json.dumps(data, default=str)}",
-            "data": data,
-            "label": label,
-            "timestamp": self._now()
-        }
-        self._send("/output", payload)
+        try:
+            payload = {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "type": "output",
+                "level": "success",
+                "message": f"[{label}] {json.dumps(data, default=str)}",
+                "data": data,
+                "label": label,
+                "timestamp": self._now()
+            }
+            self._send("/api/sdk/output", payload)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to output: {e}")
+
+    def warn(
+        self,
+        message: str,
+        data: Optional[dict] = None
+    ) -> None:
+        """Report a warning to AgentHelm dashboard."""
+        try:
+            payload = {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "type": "log",
+                "level": "warn",
+                "message": str(message),
+                "data": data,
+                "timestamp": self._now()
+            }
+            self._send("/api/sdk/log", payload)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to warn: {e}")
     
     def error(
         self,
@@ -192,25 +218,29 @@ class AgentHelm:
             except Exception as e:
                 dock.error("Operation failed", exception=e)
         """
-        error_data = {"message": message}
-        
-        if exception:
-            error_data["exception_type"] = type(exception).__name__
-            error_data["exception_message"] = str(exception)
+        try:
+            error_data = {"message": message}
             
-            if include_traceback:
-                error_data["traceback"] = traceback.format_exc()
-        
-        payload = {
-            "key": self._key,
-            "agent_id": self._agent_id,
-            "type": "log",
-            "level": "error",
-            "message": message,
-            "data": error_data,
-            "timestamp": self._now()
-        }
-        self._send("/log", payload)
+            if exception:
+                error_data["exception_type"] = type(exception).__name__
+                error_data["exception_message"] = str(exception)
+                
+                if include_traceback:
+                    error_data["traceback"] = traceback.format_exc()
+            
+            payload = {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "type": "log",
+                "level": "error",
+                "message": message,
+                "data": error_data,
+                "timestamp": self._now()
+            }
+            self._send("/api/sdk/log", payload)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to error: {e}")
     
     def track_tokens(
         self,
@@ -261,7 +291,7 @@ class AgentHelm:
             },
             "timestamp": self._now()
         }
-        self._send("/log", payload)
+        self._send("/api/sdk/log", payload)
     
     def reply(self, message: str) -> None:
         """
@@ -284,7 +314,7 @@ class AgentHelm:
             "message": message,
             "timestamp": self._now()
         }
-        self._send("/log", payload)
+        self._send("/api/sdk/log", payload)
     
     def stop(self) -> None:
         """
@@ -296,15 +326,22 @@ class AgentHelm:
                 dock.log("Stopping gracefully...")
                 dock.stop()
         """
-        self._running = False
-        self._send("/ping", {
-            "key": self._key,
-            "agent_id": self._agent_id,
-            "status": "stopped",
-            "timestamp": self._now()
-        })
-        if self._verbose:
-            print(f"[AgentHelm] ⏹  {self._name} stopped")
+        try:
+            self._running = False
+            if hasattr(self, '_ping_timer') and self._ping_timer:
+                self._ping_timer.cancel()
+                
+            self._send("/api/sdk/ping", {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "status": "stopped",
+                "timestamp": self._now()
+            })
+            if self._verbose:
+                print(f"[AgentHelm] ⏹  {self._name} stopped")
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to stop: {e}")
     
     def listen(self) -> None:
         """
@@ -400,7 +437,7 @@ class AgentHelm:
         """Register agent with AgentHelm on startup."""
         try:
             response = requests.post(
-                f"{self._base_url}/ping",
+                f"{self._base_url}/api/sdk/ping",
                 json={
                     "key": self._key,
                     "name": self._name,
@@ -409,7 +446,7 @@ class AgentHelm:
                     "status": "running",
                     "started_at": self._now()
                 },
-                timeout=self._timeout
+                timeout=10
             )
             
             if response.status_code == 200:
@@ -426,23 +463,18 @@ class AgentHelm:
                         f"{self._name} ({agent_short})"
                     )
             elif response.status_code == 401:
-                print(
-                    f"[AgentHelm] ❌ Invalid key. "
-                    f"Check your connect key at "
-                    f"agenthelm.dev/dashboard/settings"
-                )
+                if self._verbose:
+                    print("[AgentHelm] ❌ Invalid connect key.")
             else:
-                raise Exception(
-                    f"HTTP {response.status_code}"
-                )
+                if self._verbose:
+                    print(f"[AgentHelm] ⚠️ HTTP {response.status_code}")
                 
         except requests.exceptions.ConnectionError:
-            print(
-                f"[AgentHelm] ⚠️  Offline mode — "
-                f"will retry connection..."
-            )
+            if self._verbose:
+                print("[AgentHelm] ⚠️  Offline mode — will retry connection...")
         except Exception as e:
-            print(f"[AgentHelm] ⚠️  Connection failed: {e}")
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️  Connection failed: {e}")
     
     def _send(self, endpoint: str, payload: dict) -> bool:
         """
@@ -462,30 +494,42 @@ class AgentHelm:
                 self._queue.push(endpoint, payload)
             return False
     
+    def _start_ping_timer(self) -> None:
+        """Start the heartbeat timer."""
+        if self._running:
+            self._ping_timer = threading.Timer(self._ping_interval, self._ping_loop)
+            self._ping_timer.daemon = True
+            self._ping_timer.start()
+
     def _ping_loop(self) -> None:
-        """Send heartbeat every ping_interval seconds."""
-        while self._running:
-            try:
-                requests.post(
-                    f"{self._base_url}/ping",
-                    json={
-                        "key": self._key,
-                        "agent_id": self._agent_id,
-                        "status": "running",
-                        "timestamp": self._now()
-                    },
-                    timeout=self._timeout
-                )
-            except Exception:
-                pass
-            time.sleep(self._ping_interval)
+        """Send heartbeat."""
+        if not self._running:
+            return
+        try:
+            response = requests.post(
+                f"{self._base_url}/api/sdk/ping",
+                json={
+                    "key": self._key,
+                    "agent_id": self._agent_id,
+                    "status": "running",
+                    "timestamp": self._now()
+                },
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if not self._agent_id and data.get("agent_id"):
+                    self._agent_id = data.get("agent_id")
+        except Exception:
+            pass
+        self._start_ping_timer()
     
     def _command_loop(self) -> None:
         """Poll for commands every command_poll_interval seconds."""
         while self._running:
             try:
                 response = requests.get(
-                    f"{self._base_url}/command",
+                    f"{self._base_url}/api/sdk/command",
                     params={
                         "key": self._key,
                         "agent_id": self._agent_id
@@ -568,7 +612,7 @@ def connect(
     key: str,
     name: str = "Python Agent",
     **kwargs
-) -> AgentHelm:
+) -> Agent:
     """
     One-line shortcut to connect an agent to AgentHelm.
     
@@ -578,10 +622,10 @@ def connect(
         **kwargs: Additional options passed to AgentHelm()
     
     Returns:
-        Connected AgentHelm instance
+        Connected Agent instance
     
     Example:
         import agenthelm
         dock = agenthelm.connect("ahe_live_xxxxx", name="My Agent")
     """
-    return AgentHelm(key=key, name=name, **kwargs)
+    return Agent(key=key, name=name, **kwargs)

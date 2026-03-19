@@ -1,15 +1,15 @@
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "agenthelm-sdk"
 version = "0.1.0"
-description = "Monitor your AI agents from one place"
+description = "Python SDK for AgentHelm — AI Agent Control Plane"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = ["requests>=2.28.0"]
 
 [project.urls]
-Homepage = "https://agenthelm.dev"
-Documentation = "https://agenthelm.dev/docs"
+Homepage = "https://agenthelm.vercel.app"
+Repository = "https://github.com/jayasukuv11-beep/agenthelm"
