@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python SDK / PyPI
+sdk/python/upload_sdist.py
+sdk/python/build_sdist.py
+.pypirc
+dist/
+build/
+*.egg-info/
