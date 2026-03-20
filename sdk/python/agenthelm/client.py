@@ -85,6 +85,7 @@ class Agent:
         # Command + chat handlers
         self._command_handlers: Dict[str, Callable] = {}
         self._chat_handler: Optional[Callable] = None
+        self._dispatch_handler: Optional[Callable[[str], Any]] = None
         
         # Offline queue
         self._queue = OfflineQueue(maxsize=1000)
@@ -175,6 +176,58 @@ class Agent:
         except Exception as e:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to output: {e}")
+
+    def progress(
+        self,
+        message: str,
+        step: Optional[int] = None,
+        total_steps: Optional[int] = None,
+        percent: Optional[int] = None,
+    ) -> None:
+        """
+        Send a progress update (e.g. during task execution).
+        Use inside @dock.on_dispatch handlers.
+        Sends type="progress" to /log with prefix [1/3] or [50%].
+
+        Args:
+            message: Progress message to display
+            step: Current step (1-based)
+            total_steps: Total number of steps
+            percent: Progress percentage (0-100)
+
+        Example:
+            dock.progress("Starting task")
+            dock.progress("Searching...", step=1, total_steps=3)
+            dock.progress("Processing...", percent=50)
+        """
+        try:
+            prefix = ""
+            if step is not None and total_steps is not None and total_steps > 0:
+                prefix = f"[{step}/{total_steps}] "
+            elif percent is not None:
+                prefix = f"[{percent}%] "
+            full_message = f"{prefix}{message}"
+            payload = {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "type": "progress",
+                "level": "info",
+                "message": full_message,
+                "data": {
+                    k: v
+                    for k, v in [
+                        ("step", step),
+                        ("total_steps", total_steps),
+                        ("percent", percent),
+                    ]
+                    if v is not None
+                },
+                "timestamp": self._now(),
+            }
+            self._send("/api/sdk/log", payload)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to progress: {e}")
 
     def warn(
         self,
@@ -403,6 +456,22 @@ class Agent:
         """
         self._chat_handler = func
         return func
+
+    def on_dispatch(self, func: Callable[[str], Any]) -> Callable[[str], Any]:
+        """
+        Decorator to handle dispatch tasks from Telegram/dashboard.
+        Handler runs in a safe background thread. Use dock.progress() and
+        dock.output() inside; dock.error() is called on exception.
+
+        Example:
+            @dock.on_dispatch
+            def handle_task(task: str):
+                dock.progress("Starting task")
+                result = process(task)
+                dock.output({"result": result})
+        """
+        self._dispatch_handler = func
+        return func
     
     # ─── PROPERTIES ───────────────────────────────────────
     
@@ -564,6 +633,18 @@ class Agent:
                         args=(message,),
                         daemon=True
                     ).start()
+
+            elif command_type == "dispatch":
+                # Route to dispatch handler (runs in safe background thread)
+                task = payload.get("task", "")
+                if self._dispatch_handler:
+                    threading.Thread(
+                        target=self._run_dispatch_safe,
+                        args=(task,),
+                        daemon=True
+                    ).start()
+                elif self._verbose:
+                    print(f"[AgentHelm] ⚠️ No @on_dispatch handler for task: {task}")
                     
             elif command_type in self._command_handlers:
                 # Route to registered command handler
@@ -576,6 +657,20 @@ class Agent:
                 
         except Exception as e:
             print(f"[AgentHelm] ❌ Command handler error: {e}")
+
+    def _run_dispatch_safe(self, task: str) -> None:
+        """Run dispatch handler with progress/output/error wrapping."""
+        if not self._dispatch_handler:
+            return
+        try:
+            self.progress("Starting task")
+            result = self._dispatch_handler(task)
+            if isinstance(result, dict):
+                self.output(result)
+            else:
+                self.output({"result": result})
+        except Exception as e:
+            self.error("Task failed", exception=e)
     
     def _flush_loop(self) -> None:
         """Retry failed requests from offline queue."""

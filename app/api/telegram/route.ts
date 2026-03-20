@@ -83,6 +83,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await handleRun(chatId, user.id, text)
     } else if (text.startsWith('/stop')) {
       await handleStop(chatId, user.id, text)
+    } else if (text.startsWith('/dispatch')) {
+      await handleDispatch(chatId, user.id, text)
     } else if (text === '/credits') {
       await handleCredits(chatId, user.id)
     } else if (text === '/disconnect') {
@@ -159,6 +161,7 @@ async function handleStart(
       `/logs — see recent logs\n` +
       `/run — start an agent\n` +
       `/stop — stop an agent\n` +
+      `/dispatch — send a task to an agent\n` +
       `/credits — check token usage\n` +
       `/help — show all commands\n` +
       `/disconnect — unlink Telegram`,
@@ -179,7 +182,8 @@ async function handleHelp(chatId: number): Promise<void> {
       `/credits — token usage this month\n\n` +
       `<b>Control:</b>\n` +
       `/run [name] — start an agent\n` +
-      `/stop [name] — stop an agent\n\n` +
+      `/stop [name] — stop an agent\n` +
+      `/dispatch [name] [task] — send task to agent\n\n` +
       `<b>Account:</b>\n` +
       `/disconnect — unlink this Telegram\n` +
       `/help — show this message\n\n` +
@@ -472,6 +476,80 @@ async function handleStop(
   await sendMessage(
     chatId,
     `⏹ Stop command sent to <b>${agent.name}</b>`,
+    'HTML'
+  )
+}
+
+// ─── Command: /dispatch ───────────────────────────────────────────────────────
+
+async function handleDispatch(
+  chatId: number,
+  userId: string,
+  text: string
+): Promise<void> {
+  const rest = text.replace(/^\/dispatch\s+/i, '').trim()
+  if (!rest) {
+    await sendMessage(
+      chatId,
+      '❌ Usage: /dispatch [agent name] [task]\n\n' +
+        'Example: /dispatch Lead Agent summarize today\'s emails'
+    )
+    return
+  }
+
+  const words = rest.split(/\s+/)
+  let agent: { id: string; name: string } | null = null
+  let task = ''
+
+  for (let i = words.length; i >= 1; i--) {
+    const agentPart = words.slice(0, i).join(' ')
+    const taskPart = words.slice(i).join(' ').trim()
+    if (!taskPart) continue
+
+    const found = await findAgent(userId, agentPart)
+    if (found) {
+      agent = found
+      task = taskPart
+      break
+    }
+  }
+
+  if (!agent || !task) {
+    await sendMessage(
+      chatId,
+      '❌ Agent not found or task is empty.\n\n' +
+        'Usage: /dispatch [agent name] [task]\n' +
+        'Example: /dispatch Lead Agent summarize today\'s emails'
+    )
+    return
+  }
+
+  const { error: taskError } = await supabaseAdmin
+    .from('agent_tasks')
+    .insert({
+      agent_id: agent.id,
+      user_id: userId,
+      task_description: task,
+      status: 'pending',
+      source: 'telegram',
+    })
+
+  if (taskError) {
+    console.error('agent_tasks insert error:', taskError)
+    await sendMessage(chatId, '❌ Failed to create task. Try again.')
+    return
+  }
+
+  await supabaseAdmin.from('agent_commands').insert({
+    agent_id: agent.id,
+    command_type: 'dispatch',
+    payload: { task },
+    status: 'pending',
+  })
+
+  await sendMessage(
+    chatId,
+    `📨 Task dispatched to <b>${agent.name}</b>`,
     'HTML'
   )
 }

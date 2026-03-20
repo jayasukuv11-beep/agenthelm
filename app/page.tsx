@@ -5,8 +5,12 @@ import Link from "next/link"
 import { 
   AlertCircle, DollarSign, WifiOff, 
   Zap, Terminal, MessageSquare, Smartphone, CreditCard, Bot,
-  Menu, X, ArrowRight, Check
+  Menu, X, ArrowRight, Check, Send, RefreshCw, Repeat, Shield, Zap as ZapIcon, Paperclip
 } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
@@ -38,6 +42,7 @@ export default function LandingPage() {
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8 text-sm font-medium">
           <Link href="#features" className="text-gray-400 hover:text-white transition-colors">Features</Link>
+          <Link href="#dispatch" className="text-gray-400 hover:text-white transition-colors">Dispatch</Link>
           <Link href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">How it Works</Link>
           <Link href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
           <Link href="#" className="text-gray-400 hover:text-white transition-colors">Docs</Link>
@@ -68,6 +73,7 @@ export default function LandingPage() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 top-16 bg-[#09090b] z-40 p-6 flex flex-col gap-6 md:hidden">
           <Link onClick={() => setMobileMenuOpen(false)} href="#features" className="text-lg font-medium text-gray-300">Features</Link>
+          <Link onClick={() => setMobileMenuOpen(false)} href="#dispatch" className="text-lg font-medium text-gray-300">Dispatch</Link>
           <Link onClick={() => setMobileMenuOpen(false)} href="#how-it-works" className="text-lg font-medium text-gray-300">How it Works</Link>
           <Link onClick={() => setMobileMenuOpen(false)} href="#pricing" className="text-lg font-medium text-gray-300">Pricing</Link>
           <Link onClick={() => setMobileMenuOpen(false)} href="#" className="text-lg font-medium text-gray-300">Docs</Link>
@@ -86,7 +92,7 @@ export default function LandingPage() {
         
         <div className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-sm font-medium mb-8">
-            <Zap className="w-4 h-4" /> AI Agent Control Plane · Free to Start
+            <Zap className="w-4 h-4" /> ⚡ Dispatch · Monitor · Control · Free to Start
           </div>
 
           <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
@@ -99,7 +105,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Add one line. See everything in real time. Monitor logs, track tokens, get Telegram alerts, and control every agent from one dashboard.
+            Add one line. Dispatch tasks to your agents from your phone. Monitor logs, track tokens, get instant alerts, and control every agent from Telegram — even when your laptop is off.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12 w-full sm:w-auto">
@@ -121,27 +127,29 @@ export default function LandingPage() {
           </div>
 
           <div className="w-full max-w-[560px] text-left">
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-5 md:p-6 font-mono text-[13px] md:text-sm shadow-2xl overflow-x-auto relative group">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 md:p-6 font-mono text-[13px] md:text-sm shadow-2xl overflow-x-auto relative group">
               <div className="absolute top-4 right-4 flex gap-1.5 opacity-50 group-hover:opacity-100 transition-opacity">
                 <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
               </div>
-              <pre>
-<span className="text-gray-500"># Install</span>
-<span className="text-gray-300">pip install agenthelm-sdk</span>
+              <pre className="text-zinc-300">
+                <code className="block">
+                  <span className="text-zinc-500"># Install</span><br/>
+                  <span className="text-zinc-100">pip install agenthelm-sdk</span><br/><br/>
+                  
+                  <span className="text-zinc-500"># Connect & listen for tasks</span><br/>
+                  <span className="text-emerald-400">from</span> agenthelm <span className="text-emerald-400">import</span> Agent<br/><br/>
 
-<span className="text-gray-500"># Connect any agent (one line)</span>
-<span className="text-purple-400">import</span><span className="text-gray-300"> agenthelm</span>
-<span className="text-gray-300">helm = agenthelm.</span><span className="text-blue-400">connect</span><span className="text-gray-300">(</span>
-<span className="text-green-400">    "ahe_live_xxxxx"</span><span className="text-gray-300">,</span>
-<span className="text-gray-300">    name=</span><span className="text-green-400">"Lead Agent"</span>
-<span className="text-gray-300">)</span>
-
-<span className="text-gray-500"># Add instrumentation</span>
-<span className="text-gray-300">helm.</span><span className="text-blue-400">log</span><span className="text-gray-300">(</span><span className="text-green-400">"Found 12 leads today"</span><span className="text-gray-300">)</span>
-<span className="text-gray-300">helm.</span><span className="text-blue-400">track_tokens</span><span className="text-gray-300">(</span><span className="text-orange-400">1500</span><span className="text-gray-300">, </span><span className="text-green-400">"gemini-flash"</span><span className="text-gray-300">)</span>
-<span className="text-gray-300">helm.</span><span className="text-blue-400">output</span><span className="text-gray-300">{"({"}<span className="text-green-400">"leads"</span><span className="text-gray-300">: </span><span className="text-orange-400">12</span><span className="text-gray-300">, </span><span className="text-green-400">"hot"</span><span className="text-gray-300">: </span><span className="text-orange-400">5</span><span className="text-gray-300">{"})"}</span></span>
+                  agent = Agent(key=<span className="text-emerald-300">"ahe_live_..."</span>)<br/>
+                  
+                  <span className="text-blue-400">@agent.on_dispatch</span><br/>
+                  <span className="text-emerald-400">def</span> <span className="text-blue-400">handle_task</span>(task, data):<br/>
+                  &nbsp;&nbsp;agent.log(<span className="text-emerald-300">f"Dispatch received: {"{task}"}"</span>)<br/>
+                  &nbsp;&nbsp;agent.progress(<span className="text-zinc-400">25</span>, <span className="text-emerald-300">"Searching..."</span>)<br/>
+                  &nbsp;&nbsp;agent.track_tokens(<span className="text-zinc-400">500</span>, <span className="text-emerald-300">"gpt-4o"</span>)<br/>
+                  &nbsp;&nbsp;<span className="text-emerald-400">return</span> {"{"}<span className="text-emerald-300">"url"</span>: <span className="text-emerald-300">"leads.csv"</span>{"}"}
+                </code>
               </pre>
             </div>
           </div>
@@ -149,7 +157,7 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 3: PROBLEM */}
-      <section id="features" className="py-24 px-6 bg-[#09090b]">
+      <section id="features" className="py-16 md:py-24 px-6 bg-[#09090b]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Running AI agents is a black box</h2>
@@ -173,7 +181,7 @@ export default function LandingPage() {
                 <DollarSign className="w-6 h-6 text-yellow-500" />
               </div>
               <h3 className="text-xl font-bold text-white mb-3">How much did it cost?</h3>
-              <p className="text-gray-500 leading-relaxed">
+              <p className="text-gray-400 leading-relaxed">
                 LLM tokens add up fast. No way to see real-time usage until you get the invoice.
               </p>
             </div>
@@ -190,6 +198,53 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* NEW SECTION: COMPARISON BANNER */}
+      <section className="py-24 px-6 border-y border-zinc-900 bg-black overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <div className="space-y-6">
+            <Badge variant="outline" className="border-red-500/50 text-red-400 px-3 py-1 rounded-full bg-red-500/5 animate-pulse">
+              vs Claude Dispatch
+            </Badge>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-[1.1]">
+              The Open Alternative to <br/>
+              <span className="text-zinc-500">Claude Dispatch</span>
+            </h2>
+            <div className="space-y-4 text-zinc-400 text-lg">
+              <p>Claude is powerful but expensive and locked to one provider. It requires your Mac to be awake and is limited to specific use cases.</p>
+              <p>AgentHelm Dispatch works with <strong className="text-emerald-400">any agent</strong>, on any server, using any LLM provider. Control your agents from Telegram while your laptop is closed at the beach.</p>
+            </div>
+          </div>
+
+          <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm overflow-hidden shadow-2xl">
+            <div className="grid grid-cols-2 border-b border-zinc-800">
+              <div className="p-4 text-center text-zinc-500 font-medium">Claude Dispatch</div>
+              <div className="p-4 text-center bg-emerald-500/10 text-emerald-400 font-bold border-l border-zinc-800">AgentHelm</div>
+            </div>
+            <div className="divide-y divide-zinc-800">
+              {[
+                ["Costs", "$20/mo + Usage", "Free to Start"],
+                ["Lock-in", "Claude Only", "Any LLM (Open Source)"],
+                ["Availability", "Mac must be awake", "Cloud-native (Always on)"],
+                ["Interface", "Desktop Only", "Telegram + Dashboard"],
+                ["Control", "Auto-only", "Remote CLI + Manual Overrides"]
+              ].map(([feature, claude, helm], i) => (
+                <div key={i} className="grid grid-cols-2 text-sm">
+                  <div className="p-4 text-zinc-400 flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-bold">{feature}</span>
+                    <span>{claude}</span>
+                  </div>
+                  <div className="p-4 bg-emerald-500/5 text-zinc-200 border-l border-zinc-800 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>{helm}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </section>
+
       {/* SECTION 4: SOLUTION - FEATURES */}
       <section className="py-24 px-6 bg-[#0d0d0d] border-y border-gray-900">
         <div className="max-w-6xl mx-auto">
@@ -202,19 +257,39 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-[#111] border-2 border-emerald-500/50 rounded-xl p-8 relative overflow-hidden group hover:border-emerald-500 transition-colors">
-              <div className="absolute top-4 right-4 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Core Feature</div>
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6 text-emerald-500" />
+            <div className="bg-[#111] border-2 border-emerald-500/50 rounded-xl p-8 relative overflow-hidden group hover:border-emerald-500 transition-all hover:scale-[1.02] shadow-emerald-500/5 hover:shadow-emerald-500/10 shadow-xl">
+              <div className="absolute top-4 right-4 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-emerald-500/30">New</div>
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
+                <Send className="w-6 h-6 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">One Line Connect</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Dispatch Tasks Remotely</h3>
               <p className="text-gray-400 leading-relaxed">
-                Add agenthelm.connect() to any Python or Node.js agent. Agent appears in dashboard within 5 seconds.
+                Send tasks to your agents from Telegram. "/dispatch lead-agent find 10 leads". Work continues without your laptop.
               </p>
             </div>
 
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
+            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-emerald-500/30 transition-all hover:scale-[1.02] group">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
+                <RefreshCw className="w-6 h-6 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Real-Time Progress</h3>
+              <p className="text-gray-400 leading-relaxed">
+                See circular progress bars and status updates on your phone. "Agent is 45% done researching competitor pricing."
+              </p>
+            </div>
+
+            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-emerald-500/30 transition-all hover:scale-[1.02] group">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
+                <Repeat className="w-6 h-6 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Loop Automation</h3>
+              <p className="text-gray-400 leading-relaxed">
+                Auto-restart agents if they crash or get stuck. Set up infinite loops for long-running data gathering tasks.
+              </p>
+            </div>
+
+            <div className="bg-[#111] border border-zinc-800 rounded-xl p-8 hover:border-emerald-500/50 transition-all hover:scale-[1.02] group">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
                 <Terminal className="w-6 h-6 text-emerald-500" />
               </div>
               <h3 className="text-xl font-bold text-white mb-3">Live Log Terminal</h3>
@@ -223,8 +298,8 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
+            <div className="bg-[#111] border border-zinc-800 rounded-xl p-8 hover:border-emerald-500/50 transition-all hover:scale-[1.02] group">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
                 <MessageSquare className="w-6 h-6 text-emerald-500" />
               </div>
               <h3 className="text-xl font-bold text-white mb-3">Chat With Agents</h3>
@@ -233,29 +308,8 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-                <Smartphone className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Telegram Alerts</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Get instant crash alerts, daily summaries, and anomaly warnings on your phone via Telegram.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-                <CreditCard className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Token Tracking</h3>
-              <p className="text-gray-400 leading-relaxed">
-                See exactly how many tokens each agent uses. Track costs in real time. Never get surprised by an LLM bill.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border-2 border-emerald-500/50 rounded-xl p-8 relative overflow-hidden group hover:border-emerald-500 transition-colors">
-              <div className="absolute top-4 right-4 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Core Feature</div>
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <div className="bg-[#111] border border-zinc-800 rounded-xl p-8 hover:border-emerald-500/50 transition-all hover:scale-[1.02] group">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
                 <Bot className="w-6 h-6 text-emerald-500" />
               </div>
               <h3 className="text-xl font-bold text-white mb-3">AI Failure Analysis</h3>
@@ -324,6 +378,94 @@ export default function LandingPage() {
                   <div className="flex-1 h-6 bg-emerald-500/70 rounded-sm"></div>
                   <div className="flex-1 h-4 bg-gray-800 rounded-sm"></div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* NEW SECTION: DISPATCH FLOW */}
+      <section id="dispatch" className="py-24 px-6 bg-[#09090b] relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+        
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
+              📨 New Feature
+            </Badge>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white">
+              Dispatch Tasks From Your Phone
+            </h2>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+              Your agents don't need a browser to be productive. Send complex tasks via Telegram and watch them execute in real-time.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="space-y-6">
+              <div className="aspect-[4/3] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center gap-4 group hover:border-emerald-500/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold">AH</div>
+                  <div className="bg-zinc-800 rounded-2xl rounded-tl-none px-4 py-2 text-xs text-zinc-200">
+                    Ready for dispatch.
+                  </div>
+                </div>
+                <div className="bg-emerald-600 rounded-2xl rounded-tr-none px-4 py-2 text-xs text-white self-end flex items-center gap-2">
+                  <span>/dispatch lead-agent find 20 leads</span>
+                  <Send className="w-3 h-3" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-emerald-500">01.</span> Send from Telegram
+                </h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">
+                  Start any registered agent task with a simple command. No SSH, no dashboard login required.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="space-y-6">
+              <div className="aspect-[4/3] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center overflow-hidden font-mono text-[10px] group hover:border-emerald-500/50 transition-colors">
+                <div className="space-y-1">
+                  <p className="text-blue-400">@agent.on_dispatch</p>
+                  <p className="text-emerald-400">def <span className="text-blue-300">handle_task</span>(task, data):</p>
+                  <p className="text-zinc-500 ml-4"># Business logic here</p>
+                  <p className="text-zinc-300 ml-4">results = <span className="text-blue-300">search_leads</span>(task)</p>
+                  <p className="text-emerald-400 ml-4">return <span className="text-zinc-300">results</span></p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-emerald-500">02.</span> Agent runs code
+                </h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">
+                  The `@on_dispatch` decorator triggers your function automatically wherever the agent is running.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="space-y-6">
+              <div className="aspect-[4/3] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center gap-4 group hover:border-emerald-500/50 transition-colors">
+                <div className="bg-zinc-800 rounded-2xl rounded-tl-none px-4 py-2 text-xs text-zinc-200 space-y-2">
+                  <p className="font-bold text-emerald-400">Task Complete! ✅</p>
+                  <p>Found 20 leads for "SaaS marketing".</p>
+                  <div className="flex items-center gap-2 text-[10px] text-zinc-500 border-t border-zinc-700 pt-2 mt-2">
+                    <Paperclip className="w-3 h-3" />
+                    <span>leads_export.csv (4.2kb)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-emerald-500">03.</span> Get results instantly
+                </h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">
+                  Structured data, files, and success logs are sent back to your Telegram thread immediately.
+                </p>
               </div>
             </div>
           </div>
@@ -482,16 +624,19 @@ export default function LandingPage() {
               <ul className="space-y-4 mb-8 flex-1">
                 {[
                   { text: '10 agents', icon: Check, color: 'text-white font-medium' },
-                  { text: '2,000,000 traces/month', icon: Check, color: 'text-white' },
-                  { text: '30 day log history', icon: Check, color: 'text-white' },
-                  { text: 'AI failure explanations', icon: Check, color: 'text-emerald-400' },
-                  { text: 'All anomaly alerts', icon: Check, color: 'text-white' },
-                  { text: 'Email + Telegram alerts', icon: Check, color: 'text-white' },
-                  { text: 'Priority support', icon: Check, color: 'text-white' },
+                  { text: 'Dispatch tasks', icon: ZapIcon, color: 'text-emerald-400 font-bold', badge: 'NEW' },
+                  { text: 'Progress tracking', icon: RefreshCw, color: 'text-emerald-400 font-bold', badge: 'NEW' },
+                  { text: '2,000,000 traces/month', icon: Check, color: 'text-zinc-200' },
+                  { text: '30 day log history', icon: Check, color: 'text-zinc-200' },
+                  { text: 'AI failure explanations', icon: Check, color: 'text-emerald-400 font-medium' },
+                  { text: 'Email + Telegram alerts', icon: Check, color: 'text-zinc-200' },
                 ].map((item, i) => (
                   <li key={i} className={`flex items-start gap-3 ${item.color}`}>
-                    <item.icon className={`w-5 h-5 shrink-0 ${item.color.includes('emerald') ? 'text-emerald-500' : 'text-emerald-500'}`} />
-                    <span className="text-sm">{item.text}</span>
+                    <item.icon className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{item.text}</span>
+                      {item.badge && <Badge className="bg-emerald-500 text-white text-[8px] h-4 px-1 leading-none">{item.badge}</Badge>}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -513,16 +658,19 @@ export default function LandingPage() {
               <ul className="space-y-4 mb-8 flex-1">
                 {[
                   { text: 'Unlimited agents', icon: Check, color: 'text-white' },
+                  { text: 'Unlimited dispatch', icon: ZapIcon, color: 'text-emerald-400 font-bold', badge: 'NEW' },
                   { text: '15,000,000 traces/month', icon: Check, color: 'text-white' },
-                  { text: '90 day log history', icon: Check, color: 'text-white' },
                   { text: 'Everything in Indie', icon: Check, color: 'text-white' },
-                  { text: 'Team seats (coming soon)', icon: Check, color: 'text-gray-400' },
-                  { text: 'Agent simulation (coming soon)', icon: Check, color: 'text-gray-400' },
+                  { text: 'Task history', icon: Repeat, color: 'text-white' },
+                  { text: 'Team support', icon: Shield, color: 'text-white' },
                   { text: 'Priority support', icon: Check, color: 'text-white' },
                 ].map((item, i) => (
                   <li key={i} className={`flex items-start gap-3 ${item.color}`}>
-                    <item.icon className="w-5 h-5 shrink-0 text-emerald-500" />
-                    <span className="text-sm">{item.text}</span>
+                    <item.icon className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
+                    <div className="flex items-center gap-2">
+                       <span className="text-sm">{item.text}</span>
+                       {item.badge && <Badge className="bg-emerald-500 text-white text-[8px] h-4 px-1 leading-none">{item.badge}</Badge>}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -545,13 +693,18 @@ export default function LandingPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/20 blur-3xl rounded-full"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-600/30 blur-3xl rounded-full"></div>
           
-          <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6 relative z-10 tracking-tight">Ready to take the helm?</h2>
+          <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6 relative z-10 tracking-tight">Ready to dispatch your first task?</h2>
           <p className="text-emerald-100 text-lg md:text-xl max-w-2xl mx-auto mb-10 relative z-10">
-            Join 500+ developers who monitor their AI agents with AgentHelm. Free to start. Live in minutes.
+            Join 500+ developers who monitor and dispatch their AI agents with AgentHelm. Free to start. Live in minutes.
           </p>
-          <Link href="/login" className="bg-white hover:bg-gray-100 text-[#064e3b] font-bold text-lg px-8 py-4 rounded-xl transition-transform active:scale-95 shadow-xl relative z-10 flex items-center gap-2">
-            Take the Helm — Free <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 relative z-10">
+            <Link href="/login" className="bg-white hover:bg-gray-100 text-[#064e3b] font-bold text-lg px-8 py-4 rounded-xl transition-transform active:scale-95 shadow-xl flex items-center gap-2">
+              Get Started — Free <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link href="#dispatch" className="bg-emerald-500/20 hover:bg-emerald-500/30 text-white border border-emerald-500/50 font-bold text-lg px-8 py-4 rounded-xl transition-transform active:scale-95 shadow-xl flex items-center gap-2">
+              See Dispatch <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
           <p className="mt-6 text-emerald-200/80 text-sm relative z-10">
             No credit card · Free forever · Cancel anytime
           </p>
