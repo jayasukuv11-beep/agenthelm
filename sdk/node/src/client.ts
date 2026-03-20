@@ -1,6 +1,6 @@
 import { OfflineQueue } from './queue'
 
-const DEFAULT_BASE_URL = 'https://agenthelm.dev/api/sdk'
+const DEFAULT_BASE_URL = 'https://agenthelm.vercel.app/api/sdk'
 
 // ─── TYPES ────────────────────────────────────────────
 
@@ -77,11 +77,11 @@ export class AgentHelm {
       timeout = 5000,
     } = options
 
-    if (!key || (!key.startsWith('ahe_') && !key.startsWith('agd_'))) {
+    if (!key || !key.startsWith('ahe_')) {
       throw new Error(
         'Invalid AgentHelm key. ' +
-        'Keys must start with "ahe_" or "agd_". ' +
-        'Get your key at agenthelm.dev/dashboard/settings'
+        'Keys must start with "ahe_". ' +
+        'Get your key at agenthelm.vercel.app/dashboard/settings'
       )
     }
 
@@ -186,6 +186,48 @@ export class AgentHelm {
       data: errorData,
       timestamp: new Date().toISOString(),
     })
+  }
+
+  /**
+   * Send a warning message to AgentHelm dashboard.
+   * @param message - The warning message
+   */
+  warn(message: string): void {
+    this.log(message, 'warning')
+  }
+
+  /**
+   * Send a success message to AgentHelm dashboard.
+   * @param message - The success message
+   */
+  success(message: string): void {
+    this.log(message, 'success')
+  }
+
+  /**
+   * Report progress of a long-running task.
+   * @param percent - Progress percentage (0-100)
+   * @param message - Progress description
+   */
+  progress(percent: number, message: string): void {
+    this.log(`[${percent}%] ${message}`, 'info', { percent, message })
+  }
+
+  /**
+   * Register a handler for dispatched tasks from the dashboard/Telegram.
+   * @param handler - Function called with task name and data object
+   */
+  onDispatch(
+    handler: (task: string, data: Record<string, unknown>) => unknown
+  ): this {
+    this.onCommand('dispatch', async (payload) => {
+      const task = String(payload.task ?? '')
+      const result = await handler(task, payload)
+      if (result) {
+        this.output(result as Record<string, unknown>, 'dispatch_result')
+      }
+    })
+    return this
   }
 
   /**
