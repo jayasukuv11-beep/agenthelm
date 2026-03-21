@@ -1,0 +1,11 @@
+AgentHelm Payment Test Report
+Passed: 8/8
+
+PASS: Webhook endpoint is alive
+PASS: Reject invalid plan
+PASS: Reject missing fields
+PASS: Create indie order (Rs.399)
+PASS: Create studio order (Rs.1299)
+PASS: Verify endpoint reachable
+PASS: Webhook success event handled
+PASS: Webhook failed event handled

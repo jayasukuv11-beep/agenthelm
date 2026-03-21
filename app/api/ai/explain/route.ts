@@ -1,8 +1,50 @@
 import { NextResponse } from "next/server"
 export const dynamic = "force-dynamic"
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
 import { createClient } from "@/lib/supabase/server"
+
+async function callNvidia(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
+  const model = fast
+    ? 'meta/llama-3.1-8b-instruct'
+    : 'meta/llama-3.3-70b-instruct'
+
+  const res = await fetch(
+    'https://integrate.api.nvidia.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert AI agent analyst. Be concise and helpful.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 1024,
+        temperature: 0.7,
+        stream: false,
+      }),
+    }
+  )
+
+  const data = await res.json()
+
+  if (!res.ok) {
+    throw new Error(data.detail || data.message || 'NVIDIA API error')
+  }
+
+  const text = data.choices?.[0]?.message?.content || ''
+  const tokens = data.usage?.total_tokens || 0
+  return { text, tokens }
+}
 
 type ExplainBody = { agent_id: string; log_id: string }
 
@@ -114,10 +156,8 @@ No markdown. No bullet points. Plain text only.
 
     let explanation: string
     try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
-      const result = await model.generateContent(prompt)
-      explanation = result.response.text()
+      const { text } = await callNvidia(prompt, false) // fast=false for Llama-3.3-70b
+      explanation = text
     } catch (e) {
       explanation =
         "Could not analyze this error automatically. Check the log message for details."

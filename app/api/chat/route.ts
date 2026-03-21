@@ -3,6 +3,49 @@ export const dynamic = "force-dynamic"
 
 import { createClient } from "@/lib/supabase/server"
 
+async function callNvidia(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
+  const model = fast
+    ? 'meta/llama-3.1-8b-instruct'
+    : 'meta/llama-3.3-70b-instruct'
+
+  const res = await fetch(
+    'https://integrate.api.nvidia.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert AI agent analyst. Be concise and helpful.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 1024,
+        temperature: 0.7,
+        stream: false,
+      }),
+    }
+  )
+
+  const data = await res.json()
+
+  if (!res.ok) {
+    throw new Error(data.detail || data.message || 'NVIDIA API error')
+  }
+
+  const text = data.choices?.[0]?.message?.content || ''
+  const tokens = data.usage?.total_tokens || 0
+  return { text, tokens }
+}
+
 type Body = { agent_id: string; message: string }
 
 function isBody(x: unknown): x is Body {
@@ -94,11 +137,7 @@ export async function POST(request: Request) {
     let autoReply = `${agent.name} is currently offline. Your message has been queued and the agent will receive it when restarted.`
 
     try {
-      const { GoogleGenerativeAI } = await import("@google/generative-ai")
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
-
-      const result = await model.generateContent(`
+      const prompt = `
 An AI agent called "${agent.name}" is offline.
 The user sent: "${trimmed}"
 
@@ -110,11 +149,12 @@ Write a helpful 1-2 sentence reply that:
 Sound natural and helpful.
 No markdown. Plain text only.
 Maximum 30 words.
-`.trim())
+`.trim()
 
-      autoReply = result.response.text()
-    } catch (geminiError) {
-      console.error("Gemini error:", geminiError)
+      const { text } = await callNvidia(prompt, true) // fast=true for Llama-3.1-8b
+      autoReply = text
+    } catch (nvidiaError) {
+      console.error("NVIDIA API error:", nvidiaError)
     }
 
     // 8. Save auto-reply
