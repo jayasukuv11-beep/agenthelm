@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { UpgradeButton } from '@/components/dashboard/UpgradeButton'
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
@@ -45,7 +46,7 @@ export default function LandingPage() {
           <Link href="#dispatch" className="text-gray-400 hover:text-white transition-colors">Dispatch</Link>
           <Link href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">How it Works</Link>
           <Link href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
-          <Link href="#" className="text-gray-400 hover:text-white transition-colors">Docs</Link>
+
         </div>
 
         <div className="hidden md:flex items-center gap-4">
@@ -76,7 +77,7 @@ export default function LandingPage() {
           <Link onClick={() => setMobileMenuOpen(false)} href="#dispatch" className="text-lg font-medium text-gray-300">Dispatch</Link>
           <Link onClick={() => setMobileMenuOpen(false)} href="#how-it-works" className="text-lg font-medium text-gray-300">How it Works</Link>
           <Link onClick={() => setMobileMenuOpen(false)} href="#pricing" className="text-lg font-medium text-gray-300">Pricing</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} href="#" className="text-lg font-medium text-gray-300">Docs</Link>
+
           <div className="h-px bg-gray-800 w-full my-2"></div>
           <Link onClick={() => setMobileMenuOpen(false)} href="/login" className="text-lg font-medium text-gray-300">Log In</Link>
           <Link onClick={() => setMobileMenuOpen(false)} href="/login" className="text-lg font-medium bg-emerald-500 text-white px-4 py-3 rounded-lg text-center">
@@ -118,12 +119,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4 mb-16 text-sm text-gray-500">
-            <div className="flex -space-x-2">
-              {[1,2,3,4].map(i => (
-                <img key={i} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=dev${i}`} alt="user" className="w-8 h-8 rounded-full border-2 border-[#09090b] bg-gray-800" />
-              ))}
-            </div>
-            <p>500+ developers monitoring their agents</p>
+            <p>Free to start · No credit card required</p>
           </div>
 
           <div className="w-full max-w-[560px] text-left">
@@ -147,7 +143,7 @@ export default function LandingPage() {
                   <span className="text-emerald-400">def</span> <span className="text-blue-400">handle_task</span>(task, data):<br/>
                   &nbsp;&nbsp;agent.log(<span className="text-emerald-300">f"Dispatch received: {"{task}"}"</span>)<br/>
                   &nbsp;&nbsp;agent.progress(<span className="text-zinc-400">25</span>, <span className="text-emerald-300">"Searching..."</span>)<br/>
-                  &nbsp;&nbsp;agent.track_tokens(<span className="text-zinc-400">500</span>, <span className="text-emerald-300">"gpt-4o"</span>)<br/>
+                  &nbsp;&nbsp;agent.track_tokens(used=<span className="text-zinc-400">500</span>, model=<span className="text-emerald-300">"gpt-4o"</span>, cost_per_1k=<span className="text-zinc-400">0.005</span>)<br/>
                   &nbsp;&nbsp;<span className="text-emerald-400">return</span> {"{"}<span className="text-emerald-300">"url"</span>: <span className="text-emerald-300">"leads.csv"</span>{"}"}
                 </code>
               </pre>
@@ -354,9 +350,17 @@ export default function LandingPage() {
               <p className="text-gray-400 mb-6 text-sm leading-relaxed">
                 Install the SDK and connect. Works with any Python or Node.js agent.
               </p>
-              <div className="bg-black/50 border border-gray-800 p-4 rounded-lg font-mono text-[13px] text-gray-300 break-all overflow-hidden space-y-2">
-                <div><span className="text-gray-500"># Terminal</span><br/>pip install agenthelm-sdk</div>
-                <div className="pt-2"><span className="text-gray-500"># Code</span><br/>helm = agenthelm.connect(<span className="text-green-400">"..."</span>)</div>
+              <div className="bg-black/50 border border-gray-800 p-4 rounded-lg font-mono text-[11px] md:text-[13px] text-gray-300 break-all overflow-hidden space-y-3">
+                <div>
+                  <span className="text-gray-500"># Python</span><br/>
+                  <span className="text-emerald-400">from</span> agenthelm <span className="text-emerald-400">import</span> Agent<br/>
+                  agent = Agent(key=<span className="text-green-400">&quot;ahe_live_...&quot;</span>)
+                </div>
+                <div className="pt-2 border-t border-gray-800">
+                  <span className="text-gray-500">// Node.js</span><br/>
+                  <span className="text-blue-400">import</span> {'{'}  connect {'}'} <span className="text-blue-400">from</span> <span className="text-green-400">&apos;agenthelm-node-sdk&apos;</span><br/>
+                  <span className="text-blue-400">const</span> agent = connect({'{'} key: <span className="text-green-400">&apos;ahe_live_...&apos;</span> {'}'})
+                </div>
               </div>
             </div>
 
@@ -641,9 +645,11 @@ export default function LandingPage() {
                 ))}
               </ul>
 
-              <Link href="/login" className="w-full py-4 rounded-xl font-bold text-center bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/25">
-                Start Free Trial
-              </Link>
+              <UpgradeButton
+                plan="indie"
+                label="Start Free Trial — ₹399/mo"
+                className="w-full bg-green-500 hover:bg-green-600 text-black font-semibold py-4 rounded-xl shadow-lg shadow-emerald-500/25"
+              />
             </div>
 
             {/* Studio Tier */}
@@ -675,9 +681,11 @@ export default function LandingPage() {
                 ))}
               </ul>
 
-              <Link href="/login" className="w-full py-4 rounded-xl font-bold text-center bg-transparent border border-gray-700 text-white hover:bg-gray-800 transition-colors">
-                Start Free Trial
-              </Link>
+              <UpgradeButton
+                plan="studio"
+                label="Start Free Trial — ₹1299/mo"
+                className="w-full bg-white hover:bg-zinc-100 text-black font-semibold py-4 rounded-xl"
+              />
             </div>
           </div>
 
@@ -695,7 +703,7 @@ export default function LandingPage() {
           
           <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6 relative z-10 tracking-tight">Ready to dispatch your first task?</h2>
           <p className="text-emerald-100 text-lg md:text-xl max-w-2xl mx-auto mb-10 relative z-10">
-            Join 500+ developers who monitor and dispatch their AI agents with AgentHelm. Free to start. Live in minutes.
+            Start monitoring your AI agents in minutes. Free forever.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 relative z-10">
             <Link href="/login" className="bg-white hover:bg-gray-100 text-[#064e3b] font-bold text-lg px-8 py-4 rounded-xl transition-transform active:scale-95 shadow-xl flex items-center gap-2">
@@ -723,11 +731,6 @@ export default function LandingPage() {
               <p className="text-gray-400 text-sm mb-6 leading-relaxed max-w-[280px]">
                 The control plane for AI agents.<br/>Built for developers. Free to start.
               </p>
-              <div className="flex gap-4">
-                <a href="#" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition-colors">GH</a>
-                <a href="#" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition-colors">TW</a>
-                <a href="#" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition-colors">DV</a>
-              </div>
             </div>
 
             <div>
@@ -736,28 +739,23 @@ export default function LandingPage() {
                 <li><Link href="#features" className="hover:text-emerald-400 transition-colors">Features</Link></li>
                 <li><Link href="#how-it-works" className="hover:text-emerald-400 transition-colors">How it Works</Link></li>
                 <li><Link href="#pricing" className="hover:text-emerald-400 transition-colors">Pricing</Link></li>
-                <li><Link href="/changelog" className="hover:text-emerald-400 transition-colors">Changelog</Link></li>
+                <li><Link href="#dispatch" className="hover:text-emerald-400 transition-colors">Dispatch</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-white font-bold mb-6">Resources</h4>
               <ul className="space-y-4 text-sm text-gray-400">
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">Documentation</Link></li>
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">Python SDK</Link></li>
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">Node.js SDK</Link></li>
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">API Reference</Link></li>
+                <li><a href="https://pypi.org/project/agenthelm-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Python SDK</a></li>
+                <li><a href="https://www.npmjs.com/package/agenthelm-node-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Node.js SDK</a></li>
+                <li><a href="https://github.com/jayasukuv11-beep/agenthelm" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">GitHub</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white font-bold mb-6">Company</h4>
+              <h4 className="text-white font-bold mb-6">Contact</h4>
               <ul className="space-y-4 text-sm text-gray-400">
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">About</Link></li>
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">Blog</Link></li>
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="hover:text-emerald-400 transition-colors">Terms of Service</Link></li>
-                <li><a href="mailto:support@agenthelm.dev" className="hover:text-emerald-400 transition-colors">support@agenthelm.dev</a></li>
+                <li><a href="mailto:hello@agenthelm.dev" className="hover:text-emerald-400 transition-colors">hello@agenthelm.dev</a></li>
               </ul>
             </div>
           </div>

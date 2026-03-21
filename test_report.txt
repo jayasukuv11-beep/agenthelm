@@ -1,0 +1,33 @@
+AgentHelm Test Report
+Date: 2026-03-20 22:47:44
+Passed: 29/29
+
+PASS: 1.1: Agent Registration
+PASS: 1.2: Heartbeat Ping
+PASS: 1.3: Multiple Agents
+PASS: 2.1: Info Log
+PASS: 2.2: Warning Log
+PASS: 2.3: Error Log
+PASS: 2.4: Success Log
+PASS: 2.5: Long message log (500 chars)
+PASS: 2.6: Special characters log
+PASS: 2.7: Rapid logs (10 logs in 1 second)
+PASS: 3.1: Basic output dict
+PASS: 3.2: Nested dict output
+PASS: 3.3: Large output (1000 char string)
+PASS: 3.4: Output without label
+PASS: 4.1: Basic token tracking
+PASS: 4.2: Token tracking with breakdown
+PASS: 4.3: Zero tokens
+PASS: 4.4: Large token count
+PASS: 4.5: Check tokens_today property
+PASS: 5.1: Check for pending commands
+PASS: 5.2: Stop command handling
+PASS: 7.1: Invalid connect key
+PASS: 7.2: Network timeout simulation
+PASS: 7.3: Empty log message
+PASS: 7.4: None values in output
+PASS: 8.1: Log throughput
+PASS: 8.2: Concurrent agents
+PASS: 6.1: Agent stop
+PASS: 6.2: Agent status after stop
