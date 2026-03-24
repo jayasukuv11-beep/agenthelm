@@ -794,6 +794,7 @@ type GeminiIntent = {
     | 'run'
     | 'stop'
     | 'summary'
+    | 'dispatch'
     | 'credits'
     | 'help'
     | 'unknown'
@@ -826,7 +827,7 @@ Available commands:
 agents, status, logs, run, stop, summary, credits, help, disconnect
 
 Classify the intent as exactly one of:
-agents | status | logs | run | stop | credits | help | unknown
+agents | status | logs | run | stop | summary | dispatch | credits | help | unknown
 
 Also extract agent_name if a specific agent is mentioned, or null.
 
