@@ -125,6 +125,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await handleStop(chatId, user.id, text)
     } else if (text.startsWith('/dispatch')) {
       await handleDispatch(chatId, user.id, text)
+    } else if (text === '/summary') {
+      await handleSummary(chatId, user.id)
     } else if (text === '/credits') {
       await handleCredits(chatId, user.id)
     } else if (text === '/disconnect') {
@@ -219,6 +221,7 @@ async function handleHelp(chatId: number): Promise<void> {
       `/agents — list all agents + status\n` +
       `/status [name] — detailed agent status\n` +
       `/logs [name] — last 5 log entries\n` +
+      `/summary — 24h activity summary\n` +
       `/credits — token usage this month\n\n` +
       `<b>Control:</b>\n` +
       `/run [name] — start an agent\n` +
@@ -649,6 +652,93 @@ async function handleCredits(chatId: number, userId: string): Promise<void> {
   )
 }
 
+// ─── Command: /summary ────────────────────────────────────────────────────────
+
+async function handleSummary(chatId: number, userId: string): Promise<void> {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  // Get all agents
+  const { data: agents } = await supabaseAdmin
+    .from('agents')
+    .select('id, name, status, last_ping, agent_type')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .returns<AgentRow[]>()
+
+  if (!agents || agents.length === 0) {
+    await sendMessage(chatId, '📊 No agents connected yet. Nothing to summarize.')
+    return
+  }
+
+  // Count by status
+  const running = agents.filter(a => a.status === 'running').length
+  const stopped = agents.filter(a => a.status === 'stopped' || a.status === 'offline').length
+  const errored = agents.filter(a => a.status === 'error').length
+  const idle = agents.filter(a => a.status === 'idle').length
+
+  // Get logs from last 24h
+  const agentIds = agents.map(a => a.id)
+  const { data: logs } = await supabaseAdmin
+    .from('agent_logs')
+    .select('level, agent_id')
+    .in('agent_id', agentIds)
+    .gte('created_at', twentyFourHoursAgo.toISOString())
+
+  type LogEntry = { level: string; agent_id: string }
+  const logEntries = (logs as LogEntry[] | null) ?? []
+  const totalLogs = logEntries.length
+  const errorLogs = logEntries.filter(l => l.level === 'error').length
+  const warningLogs = logEntries.filter(l => l.level === 'warning').length
+
+  // Get token usage from last 24h
+  const { data: usage } = await supabaseAdmin
+    .from('credit_usage')
+    .select('tokens_used, cost_usd')
+    .eq('user_id', userId)
+    .gte('created_at', twentyFourHoursAgo.toISOString())
+
+  type UsageRow = { tokens_used: number; cost_usd: string | null }
+  const usageRows = (usage as UsageRow[] | null) ?? []
+  const totalTokens = usageRows.reduce((sum, r) => sum + (r.tokens_used ?? 0), 0)
+  const totalCost = usageRows.reduce((sum, r) => sum + parseFloat(r.cost_usd ?? '0'), 0)
+
+  // Get dispatched tasks from last 24h
+  const { count: taskCount } = await supabaseAdmin
+    .from('agent_tasks')
+    .select('id', { count: 'exact', head: true })
+    .in('agent_id', agentIds)
+    .gte('created_at', twentyFourHoursAgo.toISOString())
+
+  // Per-agent breakdown
+  const agentBreakdown = agents
+    .map(agent => {
+      const statusEmoji = agent.status === 'running' ? '🟢'
+        : agent.status === 'idle' ? '🟡'
+        : agent.status === 'error' ? '⚠️' : '🔴'
+      const agentLogs = logEntries.filter(l => l.agent_id === agent.id).length
+      const agentErrors = logEntries.filter(l => l.agent_id === agent.id && l.level === 'error').length
+      return `${statusEmoji} <b>${agent.name}</b> — ${agentLogs} logs${agentErrors > 0 ? `, ${agentErrors} errors` : ''}`
+    })
+    .join('\n')
+
+  const summary =
+    `📊 <b>24h Summary</b>\n\n` +
+    `<b>Fleet Status:</b>\n` +
+    `🟢 Running: ${running}  🟡 Idle: ${idle}  🔴 Stopped: ${stopped}  ⚠️ Errors: ${errored}\n\n` +
+    `<b>Activity:</b>\n` +
+    `📋 Total logs: ${totalLogs.toLocaleString()}\n` +
+    `🔴 Errors: ${errorLogs}  🟡 Warnings: ${warningLogs}\n` +
+    `📨 Tasks dispatched: ${taskCount ?? 0}\n\n` +
+    `<b>Token Usage:</b>\n` +
+    `🔢 Tokens: ${totalTokens.toLocaleString()}\n` +
+    `💰 Est. cost: ₹${totalCost.toFixed(4)}\n\n` +
+    `<b>Per Agent:</b>\n` +
+    `${agentBreakdown}`
+
+  await sendMessage(chatId, summary, 'HTML')
+}
+
 // ─── Command: /disconnect ─────────────────────────────────────────────────────
 
 async function handleDisconnect(chatId: number, userId: string): Promise<void> {
@@ -675,6 +765,7 @@ type GeminiIntent = {
     | 'logs'
     | 'run'
     | 'stop'
+    | 'summary'
     | 'credits'
     | 'help'
     | 'unknown'
@@ -703,7 +794,7 @@ User sent this message to an AI agent dashboard bot: "${text}"
 Their agents: ${agentNames.join(', ') || 'none connected'}
 
 Available commands:
-agents, status, logs, run, stop, credits, help, disconnect
+agents, status, logs, run, stop, summary, credits, help, disconnect
 
 Classify the intent as exactly one of:
 agents | status | logs | run | stop | credits | help | unknown
@@ -739,6 +830,9 @@ Reply with JSON only, no markdown:
         break
       case 'stop':
         await handleStop(chatId, userId, `/stop ${agent_name ?? ''}`)
+        break
+      case 'summary':
+        await handleSummary(chatId, userId)
         break
       case 'credits':
         await handleCredits(chatId, userId)
