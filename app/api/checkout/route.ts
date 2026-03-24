@@ -33,6 +33,8 @@ export async function POST(request: Request) {
       .toString(36)
       .substring(2, 9)}`;
 
+    const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://agenthelm.vercel.app";
+
     const createOrderRequest = {
       order_amount: amount,
       order_currency: currency,
@@ -44,9 +46,7 @@ export async function POST(request: Request) {
         customer_name: customer_name || "Customer",
       },
       order_meta: order_meta || {
-        return_url: `${
-          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-        }/payment/status?order_id=${orderId}`,
+        return_url: `${origin}/payment/status?order_id=${orderId}`,
       },
     };
 

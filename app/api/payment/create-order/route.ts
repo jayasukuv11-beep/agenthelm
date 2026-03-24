@@ -53,6 +53,8 @@ export async function POST(req: Request) {
     const selectedPlan = PLANS[plan]
     const orderId = `ahelm_${plan}_${userId.slice(0, 8)}_${Date.now()}`
 
+    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://agenthelm.vercel.app";
+
     const cashfreeBody = {
       order_id: orderId,
       order_amount: selectedPlan.amount,
@@ -64,14 +66,18 @@ export async function POST(req: Request) {
         customer_phone: phone || '9999999999',
       },
       order_meta: {
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?payment=success&order_id=${orderId}&plan=${plan}`,
-        notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`,
+        return_url: `${origin}/dashboard?payment=success&order_id=${orderId}&plan=${plan}`,
+        notify_url: `${origin}/api/payment/webhook`,
       },
       order_note: selectedPlan.name,
     }
 
+    const baseUrl = process.env.CASHFREE_ENVIRONMENT === "PRODUCTION" 
+      ? 'https://api.cashfree.com/pg/orders' 
+      : 'https://sandbox.cashfree.com/pg/orders';
+
     const response = await fetch(
-      'https://sandbox.cashfree.com/pg/orders',
+      baseUrl,
       {
         method: 'POST',
         headers: {
