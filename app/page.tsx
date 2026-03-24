@@ -681,11 +681,11 @@ export default function LandingPage() {
                 ))}
               </ul>
 
-              <UpgradeButton
-                plan="studio"
-                label="Start Free Trial — ₹1299/mo"
-                className="w-full bg-white hover:bg-zinc-100 text-black font-semibold py-4 rounded-xl"
-              />
+              <div
+                className="w-full bg-zinc-800 text-zinc-400 font-semibold py-4 rounded-xl text-center cursor-not-allowed"
+              >
+                Upcoming
+              </div>
             </div>
           </div>
 
