@@ -418,7 +418,6 @@ export default function SettingsPage() {
                 { key: 'agent_silent', label: 'Agent went silent', desc: 'Notify when an agent stops pinging (10m+)', icon: WifiOff, color: 'text-orange-500' },
                 { key: 'high_error_rate', label: 'High error rate', desc: 'Notify when >20% of logs are errors', icon: TrendingUp, color: 'text-yellow-500' },
                 { key: 'token_spike', label: 'Token spike warning', desc: 'Notify when token usage is 3x above normal', icon: Zap, color: 'text-yellow-500' },
-                { key: 'daily_summary', label: 'Daily summary', desc: 'Receive a daily report at 8 AM', icon: BarChart2, color: 'text-blue-500' },
                 { key: 'credits_warning', label: 'Credits at 80% warning', desc: 'Notify when monthly limit is 80% used', icon: CreditCard, color: 'text-orange-500' },
               ].map((item, idx) => (
                 <div key={item.key} className={cn("flex items-center justify-between py-4", idx !== 0 && "border-t border-[#1f2937]")}>
