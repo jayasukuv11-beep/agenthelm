@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AgentHelm = void 0;
 exports.connect = connect;
 const queue_1 = require("./queue");
-const DEFAULT_BASE_URL = 'https://agenthelm.dev/api/sdk';
+const DEFAULT_BASE_URL = 'https://agenthelm.vercel.app/api/sdk';
 // ─── CLIENT ───────────────────────────────────────────
 class AgentHelm {
     constructor(options) {
@@ -19,10 +19,10 @@ class AgentHelm {
         this.commandTimer = null;
         this.flushTimer = null;
         const { key, name = 'Node Agent', agentType = 'node', version = '1.0.0', baseUrl = DEFAULT_BASE_URL, autoPing = true, pingInterval = 30000, commandPollInterval = 5000, verbose = true, timeout = 5000, } = options;
-        if (!key || (!key.startsWith('ahe_') && !key.startsWith('agd_'))) {
+        if (!key || !key.startsWith('ahe_')) {
             throw new Error('Invalid AgentHelm key. ' +
-                'Keys must start with "ahe_" or "agd_". ' +
-                'Get your key at agenthelm.dev/dashboard/settings');
+                'Keys must start with "ahe_". ' +
+                'Get your key at agenthelm.vercel.app/dashboard/settings');
         }
         this.key = key;
         this._name = name;
@@ -99,6 +99,42 @@ class AgentHelm {
             data: errorData,
             timestamp: new Date().toISOString(),
         });
+    }
+    /**
+     * Send a warning message to AgentHelm dashboard.
+     * @param message - The warning message
+     */
+    warn(message) {
+        this.log(message, 'warning');
+    }
+    /**
+     * Send a success message to AgentHelm dashboard.
+     * @param message - The success message
+     */
+    success(message) {
+        this.log(message, 'success');
+    }
+    /**
+     * Report progress of a long-running task.
+     * @param percent - Progress percentage (0-100)
+     * @param message - Progress description
+     */
+    progress(percent, message) {
+        this.log(`[${percent}%] ${message}`, 'info', { percent, message });
+    }
+    /**
+     * Register a handler for dispatched tasks from the dashboard/Telegram.
+     * @param handler - Function called with task name and data object
+     */
+    onDispatch(handler) {
+        this.onCommand('dispatch', async (payload) => {
+            const task = String(payload.task ?? '');
+            const result = await handler(task, payload);
+            if (result) {
+                this.output(result, 'dispatch_result');
+            }
+        });
+        return this;
     }
     /**
      * Track token usage for credits dashboard.

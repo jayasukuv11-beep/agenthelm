@@ -63,6 +63,27 @@ export declare class AgentHelm {
      */
     error(message: string, error?: Error): void;
     /**
+     * Send a warning message to AgentHelm dashboard.
+     * @param message - The warning message
+     */
+    warn(message: string): void;
+    /**
+     * Send a success message to AgentHelm dashboard.
+     * @param message - The success message
+     */
+    success(message: string): void;
+    /**
+     * Report progress of a long-running task.
+     * @param percent - Progress percentage (0-100)
+     * @param message - Progress description
+     */
+    progress(percent: number, message: string): void;
+    /**
+     * Register a handler for dispatched tasks from the dashboard/Telegram.
+     * @param handler - Function called with task name and data object
+     */
+    onDispatch(handler: (task: string, data: Record<string, unknown>) => unknown): this;
+    /**
      * Track token usage for credits dashboard.
      * @param options - Token tracking options
      */
