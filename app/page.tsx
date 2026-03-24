@@ -722,7 +722,7 @@ export default function LandingPage() {
       {/* SECTION 9: FOOTER */}
       <footer className="bg-[#09090b] border-t border-gray-800 pt-16 pb-8 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">
             <div>
               <Link href="/" className="flex items-center gap-2 mb-6">
                 <span className="text-emerald-500 text-xl font-bold">⚡</span>
@@ -753,9 +753,19 @@ export default function LandingPage() {
             </div>
 
             <div>
+              <h4 className="text-white font-bold mb-6">Legal</h4>
+              <ul className="space-y-4 text-sm text-gray-400">
+                <li><a href="/PrivacyPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="/TermsOfService.md" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
+                <li><a href="/RefundPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Refund Policy</a></li>
+              </ul>
+            </div>
+
+            <div>
               <h4 className="text-white font-bold mb-6">Contact</h4>
               <ul className="space-y-4 text-sm text-gray-400">
-                <li><a href="mailto:hello@agenthelm.dev" className="hover:text-emerald-400 transition-colors">hello@agenthelm.dev</a></li>
+                <li><a href="mailto:tharagesharumugam@gmail.com" className="hover:text-emerald-400 transition-colors">tharagesharumugam@gmail.com</a></li>
+                <li><a href="tel:+918903356017" className="hover:text-emerald-400 transition-colors">+91 8903356017</a></li>
               </ul>
             </div>
           </div>
