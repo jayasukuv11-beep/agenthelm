@@ -111,28 +111,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
-    if (text === '/help') {
-      await handleHelp(chatId)
-    } else if (text === '/agents' || text === '/agent') {
+    const plan = user.plan || 'free'
+    const words = text.split(/\s+/)
+    const cmd = words[0].toLowerCase()
+
+    if (cmd === '/start') {
+      await handleStart(chatId, text, telegramUserId)
+    } else if (cmd === '/agents' || cmd === '/agent') {
       await handleAgents(chatId, user.id)
-    } else if (text.startsWith('/status')) {
+    } else if (cmd === '/status') {
       await handleStatus(chatId, user.id, text)
-    } else if (text.startsWith('/logs')) {
+    } else if (cmd === '/logs') {
       await handleLogs(chatId, user.id, text)
-    } else if (text.startsWith('/run')) {
+    } else if (cmd === '/run') {
       await handleRun(chatId, user.id, text)
-    } else if (text.startsWith('/stop')) {
+    } else if (cmd === '/stop') {
       await handleStop(chatId, user.id, text)
-    } else if (text.startsWith('/dispatch')) {
-      await handleDispatch(chatId, user.id, text)
-    } else if (text === '/summary') {
-      await handleSummary(chatId, user.id)
-    } else if (text === '/credits') {
+    } else if (cmd === '/dispatch') {
+      await handleDispatch(chatId, user.id, text, plan)
+    } else if (cmd === '/summary') {
+      await handleSummary(chatId, user.id, plan)
+    } else if (cmd === '/credits') {
       await handleCredits(chatId, user.id)
-    } else if (text === '/disconnect') {
+    } else if (cmd === '/help') {
+      await handleHelp(chatId)
+    } else if (cmd === '/disconnect') {
       await handleDisconnect(chatId, user.id)
     } else {
-      await handleFreeText(chatId, user.id, text)
+      // Natural Language Processing
+      await handleFreeText(chatId, user.id, text, plan)
     }
 
     return NextResponse.json({ ok: true })
@@ -528,8 +535,19 @@ async function handleStop(
 async function handleDispatch(
   chatId: number,
   userId: string,
-  text: string
+  text: string,
+  plan?: string
 ): Promise<void> {
+  if (plan === 'free') {
+    await sendMessage(
+      chatId,
+      '🔐 <b>Indie Feature</b>\n\n' +
+        'Remote task dispatch is only available on the <b>Indie</b> plan.\n\n' +
+        'Upgrade at: agenthelm.vercel.app/dashboard/settings',
+      'HTML'
+    )
+    return
+  }
   const rest = text.replace(/^\/dispatch\s+/i, '').trim()
   if (!rest) {
     await sendMessage(
@@ -654,7 +672,17 @@ async function handleCredits(chatId: number, userId: string): Promise<void> {
 
 // ─── Command: /summary ────────────────────────────────────────────────────────
 
-async function handleSummary(chatId: number, userId: string): Promise<void> {
+async function handleSummary(chatId: number, userId: string, plan?: string): Promise<void> {
+  if (plan === 'free') {
+    await sendMessage(
+      chatId,
+      '🔐 <b>Indie Feature</b>\n\n' +
+        'Daily and on-demand summaries are only available on the <b>Indie</b> plan.\n\n' +
+        'Upgrade at: agenthelm.vercel.app/dashboard/settings',
+      'HTML'
+    )
+    return
+  }
   const now = new Date()
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
@@ -775,7 +803,8 @@ type GeminiIntent = {
 async function handleFreeText(
   chatId: number,
   userId: string,
-  text: string
+  text: string,
+  plan: string
 ): Promise<void> {
   const { data: agents } = await supabaseAdmin
     .from('agents')
@@ -832,7 +861,10 @@ Reply with JSON only, no markdown:
         await handleStop(chatId, userId, `/stop ${agent_name ?? ''}`)
         break
       case 'summary':
-        await handleSummary(chatId, userId)
+        await handleSummary(chatId, userId, plan)
+        break
+      case 'dispatch':
+        await handleDispatch(chatId, userId, text, plan)
         break
       case 'credits':
         await handleCredits(chatId, userId)

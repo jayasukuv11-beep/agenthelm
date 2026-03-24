@@ -123,6 +123,16 @@ export async function POST(req: Request) {
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const { userId, supabaseAdmin } = auth
+    const { getUserUsage } = await import('@/lib/usage')
+    const usage = await getUserUsage(userId)
+
+    if (usage.monthlyTokens >= usage.tokensLimit) {
+      return NextResponse.json({ 
+        error: 'quota_exceeded', 
+        message: `Monthly token limit reached for ${usage.plan} plan (${usage.tokensLimit.toLocaleString()}). Upgrade for more capacity.`,
+        upgrade_url: '/dashboard/settings'
+      }, { status: 402 })
+    }
 
     // Verify agent belongs to user
     const { data: agent } = await supabaseAdmin!
@@ -161,7 +171,8 @@ export async function POST(req: Request) {
           agent_id,
           tokens_used,
           model,
-          cost_usd: cost_inr  // storing ₹ value here
+          cost_usd,
+          cost_inr
         })
     }
 
