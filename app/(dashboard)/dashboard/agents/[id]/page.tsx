@@ -302,10 +302,14 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       return;
     }
 
+    const days = plan === "free" ? 7 : plan === "indie" ? 30 : 90;
+    const minDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from("agent_logs")
       .select("*")
       .eq("agent_id", agentId)
+      .gte("created_at", minDate)
       .order("created_at", { ascending: false })
       .limit(100)
       .returns<AgentLogRow[]>();

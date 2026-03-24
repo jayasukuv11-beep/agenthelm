@@ -51,6 +51,8 @@ export async function POST(req: Request) {
     }
 
     const { userId, supabaseAdmin } = auth
+    const { getUserUsage } = await import('@/lib/usage')
+    const usage = await getUserUsage(userId)
 
     // Find agent by user_id and name
     const { data: existingAgent } = await supabaseAdmin!
@@ -75,7 +77,15 @@ export async function POST(req: Request) {
         })
         .eq('id', agentId)
     } else {
-      // Create new
+      // Create new - ENFORCE LIMIT
+      if (usage.agentCount >= usage.agentLimit) {
+        return NextResponse.json({ 
+          error: 'agent_limit_reached', 
+          message: `Your current plan (${usage.plan}) is limited to ${usage.agentLimit} agents. Upgrade to connect more.`,
+          upgrade_url: '/dashboard/settings'
+        }, { status: 402 })
+      }
+
       const { data: newAgent, error: insertError } = await supabaseAdmin!
         .from('agents')
         .insert({
