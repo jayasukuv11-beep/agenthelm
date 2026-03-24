@@ -38,6 +38,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { UpgradeButton } from "@/components/dashboard/UpgradeButton";
 
 type Profile = {
   id: string;
@@ -551,7 +552,11 @@ export default function SettingsPage() {
                       <p className="text-2xl font-bold text-white">₹399<span className="text-sm font-normal text-gray-500">/month</span></p>
                       <p className="text-xs text-[#10b981]">Indie Plan</p>
                     </div>
-                    <Button className="bg-[#10b981] hover:bg-[#059669] text-white px-8">Upgrade to Indie →</Button>
+                    <UpgradeButton 
+                      plan="indie"
+                      label="Upgrade to Indie →"
+                      className="bg-[#10b981] hover:bg-[#059669] text-white px-8"
+                    />
                   </div>
                 </div>
               ) : (
