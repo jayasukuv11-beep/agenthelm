@@ -67,7 +67,7 @@ export function UpgradeButton({
       // Step 3: Open Cashfree checkout
       const CashfreeSDK = (window as unknown as Record<string, unknown>).Cashfree as (opts: { mode: string }) => { checkout: (opts: { paymentSessionId: string; redirectTarget: string }) => void }
       const cashfree = CashfreeSDK({
-        mode: 'sandbox',
+        mode: process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === "PRODUCTION" ? "production" : "sandbox",
       })
 
       cashfree.checkout({
