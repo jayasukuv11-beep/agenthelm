@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
     // Mark as delivered
     if (commands && commands.length > 0) {
-      const commandIds = commands.map(c => c.id)
+      const commandIds = (commands as any[]).map(c => c.id)
       await supabaseAdmin!
         .from('agent_commands')
         .update({ status: 'delivered' })

@@ -140,7 +140,7 @@ function formatOutputSummary(data: Record<string, unknown>, maxFields = 5): stri
     .slice(0, maxFields)
   if (entries.length === 0) return ''
   return entries
-    .map(([k, v]) => {
+    .map(([k, v]: [string, any]) => {
       const val = typeof v === 'object' ? JSON.stringify(v) : String(v)
       return `${k}: ${val.length > 80 ? val.slice(0, 77) + '...' : val}`
     })
