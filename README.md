@@ -25,7 +25,7 @@ agent.stop()
 - Multi-agent support
 
 ## Dashboard
-Live at: https://agenthelm.vercel.app
+Live at: https://agenthelm.online
 
 ## SDK Methods
 
@@ -50,7 +50,7 @@ npm run dev
 
 ## Links
 - PyPI: https://pypi.org/project/agenthelm-sdk
-- Dashboard: https://agenthelm.vercel.app
+- Dashboard: https://agenthelm.online/dashboard
 - Issues: https://github.com/jayasukuv11-beep/agenthelm/issues
 
 ## License

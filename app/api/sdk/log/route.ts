@@ -252,7 +252,7 @@ export async function POST(req: Request) {
     const auth = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { userId, supabaseAdmin } = auth
+    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
     const { getUserUsage } = await import('@/lib/usage')
     const usage = await getUserUsage(userId)
 
@@ -264,16 +264,20 @@ export async function POST(req: Request) {
       }, { status: 402 })
     }
 
-    // Verify agent belongs to user
-    const { data: agent } = await supabaseAdmin!
-      .from('agents')
-      .select('id, user_id, name')
-      .eq('id', agent_id)
-      .eq('user_id', userId)
-      .single()
+    // If no valid JWT connects them, verify ownership via DB
+    let agentName = "Unknown Agent"
+    if (!jwtAgentId || jwtAgentId !== agent_id) {
+      const { data: dbAgent } = await supabaseAdmin!
+        .from('agents')
+        .select('id, user_id, name')
+        .eq('id', agent_id)
+        .eq('user_id', userId)
+        .single()
 
-    if (!agent) {
-      return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
+      if (!dbAgent) {
+        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
+      }
+      agentName = dbAgent.name
     }
 
     // Prevent duplicate logs when `event_id` is provided
@@ -332,12 +336,11 @@ export async function POST(req: Request) {
 
     // Handle incoming chat replies from the SDK
     if (type === 'chat_reply') {
-      const agentUserId = (agent as { user_id: string }).user_id
       await supabaseAdmin!
         .from('agent_chats')
         .insert({
           agent_id,
-          user_id: agentUserId || userId,
+          user_id: userId,
           role: 'agent',
           content: message,
           source: 'dashboard'
@@ -345,10 +348,14 @@ export async function POST(req: Request) {
     }
 
     // Run anomaly check in background — do NOT await (never slow down SDK)
-    const agentName = (agent as { name: string }).name
     setImmediate(async () => {
+      let finalAgentName = agentName
+      if (finalAgentName === "Unknown Agent") {
+        const { data } = await supabaseAdmin!.from('agents').select('name').eq('id', agent_id).single()
+        if (data) finalAgentName = data.name
+      }
       const { checkAnomalies } = await import('@/lib/anomaly')
-      await checkAnomalies(agent_id, userId!, agentName)
+      await checkAnomalies(agent_id, userId!, finalAgentName)
     })
 
     // Progress → Telegram (throttled, only for active telegram-sourced tasks)

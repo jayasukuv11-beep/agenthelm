@@ -122,7 +122,7 @@ export async function POST(req: Request) {
     const auth = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { userId, supabaseAdmin } = auth
+    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
     const { getUserUsage } = await import('@/lib/usage')
     const usage = await getUserUsage(userId)
 
@@ -134,16 +134,18 @@ export async function POST(req: Request) {
       }, { status: 402 })
     }
 
-    // Verify agent belongs to user
-    const { data: agent } = await supabaseAdmin!
-      .from('agents')
-      .select('id')
-      .eq('id', agent_id)
-      .eq('user_id', userId)
-      .single()
+    // Verify agent belongs to user (skip DB hit if valid JWT connects them)
+    if (!jwtAgentId || jwtAgentId !== agent_id) {
+      const { data: agent } = await supabaseAdmin!
+        .from('agents')
+        .select('id')
+        .eq('id', agent_id)
+        .eq('user_id', userId)
+        .single()
 
-    if (!agent) {
-      return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
+      if (!agent) {
+        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
+      }
     }
 
     // Store output log
