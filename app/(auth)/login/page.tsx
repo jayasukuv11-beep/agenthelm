@@ -58,6 +58,7 @@ export default function LoginPage() {
         email,
         options: {
           shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/dashboard`
         },
       });
 
@@ -89,7 +90,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://agenthelm.online/dashboard'
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
       if (error) throw error;
