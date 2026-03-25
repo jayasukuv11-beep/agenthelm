@@ -46,15 +46,22 @@ async function callNvidia(prompt: string, fast = false): Promise<{ text: string;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TelegramUpdate = {
-  message?: TelegramMessage
-  edited_message?: TelegramMessage
-}
-
 type TelegramMessage = {
   chat: { id: number }
   from: { id: number }
   text?: string
+  message_id: number
+}
+
+type TelegramUpdate = {
+  message?: TelegramMessage
+  edited_message?: TelegramMessage
+  callback_query?: {
+    id: string
+    from: { id: number }
+    data: string
+    message: TelegramMessage
+  }
 }
 
 type Profile = {
@@ -87,6 +94,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = (await request.json()) as TelegramUpdate
 
     const message = body.message ?? body.edited_message
+    const callbackQuery = body.callback_query
+
+    if (callbackQuery) {
+      const chatId = callbackQuery.message.chat.id
+      const telegramUserId = callbackQuery.from.id
+      const data = callbackQuery.data
+      await handleCallbackQuery(chatId, telegramUserId, data, callbackQuery.id, callbackQuery.message.message_id)
+      return NextResponse.json({ ok: true })
+    }
+
     if (!message) return NextResponse.json({ ok: true })
 
     const chatId = message.chat.id
@@ -146,6 +163,76 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('Telegram webhook error:', error)
     return NextResponse.json({ ok: true }) // Always 200 to Telegram
+  }
+}
+
+async function handleCallbackQuery(
+  chatId: number,
+  telegramUserId: number,
+  data: string,
+  callbackQueryId: string,
+  messageId: number
+): Promise<void> {
+  const [action, id] = data.split(':')
+
+  if (action === 'cancel') {
+    await deleteMessage(chatId, messageId)
+    await answerCallbackQuery(callbackQueryId, 'Command cancelled.')
+    return
+  }
+
+  // Resolve user by telegramId
+  const user = await getUserByTelegramId(chatId)
+  if (!user) {
+    await answerCallbackQuery(callbackQueryId, '❌ Account not connected.')
+    return
+  }
+
+  if (action === 'confirm_stop') {
+    const { error } = await supabaseAdmin
+      .from('agent_commands')
+      .update({ status: 'pending' })
+      .eq('id', id)
+      .eq('status', 'draft')
+
+    if (error) {
+      await answerCallbackQuery(callbackQueryId, '❌ Failed to confirm.')
+    } else {
+      await deleteMessage(chatId, messageId)
+      await sendMessage(chatId, '✅ Stop command activated.')
+      await answerCallbackQuery(callbackQueryId, 'Stop confirmed.')
+    }
+  }
+
+  if (action === 'confirm_dispatch') {
+    // Confirm both the task and the command
+    const { data: command } = await supabaseAdmin
+      .from('agent_commands')
+      .select('agent_id, payload')
+      .eq('id', id)
+      .single()
+
+    if (command) {
+      await supabaseAdmin
+        .from('agent_commands')
+        .update({ status: 'pending' })
+        .eq('id', id)
+
+      // Also update any matching task in agent_tasks
+      const payload = command.payload as { task?: string }
+      if (payload?.task) {
+        await supabaseAdmin
+          .from('agent_tasks')
+          .update({ status: 'pending' })
+          .eq('agent_id', command.agent_id)
+          .eq('task_description', payload.task)
+          .eq('status', 'draft')
+      }
+    }
+
+    await deleteMessage(chatId, messageId)
+    await sendMessage(chatId, '✅ Task dispatch confirmed.')
+    await answerCallbackQuery(callbackQueryId, 'Dispatch confirmed.')
   }
 }
 
@@ -511,22 +598,34 @@ async function handleStop(
     return
   }
 
-  await supabaseAdmin.from('agent_commands').insert({
-    agent_id: agent.id,
-    command_type: 'stop',
-    payload: { source: 'telegram' },
-    status: 'pending',
-  })
+  const { data: command, error: cmdError } = await supabaseAdmin
+    .from('agent_commands')
+    .insert({
+      agent_id: agent.id,
+      command_type: 'stop',
+      payload: { source: 'telegram' },
+      status: 'draft',
+    })
+    .select()
+    .single()
 
-  await supabaseAdmin
-    .from('agents')
-    .update({ status: 'stopped' })
-    .eq('id', agent.id)
+  if (cmdError) {
+    await sendMessage(chatId, '❌ Failed to stage stop command.')
+    return
+  }
 
   await sendMessage(
     chatId,
-    `⏹ Stop command sent to <b>${agent.name}</b>`,
-    'HTML'
+    `⚠️ <b>Confirm Stop</b>\n\nAre you sure you want to stop <b>${agent.name}</b>?`,
+    'HTML',
+    {
+      inline_keyboard: [
+        [
+          { text: '✅ Confirm Stop', callback_data: `confirm_stop:${command.id}` },
+          { text: '❌ Cancel', callback_data: 'cancel:0' },
+        ],
+      ],
+    }
   )
 }
 
@@ -543,7 +642,7 @@ async function handleDispatch(
       chatId,
       '🔐 <b>Indie Feature</b>\n\n' +
         'Remote task dispatch is only available on the <b>Indie</b> plan.\n\n' +
-        'Upgrade at: agenthelm.vercel.app/dashboard/settings',
+        'Upgrade at: agenthelm.online/dashboard/settings',
       'HTML'
     )
     return
@@ -591,27 +690,44 @@ async function handleDispatch(
       agent_id: agent.id,
       user_id: userId,
       task_description: task,
-      status: 'pending',
+      status: 'draft',
       source: 'telegram',
     })
 
   if (taskError) {
     console.error('agent_tasks insert error:', taskError)
-    await sendMessage(chatId, '❌ Failed to create task. Try again.')
+    await sendMessage(chatId, '❌ Failed to create task draft.')
     return
   }
 
-  await supabaseAdmin.from('agent_commands').insert({
-    agent_id: agent.id,
-    command_type: 'dispatch',
-    payload: { task },
-    status: 'pending',
-  })
+  const { data: command, error: cmdError } = await supabaseAdmin
+    .from('agent_commands')
+    .insert({
+      agent_id: agent.id,
+      command_type: 'dispatch',
+      payload: { task },
+      status: 'draft',
+    })
+    .select()
+    .single()
+
+  if (cmdError) {
+    await sendMessage(chatId, '❌ Failed to stage task command.')
+    return
+  }
 
   await sendMessage(
     chatId,
-    `📨 Task dispatched to <b>${agent.name}</b>`,
-    'HTML'
+    `⚠️ <b>Confirm Dispatch</b>\n\n<b>Agent:</b> ${agent.name}\n<b>Task:</b> ${task}\n\nDo you want to send this task?`,
+    'HTML',
+    {
+      inline_keyboard: [
+        [
+          { text: '🚀 Dispatch Now', callback_data: `confirm_dispatch:${command.id}` },
+          { text: '❌ Cancel', callback_data: 'cancel:0' },
+        ],
+      ],
+    }
   )
 }
 
@@ -678,7 +794,7 @@ async function handleSummary(chatId: number, userId: string, plan?: string): Pro
       chatId,
       '🔐 <b>Indie Feature</b>\n\n' +
         'Daily and on-demand summaries are only available on the <b>Indie</b> plan.\n\n' +
-        'Upgrade at: agenthelm.vercel.app/dashboard/settings',
+        'Upgrade at: agenthelm.online/dashboard/settings',
       'HTML'
     )
     return
@@ -895,10 +1011,12 @@ Reply with JSON only, no markdown:
 async function sendMessage(
   chatId: number,
   text: string,
-  parseMode?: 'HTML' | 'Markdown'
+  parseMode?: 'HTML' | 'Markdown',
+  replyMarkup?: any
 ): Promise<void> {
   const body: Record<string, unknown> = { chat_id: chatId, text }
   if (parseMode) body.parse_mode = parseMode
+  if (replyMarkup) body.reply_markup = replyMarkup
 
   try {
     const res = await fetch(
@@ -915,6 +1033,36 @@ async function sendMessage(
     }
   } catch (error) {
     console.error('Failed to send Telegram message:', error)
+  }
+}
+
+async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  try {
+    await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+      }
+    )
+  } catch (err) {
+    console.error('Failed to answer callback query:', err)
+  }
+}
+
+async function deleteMessage(chatId: number, messageId: number): Promise<void> {
+  try {
+    await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/deleteMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
+      }
+    )
+  } catch (err) {
+    console.error('Failed to delete message:', err)
   }
 }
 

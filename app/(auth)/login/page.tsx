@@ -89,7 +89,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://agenthelm.vercel.app/dashboard'
+          redirectTo: 'https://agenthelm.online/dashboard'
         }
       });
       if (error) throw error;

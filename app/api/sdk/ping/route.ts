@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, issueAgentToken } from '@/lib/sdk-auth'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -104,11 +104,15 @@ export async function POST(req: Request) {
       agentId = newAgent.id
     }
 
+    // Issue the short-lived JWT for the Handshake Protocol
+    const agentToken = await issueAgentToken(userId, agentId, auth.plan)
+
     return NextResponse.json({ 
       agent_id: agentId, 
       user_id: userId,
       plan: auth.plan,
-      success: true
+      success: true,
+      agent_token: agentToken
     })
 
   } catch (err: any) {

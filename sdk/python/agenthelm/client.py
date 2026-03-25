@@ -15,7 +15,7 @@ import requests
 from .queue import OfflineQueue
 
 # Default API URL — can be overridden for self-hosted
-DEFAULT_BASE_URL = "https://agenthelm.vercel.app"
+DEFAULT_BASE_URL = "https://agenthelm.online"
 
 
 class Agent:
@@ -76,11 +76,16 @@ class Agent:
         
         # State
         self._agent_id: Optional[str] = None
+        self._agent_token: Optional[str] = None
         self._running = True
         self._connected = False
         self._tokens_today = 0
         self._tokens_session = 0
         self._ping_timer: Optional[threading.Timer] = None
+        
+        # Concurrency
+        self._active_tasks = 0
+        self._task_lock = threading.Lock()
         
         # Command + chat handlers
         self._command_handlers: Dict[str, Callable] = {}
@@ -322,7 +327,7 @@ class Agent:
                 completion_tokens=800
             )
         """
-        cost_usd = round((used / 1000) * cost_per_1k, 8)
+        cost_usd = round((used / 1000.0) * cost_per_1k, 8)
         self._tokens_today += used
         self._tokens_session += used
         
@@ -400,10 +405,6 @@ class Agent:
         """
         Block the main thread and keep the agent running.
         Handles KeyboardInterrupt (Ctrl+C) gracefully.
-        
-        Example:
-            # At the end of your script:
-            dock.listen()
         """
         if self._verbose:
             print(f"[AgentHelm] 👂 {self._name} listening for commands...")
@@ -414,6 +415,14 @@ class Agent:
             if self._verbose:
                 print(f"\n[AgentHelm] 🛑 Shutdown requested")
             self.stop()
+            
+        # Graceful Shutdown
+        if self._active_tasks > 0 and self._verbose:
+            print(f"[AgentHelm] ⏳ Waiting for {self._active_tasks} active task(s) to finish...")
+        while self._active_tasks > 0:
+            time.sleep(1)
+        if self._verbose:
+            print(f"[AgentHelm] 💤 Graceful shutdown complete.")
     
     # ─── DECORATORS ───────────────────────────────────────
     
@@ -476,6 +485,11 @@ class Agent:
     # ─── PROPERTIES ───────────────────────────────────────
     
     @property
+    def auth_key(self) -> str:
+        """The authentication key to use for API requests."""
+        return self._agent_token or self._key
+        
+    @property
     def tokens_today(self) -> int:
         """Total tokens tracked today in this session."""
         return self._tokens_today
@@ -508,7 +522,7 @@ class Agent:
             response = requests.post(
                 f"{self._base_url}/api/sdk/ping",
                 json={
-                    "key": self._key,
+                    "key": self.auth_key,
                     "name": self._name,
                     "agent_type": self._agent_type,
                     "version": self._version,
@@ -521,12 +535,13 @@ class Agent:
             if response.status_code == 200:
                 data = response.json()
                 self._agent_id = data.get("agent_id")
+                if data.get("agent_token"):
+                    self._agent_token = data.get("agent_token")
                 self._connected = True
                 if self._verbose:
-                    agent_short = (
-                        self._agent_id[:8] + "..."
-                        if self._agent_id else "unknown"
-                    )
+                    agent_short = "unknown"
+                    if self._agent_id:
+                        agent_short = str(self._agent_id)[:8] + "..."
                     print(
                         f"[AgentHelm] ✅ Connected: "
                         f"{self._name} ({agent_short})"
@@ -550,6 +565,7 @@ class Agent:
         Send request to AgentHelm API.
         Falls back to offline queue on failure.
         """
+        payload["key"] = self.auth_key
         try:
             response = requests.post(
                 f"{self._base_url}{endpoint}",
@@ -567,8 +583,9 @@ class Agent:
         """Start the heartbeat timer."""
         if self._running:
             self._ping_timer = threading.Timer(self._ping_interval, self._ping_loop)
-            self._ping_timer.daemon = True
-            self._ping_timer.start()
+            if self._ping_timer:
+                self._ping_timer.daemon = True
+                self._ping_timer.start()
 
     def _ping_loop(self) -> None:
         """Send heartbeat."""
@@ -578,7 +595,7 @@ class Agent:
             response = requests.post(
                 f"{self._base_url}/api/sdk/ping",
                 json={
-                    "key": self._key,
+                    "key": self.auth_key,
                     "agent_id": self._agent_id,
                     "status": "running",
                     "timestamp": self._now()
@@ -589,6 +606,8 @@ class Agent:
                 data = response.json()
                 if not self._agent_id and data.get("agent_id"):
                     self._agent_id = data.get("agent_id")
+                if data.get("agent_token"):
+                    self._agent_token = data.get("agent_token")
         except Exception:
             pass
         self._start_ping_timer()
@@ -600,7 +619,7 @@ class Agent:
                 response = requests.get(
                     f"{self._base_url}/api/sdk/command",
                     params={
-                        "key": self._key,
+                        "key": self.auth_key,
                         "agent_id": self._agent_id
                     },
                     timeout=self._timeout
@@ -660,17 +679,28 @@ class Agent:
 
     def _run_dispatch_safe(self, task: str) -> None:
         """Run dispatch handler with progress/output/error wrapping."""
-        if not self._dispatch_handler:
-            return
+        with self._task_lock:
+            self._active_tasks += 1
+            
         try:
-            self.progress("Starting task")
-            result = self._dispatch_handler(task)
-            if isinstance(result, dict):
-                self.output(result)
-            else:
-                self.output({"result": result})
-        except Exception as e:
-            self.error("Task failed", exception=e)
+            if not self._dispatch_handler:
+                return
+            
+            try:
+                self.progress("Starting task")
+                result = self._dispatch_handler(task)
+                if isinstance(result, dict):
+                    self.output(result)
+                else:
+                    self.output({"result": result})
+            except Exception as e:
+                # self.error isn't defined, using log/warn pattern or just printing for now
+                if self._verbose:
+                    print(f"[AgentHelm] ❌ Task failed: {e}")
+                self.log(f"Task failed: {e}", level="error")
+        finally:
+            with self._task_lock:
+                self._active_tasks -= 1
     
     def _flush_loop(self) -> None:
         """Retry failed requests from offline queue."""

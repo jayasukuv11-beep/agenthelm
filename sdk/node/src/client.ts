@@ -1,6 +1,6 @@
 import { OfflineQueue } from './queue'
 
-const DEFAULT_BASE_URL = 'https://agenthelm.vercel.app/api/sdk'
+const DEFAULT_BASE_URL = 'https://agenthelm.online/api/sdk'
 
 // ─── TYPES ────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ export class AgentHelm {
       throw new Error(
         'Invalid AgentHelm key. ' +
         'Keys must start with "ahe_". ' +
-        'Get your key at agenthelm.vercel.app/dashboard/settings'
+        'Get your key at agenthelm.online/dashboard/settings'
       )
     }
 

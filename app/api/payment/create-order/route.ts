@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const selectedPlan = PLANS[plan]
     const orderId = `ahelm_${plan}_${userId.slice(0, 8)}_${Date.now()}`
 
-    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://agenthelm.vercel.app";
+    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://agenthelm.online";
 
     const cashfreeBody = {
       order_id: orderId,
