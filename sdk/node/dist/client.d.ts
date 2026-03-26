@@ -31,6 +31,7 @@ export declare class AgentHelm {
     private readonly pingInterval;
     private readonly commandPollInterval;
     private _agentId;
+    private _agentToken;
     private _connected;
     private _running;
     private _tokensToday;
@@ -120,6 +121,7 @@ export declare class AgentHelm {
     get name(): string;
     get tokensToday(): number;
     get tokensSession(): number;
+    private getAuthKey;
     private register;
     private send;
     private fetch;

@@ -25,4 +25,3 @@ We may share your information with third-party vendors, service providers, contr
 ## 5. Contact Us
 If you have any questions about this Privacy Policy, please contact us:
 - **Email:** tharagesharumugam@gmail.com
-- **Phone:** +91 8903356017

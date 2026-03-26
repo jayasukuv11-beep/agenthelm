@@ -27,4 +27,3 @@ You agree not to use the Services for any unlawful purpose or in any way that in
 ## 7. Contact Information
 If you have any questions regarding these Terms, please contact us at:
 - **Email:** tharagesharumugam@gmail.com
-- **Phone:** +91 8903356017
