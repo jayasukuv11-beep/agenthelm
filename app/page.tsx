@@ -317,6 +317,73 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* SECTION 4.5: ONE LINE INTEGRATION */}
+      <section id="install" className="py-24 px-6 bg-[#030712] relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.05),transparent_50%)]"></div>
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+              One line of code. Total control.
+            </h2>
+            <p className="text-gray-400 text-lg">
+              Install the SDK and connect your agent in seconds.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 text-left">
+            {/* Python SDK */}
+            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-emerald-500/30 transition-colors group">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                  <span className="text-blue-400 font-bold">Py</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">Python SDK</h3>
+                  <p className="text-xs text-gray-500">agenthelm-sdk</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-sm text-emerald-400 flex items-center justify-between">
+                  <code>pip install agenthelm-sdk</code>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500/50 animate-pulse"></div>
+                </div>
+                <div className="bg-black/60 p-5 rounded-xl border border-white/5 font-mono text-[11px] leading-relaxed text-slate-300">
+                  <code className="block">
+                    <span className="text-blue-400">from</span> agenthelm <span className="text-blue-400">import</span> Agent<br/>
+                    agent = Agent(key=<span className="text-emerald-400">&quot;YOUR_KEY&quot;</span>)
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            {/* Node.js SDK */}
+            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-emerald-500/30 transition-colors group">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                  <span className="text-emerald-400 font-bold">JS</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">Node.js SDK</h3>
+                  <p className="text-xs text-gray-500">agenthelm-node-sdk</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-sm text-emerald-400 flex items-center justify-between">
+                  <code>npm install agenthelm-node-sdk</code>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500/50 animate-pulse"></div>
+                </div>
+                <div className="bg-black/60 p-5 rounded-xl border border-white/5 font-mono text-[11px] leading-relaxed text-slate-300">
+                  <code className="block">
+                    <span className="text-blue-400">import</span> {'{'} Agent {'}'} <span className="text-blue-400">from</span> <span className="text-emerald-400">&quot;agenthelm&quot;</span><br/>
+                    <span className="text-blue-400">const</span> agent = <span className="text-blue-400">new</span> Agent({'{'} key: <span className="text-emerald-400">&quot;YOUR_KEY&quot;</span> {'}'})
+                  </code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SECTION 5: HOW IT WORKS */}
       <section id="how-it-works" className="py-24 px-6 bg-[#09090b]">
         <div className="max-w-6xl mx-auto">
@@ -765,7 +832,6 @@ export default function LandingPage() {
               <h4 className="text-white font-bold mb-6">Contact</h4>
               <ul className="space-y-4 text-sm text-gray-400">
                 <li><a href="mailto:tharagesharumugam@gmail.com" className="hover:text-emerald-400 transition-colors">tharagesharumugam@gmail.com</a></li>
-                <li><a href="tel:+918903356017" className="hover:text-emerald-400 transition-colors">+91 8903356017</a></li>
               </ul>
             </div>
           </div>

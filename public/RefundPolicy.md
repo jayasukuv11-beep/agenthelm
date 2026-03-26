@@ -21,4 +21,3 @@ All approved refunds will be processed securely through our payment provider, **
 ## How to Request a Refund
 To request a refund due to a technical issue, please contact our support team with a detailed description of the problem and your account details:
 - **Email:** tharagesharumugam@gmail.com
-- **Phone:** +91 8903356017

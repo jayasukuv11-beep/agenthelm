@@ -3,11 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AgentHelm = void 0;
 exports.connect = connect;
 const queue_1 = require("./queue");
-const DEFAULT_BASE_URL = 'https://agenthelm.vercel.app/api/sdk';
+const DEFAULT_BASE_URL = 'https://agenthelm.online/api/sdk';
 // ─── CLIENT ───────────────────────────────────────────
 class AgentHelm {
     constructor(options) {
         this._agentId = null;
+        this._agentToken = null;
         this._connected = false;
         this._running = true;
         this._tokensToday = 0;
@@ -22,7 +23,7 @@ class AgentHelm {
         if (!key || !key.startsWith('ahe_')) {
             throw new Error('Invalid AgentHelm key. ' +
                 'Keys must start with "ahe_". ' +
-                'Get your key at agenthelm.vercel.app/dashboard/settings');
+                'Get your key at agenthelm.online/dashboard/settings');
         }
         this.key = key;
         this._name = name;
@@ -51,7 +52,7 @@ class AgentHelm {
      */
     log(message, level = 'info', data) {
         this.send('/log', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             type: 'log',
             level,
@@ -67,7 +68,7 @@ class AgentHelm {
      */
     output(data, label = 'output') {
         this.send('/output', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             type: 'output',
             level: 'success',
@@ -91,7 +92,7 @@ class AgentHelm {
             errorData.stack = error.stack;
         }
         this.send('/log', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             type: 'log',
             level: 'error',
@@ -146,7 +147,7 @@ class AgentHelm {
         this._tokensToday += used;
         this._tokensSession += used;
         this.send('/log', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             type: 'tokens',
             level: 'info',
@@ -171,7 +172,7 @@ class AgentHelm {
      */
     reply(message) {
         this.send('/log', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             type: 'chat_reply',
             level: 'info',
@@ -211,7 +212,7 @@ class AgentHelm {
             clearInterval(this.flushTimer);
         // Notify dashboard
         this.send('/ping', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             status: 'stopped',
             timestamp: new Date().toISOString(),
@@ -254,6 +255,9 @@ class AgentHelm {
         return this._tokensSession;
     }
     // ─── PRIVATE METHODS ────────────────────────────────
+    getAuthKey() {
+        return this._agentToken ?? this.key;
+    }
     async register() {
         try {
             const res = await this.fetch('/ping', {
@@ -267,6 +271,7 @@ class AgentHelm {
             if (res.ok) {
                 const data = await res.json();
                 this._agentId = data.agent_id ?? null;
+                this._agentToken = data.agent_token ?? null;
                 this._connected = true;
                 if (this.verbose) {
                     const short = this._agentId
@@ -328,10 +333,17 @@ class AgentHelm {
     }
     sendPing() {
         this.fetch('/ping', {
-            key: this.key,
+            key: this.getAuthKey(),
             agent_id: this._agentId,
             status: 'running',
             timestamp: new Date().toISOString(),
+        }).then(async (res) => {
+            if (res.ok) {
+                const data = await res.json();
+                if (data.agent_token) {
+                    this._agentToken = data.agent_token;
+                }
+            }
         }).catch(() => { });
     }
     async pollCommands() {
@@ -339,7 +351,7 @@ class AgentHelm {
             return;
         try {
             const url = `${this.baseUrl}/command` +
-                `?key=${encodeURIComponent(this.key)}` +
+                `?key=${encodeURIComponent(this.getAuthKey())}` +
                 `&agent_id=${encodeURIComponent(this._agentId)}`;
             const res = await this.fetchGet(url);
             if (res.ok) {

@@ -50,6 +50,7 @@ export class AgentHelm {
   private readonly commandPollInterval: number
 
   private _agentId: string | null = null
+  private _agentToken: string | null = null
   private _connected = false
   private _running = true
   private _tokensToday = 0
@@ -131,7 +132,7 @@ export class AgentHelm {
     data?: Record<string, unknown>
   ): void {
     this.send('/log', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       type: 'log',
       level,
@@ -151,7 +152,7 @@ export class AgentHelm {
     label = 'output'
   ): void {
     this.send('/output', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       type: 'output',
       level: 'success',
@@ -178,7 +179,7 @@ export class AgentHelm {
     }
 
     this.send('/log', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       type: 'log',
       level: 'error',
@@ -251,7 +252,7 @@ export class AgentHelm {
     this._tokensSession += used
 
     this.send('/log', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       type: 'tokens',
       level: 'info',
@@ -277,7 +278,7 @@ export class AgentHelm {
    */
   reply(message: string): void {
     this.send('/log', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       type: 'chat_reply',
       level: 'info',
@@ -322,7 +323,7 @@ export class AgentHelm {
 
     // Notify dashboard
     this.send('/ping', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       status: 'stopped',
       timestamp: new Date().toISOString(),
@@ -377,6 +378,10 @@ export class AgentHelm {
   }
 
   // ─── PRIVATE METHODS ────────────────────────────────
+  
+  private getAuthKey(): string {
+    return this._agentToken ?? this.key
+  }
 
   private async register(): Promise<void> {
     try {
@@ -393,8 +398,10 @@ export class AgentHelm {
         const data = await res.json() as {
           agent_id?: string
           user_id?: string
+          agent_token?: string
         }
         this._agentId = data.agent_id ?? null
+        this._agentToken = data.agent_token ?? null
         this._connected = true
 
         if (this.verbose) {
@@ -480,10 +487,17 @@ export class AgentHelm {
 
   private sendPing(): void {
     this.fetch('/ping', {
-      key: this.key,
+      key: this.getAuthKey(),
       agent_id: this._agentId,
       status: 'running',
       timestamp: new Date().toISOString(),
+    }).then(async (res) => {
+      if (res.ok) {
+        const data = await res.json() as { agent_token?: string }
+        if (data.agent_token) {
+          this._agentToken = data.agent_token
+        }
+      }
     }).catch(() => {})
   }
 
@@ -493,7 +507,7 @@ export class AgentHelm {
     try {
       const url =
         `${this.baseUrl}/command` +
-        `?key=${encodeURIComponent(this.key)}` +
+        `?key=${encodeURIComponent(this.getAuthKey())}` +
         `&agent_id=${encodeURIComponent(this._agentId)}`
 
       const res = await this.fetchGet(url)
