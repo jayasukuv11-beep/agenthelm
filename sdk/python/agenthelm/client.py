@@ -40,7 +40,8 @@ class Agent:
         ping_interval: int = 30,
         command_poll_interval: int = 5,
         verbose: bool = True,
-        timeout: int = 10
+        timeout: int = 10,
+        burn_rate_threshold: int = 10000
     ):
         """
         Initialize AgentHelm connection.
@@ -92,6 +93,11 @@ class Agent:
         self._step_counter = 0
         self._last_checkpoint_state: Optional[dict] = None
         self._step_start_time: Optional[float] = None
+        
+        # Burn-rate monitoring
+        self._token_window: list = []  # [(timestamp, tokens_used), ...]
+        self._burn_rate_threshold: int = burn_rate_threshold
+        self._burn_rate_alerted = False
         
         # Command + chat handlers
         self._command_handlers: Dict[str, Callable] = {}
@@ -356,6 +362,40 @@ class Agent:
             "timestamp": self._now()
         }
         self._send("/api/sdk/log", payload)
+        
+        # Burn-rate monitoring: sliding 60-second window
+        now = time.time()
+        self._token_window.append((now, used))
+        self._token_window = [
+            (t, u) for t, u in self._token_window
+            if now - t < 60
+        ]
+        tokens_per_minute = sum(u for _, u in self._token_window)
+        
+        if tokens_per_minute > self._burn_rate_threshold and not self._burn_rate_alerted:
+            self._burn_rate_alerted = True
+            self.warn(
+                f"\U0001f525 Token burn rate: {tokens_per_minute:,}/min "
+                f"exceeds threshold ({self._burn_rate_threshold:,}/min)"
+            )
+            # Send a special burn_rate log for Telegram alerts
+            burn_payload = {
+                "key": self._key,
+                "agent_id": self._agent_id,
+                "type": "burn_rate",
+                "level": "warning",
+                "message": f"Token burn rate: {tokens_per_minute:,}/min",
+                "data": {
+                    "tokens_per_minute": tokens_per_minute,
+                    "threshold": self._burn_rate_threshold,
+                    "window_seconds": 60,
+                    "model": model
+                },
+                "timestamp": self._now()
+            }
+            self._send("/api/sdk/log", burn_payload)
+        elif tokens_per_minute <= self._burn_rate_threshold:
+            self._burn_rate_alerted = False
     
     def checkpoint(
         self,
