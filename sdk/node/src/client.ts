@@ -256,6 +256,14 @@ export class AgentHelm {
     }
     this._stepStartTime = Date.now()
 
+    // Delta encoding: step 0 = full snapshot, step 1+ = delta only
+    let stateDelta: Record<string, unknown> | null = null
+    let sendSnapshot: Record<string, unknown> | null = state
+    if (idx > 0 && this._lastCheckpointState !== null) {
+      stateDelta = this.computeDelta(this._lastCheckpointState, state)
+      sendSnapshot = null // Don't send full snapshot for deltas
+    }
+
     this._lastCheckpointState = state
 
     const payload: Record<string, unknown> = {
@@ -265,7 +273,8 @@ export class AgentHelm {
       step_index: idx,
       step_name: stepName,
       status,
-      state_snapshot: state,
+      state_snapshot: sendSnapshot,
+      state_delta: stateDelta,
       input_data: inputData ?? null,
       output_data: outputData ?? null,
       latency_ms: latencyMs,
@@ -699,6 +708,35 @@ export class AgentHelm {
       // Put back at front if still failing
       this.queue.push(item.endpoint, item.payload)
     }
+  }
+
+  /**
+   * Compute what changed between two state snapshots.
+   * Returns a dict of {key: {op, value}} operations.
+   */
+  private computeDelta(
+    previous: Record<string, unknown>,
+    current: Record<string, unknown>
+  ): Record<string, unknown> {
+    const delta: Record<string, unknown> = {}
+    const allKeys = Array.from(new Set(
+      Object.keys(previous).concat(Object.keys(current))
+    ))
+
+    for (let i = 0; i < allKeys.length; i++) {
+      const key = allKeys[i]
+      if (!(key in previous)) {
+        delta[key] = { op: 'add', value: current[key] }
+      } else if (!(key in current)) {
+        delta[key] = { op: 'remove' }
+      } else if (
+        JSON.stringify(previous[key]) !== JSON.stringify(current[key])
+      ) {
+        delta[key] = { op: 'replace', value: current[key] }
+      }
+    }
+
+    return delta
   }
 }
 
