@@ -29,6 +29,13 @@ export type LogLevel = 'info' | 'warning' | 'error' | 'success'
 export type CommandHandler = (payload: Record<string, unknown>) => void | Promise<void>
 export type ChatHandler = (message: string) => void | Promise<void>
 
+export interface CheckpointOptions {
+  stepIndex?: number
+  inputData?: Record<string, unknown>
+  outputData?: Record<string, unknown>
+  status?: 'running' | 'completed' | 'failed' | 'skipped'
+}
+
 interface Command {
   id: string
   command_type: string
@@ -63,6 +70,12 @@ export class AgentHelm {
   private pingTimer: ReturnType<typeof setInterval> | null = null
   private commandTimer: ReturnType<typeof setInterval> | null = null
   private flushTimer: ReturnType<typeof setInterval> | null = null
+
+  // Checkpoint state
+  private _currentTaskId: string | null = null
+  private _stepCounter = 0
+  private _lastCheckpointState: Record<string, unknown> | null = null
+  private _stepStartTime: number | null = null
 
   constructor(options: AgentHelmOptions) {
     const {
@@ -212,6 +225,128 @@ export class AgentHelm {
    */
   progress(percent: number, message: string): void {
     this.log(`[${percent}%] ${message}`, 'info', { percent, message })
+  }
+
+  /**
+   * Save a checkpoint at the current step for resumability.
+   * Call between each tool/chain step to enable resume on crash.
+   * @param stepName - Human-readable label for this step
+   * @param state - Serializable state object at this step
+   * @param options - Optional step_index, input/output data, status
+   */
+  checkpoint(
+    stepName: string,
+    state: Record<string, unknown>,
+    options: CheckpointOptions = {}
+  ): void {
+    const {
+      stepIndex,
+      inputData,
+      outputData,
+      status = 'completed',
+    } = options
+
+    const idx = stepIndex ?? this._stepCounter
+    this._stepCounter = idx + 1
+
+    // Calculate latency since last checkpoint
+    let latencyMs: number | null = null
+    if (this._stepStartTime !== null) {
+      latencyMs = Math.round(Date.now() - this._stepStartTime)
+    }
+    this._stepStartTime = Date.now()
+
+    this._lastCheckpointState = state
+
+    const payload: Record<string, unknown> = {
+      key: this.getAuthKey(),
+      agent_id: this._agentId,
+      task_id: this._currentTaskId,
+      step_index: idx,
+      step_name: stepName,
+      status,
+      state_snapshot: state,
+      input_data: inputData ?? null,
+      output_data: outputData ?? null,
+      latency_ms: latencyMs,
+    }
+
+    if (status === 'failed') {
+      payload.error_data = outputData ?? null
+    }
+
+    this.send('/checkpoint', payload)
+
+    if (this.verbose) {
+      console.log(
+        `[AgentHelm] \uD83D\uDCCC Checkpoint: ${stepName} (step ${idx})`
+      )
+    }
+  }
+
+  /**
+   * Resume a failed task from the last successful checkpoint.
+   * Returns the state snapshot at that checkpoint, or null.
+   * @param taskId - The task UUID to resume
+   * @param stepIndex - Specific step to resume from (defaults to last successful)
+   */
+  async resumeFrom(
+    taskId: string,
+    stepIndex?: number
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      let url =
+        `${this.baseUrl}/checkpoint` +
+        `?key=${encodeURIComponent(this.getAuthKey())}` +
+        `&task_id=${encodeURIComponent(taskId)}`
+
+      if (stepIndex !== undefined) {
+        url += `&step_index=${stepIndex}`
+      }
+
+      const res = await this.fetchGet(url)
+
+      if (res.ok) {
+        const data = await res.json() as {
+          checkpoint?: {
+            step_index: number
+            step_name: string
+            state_snapshot: Record<string, unknown>
+          }
+          has_checkpoint: boolean
+        }
+
+        if (data.checkpoint) {
+          this._currentTaskId = taskId
+          this._stepCounter = data.checkpoint.step_index + 1
+          this._stepStartTime = Date.now()
+          this._lastCheckpointState = data.checkpoint.state_snapshot
+
+          if (this.verbose) {
+            console.log(
+              `[AgentHelm] \uD83D\uDD04 Resuming from: ` +
+              `${data.checkpoint.step_name} (step ${data.checkpoint.step_index})`
+            )
+          }
+
+          return data.checkpoint.state_snapshot
+        }
+
+        if (this.verbose) {
+          console.log(
+            `[AgentHelm] \u26A0\uFE0F No checkpoint found for task ${taskId.slice(0, 8)}...`
+          )
+        }
+        return null
+      }
+
+      return null
+    } catch {
+      if (this.verbose) {
+        console.log('[AgentHelm] \u26A0\uFE0F Failed to resume from checkpoint')
+      }
+      return null
+    }
   }
 
   /**
