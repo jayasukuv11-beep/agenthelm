@@ -87,6 +87,12 @@ class Agent:
         self._active_tasks = 0
         self._task_lock = threading.Lock()
         
+        # Checkpoint state
+        self._current_task_id: Optional[str] = None
+        self._step_counter = 0
+        self._last_checkpoint_state: Optional[dict] = None
+        self._step_start_time: Optional[float] = None
+        
         # Command + chat handlers
         self._command_handlers: Dict[str, Callable] = {}
         self._chat_handler: Optional[Callable] = None
@@ -350,6 +356,138 @@ class Agent:
             "timestamp": self._now()
         }
         self._send("/api/sdk/log", payload)
+    
+    def checkpoint(
+        self,
+        step_name: str,
+        state: dict,
+        step_index: Optional[int] = None,
+        input_data: Optional[dict] = None,
+        output_data: Optional[dict] = None,
+        status: str = "completed"
+    ) -> None:
+        """
+        Save a checkpoint at the current step.
+        Call this between each tool/chain step to enable resumability.
+        
+        Args:
+            step_name: Human-readable label for this step
+            state: Serializable dict of agent state at this step
+            step_index: Step number (auto-increments if not provided)
+            input_data: What went into this step
+            output_data: What came out of this step
+            status: Step status ("running", "completed", "failed", "skipped")
+        
+        Example:
+            @dock.on_dispatch
+            def handle(task):
+                result1 = search(task)
+                dock.checkpoint("search_complete", {"results": result1})
+                
+                result2 = analyze(result1)
+                dock.checkpoint("analysis_complete", {"analysis": result2})
+        """
+        try:
+            if step_index is None:
+                step_index = self._step_counter
+                self._step_counter += 1
+            else:
+                self._step_counter = step_index + 1
+            
+            # Calculate latency since last checkpoint/start
+            latency_ms = None
+            if self._step_start_time is not None:
+                latency_ms = int((time.time() - self._step_start_time) * 1000)
+            self._step_start_time = time.time()
+            
+            self._last_checkpoint_state = state
+            
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "task_id": self._current_task_id,
+                "step_index": step_index,
+                "step_name": step_name,
+                "status": status,
+                "state_snapshot": state,
+                "input_data": input_data,
+                "output_data": output_data,
+                "latency_ms": latency_ms,
+            }
+            
+            if status == "failed":
+                payload["error_data"] = output_data
+            
+            self._send("/api/sdk/checkpoint", payload)
+            
+            if self._verbose:
+                print(f"[AgentHelm] 📌 Checkpoint: {step_name} (step {step_index})")
+                
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to checkpoint: {e}")
+    
+    def resume_from(
+        self,
+        task_id: str,
+        step_index: Optional[int] = None,
+    ) -> Optional[dict]:
+        """
+        Resume a failed task from the last successful checkpoint.
+        Returns the state snapshot at that checkpoint, or None.
+        
+        Args:
+            task_id: The task UUID to resume
+            step_index: Specific step to resume from (defaults to last successful)
+        
+        Returns:
+            dict with checkpoint state, or None if no checkpoint found
+        
+        Example:
+            state = dock.resume_from(task_id="xxx")
+            if state:
+                result = state["analysis"]
+                final = generate_report(result)
+        """
+        try:
+            params = {
+                "key": self.auth_key,
+                "task_id": task_id,
+            }
+            if step_index is not None:
+                params["step_index"] = str(step_index)
+            
+            response = requests.get(
+                f"{self._base_url}/api/sdk/checkpoint",
+                params=params,
+                timeout=self._timeout
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                checkpoint = data.get("checkpoint")
+                
+                if checkpoint:
+                    self._current_task_id = task_id
+                    self._step_counter = checkpoint.get("step_index", 0) + 1
+                    self._step_start_time = time.time()
+                    self._last_checkpoint_state = checkpoint.get("state_snapshot")
+                    
+                    if self._verbose:
+                        step_name = checkpoint.get("step_name", "unknown")
+                        idx = checkpoint.get("step_index", "?")
+                        print(f"[AgentHelm] 🔄 Resuming from: {step_name} (step {idx})")
+                    
+                    return checkpoint.get("state_snapshot")
+                
+                if self._verbose:
+                    print(f"[AgentHelm] ⚠️ No checkpoint found for task {task_id[:8]}...")
+                return None
+                
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to resume: {e}")
+            return None
     
     def reply(self, message: str) -> None:
         """
@@ -687,6 +825,11 @@ class Agent:
                 return
             
             try:
+                # Reset checkpoint state for new dispatch
+                self._step_counter = 0
+                self._step_start_time = time.time()
+                self._last_checkpoint_state = None
+                
                 self.progress("Starting task")
                 result = self._dispatch_handler(task)
                 if isinstance(result, dict):
