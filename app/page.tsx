@@ -269,21 +269,21 @@ export default function LandingPage() {
 
             <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-emerald-500/30 transition-all hover:scale-[1.02] group">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <RefreshCw className="w-6 h-6 text-emerald-500" />
+                <Terminal className="w-6 h-6 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Real-Time Progress</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Live Step Progress</h3>
               <p className="text-gray-400 leading-relaxed">
-                See circular progress bars and status updates on your phone. "Agent is 45% done researching competitor pricing."
+                Watch agents execute step-by-step. See "Step 3/10: Searching Leads" in real-time on your phone or dashboard.
               </p>
             </div>
 
             <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-emerald-500/30 transition-all hover:scale-[1.02] group">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <Repeat className="w-6 h-6 text-emerald-500" />
+                <ZapIcon className="w-6 h-6 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Loop Automation</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Delta Storage</h3>
               <p className="text-gray-400 leading-relaxed">
-                Auto-restart agents if they crash or get stuck. Set up infinite loops for long-running data gathering tasks.
+                High-frequency checkpointing without the bloat. Optimized delta encoding reduces state storage overhead by ~65%.
               </p>
             </div>
 
@@ -603,34 +603,18 @@ export default function LandingPage() {
 
                 {/* User Message */}
                 <div className="bg-[#10b981] rounded-xl rounded-tr-sm p-3 max-w-[85%] text-white self-end shadow-sm w-fit">
-                  /agents
+                  /resume lead-agent
                 </div>
 
                 {/* Bot Reply */}
                 <div className="bg-[#2a3646] rounded-xl rounded-tl-sm p-3 max-w-[85%] text-gray-200 shadow-sm border border-gray-700 w-fit">
-                  <p className="font-bold mb-3 border-b border-gray-700 pb-2">🤖 Your Agents (3)</p>
+                  <p className="font-bold mb-3 border-b border-gray-700 pb-2">🔄 Resuming Lead Agent</p>
                   
                   <div className="space-y-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px]">🟢</span> <span className="font-bold">Lead Agent</span>
-                      </div>
-                      <div className="text-gray-400 text-xs ml-5 mt-1">Status: running</div>
-                      <div className="text-gray-400 text-xs ml-5">Last ping: 5s ago</div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px]">🔴</span> <span className="font-bold">Email Bot</span>
-                      </div>
-                      <div className="text-gray-400 text-xs ml-5 mt-1">Status: stopped</div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px]">🟡</span> <span className="font-bold">Data Scraper</span>
-                      </div>
-                      <div className="text-gray-400 text-xs ml-5 mt-1">Status: idle</div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2 text-[11px]">
+                      <p className="text-emerald-400 font-bold mb-1">Found Checkpoint:</p>
+                      <p>Step 4: Web Search (2m ago)</p>
+                      <button className="mt-2 w-full py-1.5 bg-emerald-600 rounded text-[10px] font-bold">REPLAY FROM HERE</button>
                     </div>
                   </div>
                 </div>
