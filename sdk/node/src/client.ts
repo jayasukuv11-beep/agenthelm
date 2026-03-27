@@ -312,10 +312,12 @@ export class AgentHelm {
    * Resume a failed task from the last successful checkpoint.
    * Returns the state snapshot at that checkpoint, or null.
    * @param taskId - The task UUID to resume
+   * @param checkpointId - Specific checkpoint UUID to resume from
    * @param stepIndex - Specific step to resume from (defaults to last successful)
    */
   async resumeFrom(
     taskId: string,
+    checkpointId?: string,
     stepIndex?: number
   ): Promise<Record<string, unknown> | null> {
     try {
@@ -324,6 +326,9 @@ export class AgentHelm {
         `?key=${encodeURIComponent(this.getAuthKey())}` +
         `&task_id=${encodeURIComponent(taskId)}`
 
+      if (checkpointId !== undefined) {
+        url += `&checkpoint_id=${encodeURIComponent(checkpointId)}`
+      }
       if (stepIndex !== undefined) {
         url += `&step_index=${stepIndex}`
       }
@@ -380,14 +385,55 @@ export class AgentHelm {
   onDispatch(
     handler: (task: string, data: Record<string, unknown>) => unknown
   ): this {
+    this.dispatchHandler = handler
+
     this.onCommand('dispatch', async (payload) => {
-      const task = String(payload.task ?? '')
-      const result = await handler(task, payload)
+      await this.runDispatchSafe(String(payload.task ?? ''), payload)
+    })
+
+    this.onCommand('custom', async (payload) => {
+      if (payload.action === 'resume') {
+        const taskId = payload.task_id as string
+        const checkpointId = payload.checkpoint_id as string
+        const taskDescription = (payload.task_description ?? 'Resumed Task') as string
+
+        await this.resumeFrom(taskId, checkpointId)
+        await this.runDispatchSafe(taskDescription, payload, true)
+      }
+    })
+
+    return this
+  }
+
+  private dispatchHandler:
+    | ((task: string, data: Record<string, unknown>) => unknown)
+    | null = null
+
+  private async runDispatchSafe(
+    task: string,
+    data: Record<string, unknown>,
+    isResume = false
+  ): Promise<void> {
+    if (!this.dispatchHandler) return
+
+    try {
+      if (!isResume) {
+        this._stepCounter = 0
+        this._stepStartTime = Date.now()
+        this._lastCheckpointState = null
+      }
+
+      this.progress(0, `${isResume ? 'Resuming' : 'Starting'} task: ${task}`)
+      const result = await this.dispatchHandler(task, data)
       if (result) {
         this.output(result as Record<string, unknown>, 'dispatch_result')
       }
-    })
-    return this
+    } catch (err) {
+      if (this.verbose) {
+        console.error('[AgentHelm] \u274C Task failed:', err)
+      }
+      this.error(`Task failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   /**
