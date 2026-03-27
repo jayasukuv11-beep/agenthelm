@@ -468,6 +468,9 @@ class Agent:
             
             self._send("/api/sdk/checkpoint", payload)
             
+            # Phase 4: Check for user interventions (stop, pause, override)
+            self._process_interventions()
+            
             if self._verbose:
                 print(f"[AgentHelm] 📌 Checkpoint: {step_name} (step {step_index})")
                 
@@ -903,6 +906,96 @@ class Agent:
                     self._send(endpoint, payload)
             time.sleep(10)
     
+    def _process_interventions(self) -> None:
+        """
+        Check for and apply user interventions (stop, pause, override, etc.).
+        Should be called at checkpoint boundaries.
+        """
+        if not self._current_task_id:
+            return
+
+        try:
+            params = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "task_id": self._current_task_id
+            }
+            response = requests.get(
+                f"{self._base_url}/api/sdk/interventions",
+                params=params,
+                timeout=self._timeout
+            )
+            
+            if response.status_code == 200:
+                interventions = response.json().get("interventions", [])
+                if not interventions:
+                    return
+
+                applied_ids = []
+                for intervention in interventions:
+                    int_type = intervention.get("type")
+                    payload = intervention.get("payload", {})
+                    int_id = intervention.get("id")
+                    
+                    if self._verbose:
+                        print(f"[AgentHelm] 🚨 Intervention detected: {int_type}")
+
+                    if int_type == "stop":
+                        self.stop()
+                        # Raise exception to halt current execution flow
+                        raise InterruptedError("Agent stopped by user intervention")
+                    
+                    elif int_type == "state_override":
+                        # Merge override payload into current state
+                        if isinstance(payload, dict) and self._last_checkpoint_state is not None:
+                            self._last_checkpoint_state.update(payload)
+                            if self._verbose:
+                                print(f"[AgentHelm] 📝 State override applied: {list(payload.keys())}")
+                    
+                    elif int_type == "pause":
+                        if self._verbose:
+                            print("[AgentHelm] ⏸  Agent paused by user. Waiting for resume...")
+                        
+                        # Simple polling loop for resume
+                        while True:
+                            time.sleep(5)
+                            res = requests.get(
+                                f"{self._base_url}/api/sdk/interventions",
+                                params=params,
+                                timeout=self._timeout
+                            )
+                            if res.status_code == 200:
+                                pending = res.json().get("interventions", [])
+                                if any(p.get("type") == "resume" for p in pending):
+                                    # Mark resume as applied too
+                                    resume_id = next(p.get("id") for p in pending if p.get("type") == "resume")
+                                    applied_ids.append(resume_id)
+                                    if self._verbose:
+                                        print("[AgentHelm] ▶️ Agent resumed")
+                                    break
+                    
+                    applied_ids.append(int_id)
+
+                # Mark all processed interventions as applied
+                if applied_ids:
+                    self._send_patch("/api/sdk/interventions", {"ids": applied_ids})
+
+        except InterruptedError:
+            raise
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to check interventions: {e}")
+
+    def _send_patch(self, endpoint: str, payload: dict) -> None:
+        """Helper for PATCH requests (not part of the standard _send queue yet)."""
+        try:
+            url = f"{self._base_url}{endpoint}"
+            params = {"key": self.auth_key}
+            requests.patch(url, params=params, json=payload, timeout=self._timeout)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ PATCH failed: {e}")
+
     @staticmethod
     def _now() -> str:
         """Return current UTC timestamp as ISO string."""

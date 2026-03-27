@@ -77,9 +77,6 @@ export class AgentHelm {
   private _stepCounter = 0
   private _lastCheckpointState: Record<string, unknown> | null = null
   private _stepStartTime: number | null = null
-  private _tokensToday = 0
-  private _tokensSession = 0
-
   // Burn-rate monitoring
   private _tokenWindow: { timestamp: number; used: number }[] = []
   private _burnRateThreshold: number
@@ -296,6 +293,13 @@ export class AgentHelm {
     }
 
     this.send('/checkpoint', payload)
+
+    // Phase 4: Check for user interventions (stop, pause, override)
+    this.processInterventions().catch((err) => {
+      if (this.verbose) {
+        console.error('[AgentHelm] \u26A0\uFE0F Failed to check interventions:', err)
+      }
+    })
 
     if (this.verbose) {
       console.log(
@@ -789,6 +793,121 @@ export class AgentHelm {
     }
 
     return delta
+  }
+
+  /**
+   * Check for and apply user interventions (stop, pause, override, etc.).
+   * Should be called at checkpoint boundaries.
+   */
+  private async processInterventions(): Promise<void> {
+    if (!this._currentTaskId) return
+
+    try {
+      if (!this._agentId) return
+
+      const url =
+        `${this.baseUrl}/interventions` +
+        `?key=${encodeURIComponent(this.getAuthKey())}` +
+        `&agent_id=${encodeURIComponent(this._agentId)}` +
+        `&task_id=${encodeURIComponent(this._currentTaskId)}`
+
+      const res = await this.fetchGet(url)
+      if (!res.ok) return
+
+      const data = (await res.json()) as {
+        interventions: {
+          id: string
+          type: 'stop' | 'pause' | 'resume' | 'rollback' | 'state_override'
+          payload: Record<string, unknown>
+        }[]
+      }
+
+      const interventions = data.interventions || []
+      if (interventions.length === 0) return
+
+      const appliedIds: string[] = []
+
+      for (const intervention of interventions) {
+        if (this.verbose) {
+          console.log(
+            `[AgentHelm] \uD83D\uDEA8 Intervention detected: ${intervention.type}`
+          )
+        }
+
+        if (intervention.type === 'stop') {
+          this.stop()
+          throw new Error('Agent stopped by user intervention')
+        }
+
+        if (intervention.type === 'state_override') {
+          if (this._lastCheckpointState) {
+            Object.assign(this._lastCheckpointState, intervention.payload)
+            if (this.verbose) {
+              console.log(
+                `[AgentHelm] \uD83D\uDCDD State override applied: ${Object.keys(
+                  intervention.payload
+                ).join(', ')}`
+              )
+            }
+          }
+        }
+
+        if (intervention.type === 'pause') {
+          if (this.verbose) {
+            console.log(
+              '[AgentHelm] \u23F8 Agent paused by user. Waiting for resume...'
+            )
+          }
+
+          // Polling for resume
+          let resumed = false
+          while (!resumed) {
+            await new Promise((resolve) => setTimeout(resolve, 5000))
+            const checkRes = await this.fetchGet(url)
+            if (checkRes.ok) {
+              const checkData = (await checkRes.json()) as any
+              const pending = checkData.interventions || []
+              const resumeInt = pending.find((p: any) => p.type === 'resume')
+              if (resumeInt) {
+                appliedIds.push(resumeInt.id)
+                resumed = true
+                if (this.verbose) {
+                  console.log('[AgentHelm] \u25B6\uFE0F Agent resumed')
+                }
+              }
+            }
+          }
+        }
+
+        appliedIds.push(intervention.id)
+      }
+
+      if (appliedIds.length > 0) {
+        await this.fetchPatch('/interventions', { ids: appliedIds })
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Agent stopped by user intervention') {
+        throw err
+      }
+      throw err
+    }
+  }
+
+  /**
+   * Helper for PATCH requests.
+   */
+  private async fetchPatch(
+    endpoint: string,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    const url = `${this.baseUrl}${endpoint}?key=${encodeURIComponent(
+      this.getAuthKey()
+    )}`
+    await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
   }
 }
 
