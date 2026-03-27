@@ -390,6 +390,18 @@ export async function POST(req: Request) {
       })
     }
 
+    // Burn-rate → Telegram alert
+    if (type === 'burn_rate') {
+      setImmediate(async () => {
+        const burnData = (safeData as any) || {}
+        const alertMsg = `🔥 *Burn-rate Alert: ${agentName}*\n` +
+          `Token consumption is too high: ${Number(burnData.tokens_per_minute).toLocaleString()}/min\n` +
+          `Threshold: ${Number(burnData.threshold).toLocaleString()}/min`
+        
+        await sendTelegramToUser(userId!, alertMsg)
+      })
+    }
+
     return NextResponse.json({ success: true })
 
   } catch (err: unknown) {

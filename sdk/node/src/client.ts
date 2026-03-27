@@ -15,6 +15,7 @@ export interface AgentHelmOptions {
   commandPollInterval?: number
   verbose?: boolean
   timeout?: number
+  burnRateThreshold?: number
 }
 
 export interface TrackTokensOptions {
@@ -76,6 +77,13 @@ export class AgentHelm {
   private _stepCounter = 0
   private _lastCheckpointState: Record<string, unknown> | null = null
   private _stepStartTime: number | null = null
+  private _tokensToday = 0
+  private _tokensSession = 0
+
+  // Burn-rate monitoring
+  private _tokenWindow: { timestamp: number; used: number }[] = []
+  private _burnRateThreshold: number
+  private _burnRateAlerted = false
 
   constructor(options: AgentHelmOptions) {
     const {
@@ -89,7 +97,10 @@ export class AgentHelm {
       commandPollInterval = 5000,
       verbose = true,
       timeout = 5000,
+      burnRateThreshold = 10000,
     } = options
+
+    this._burnRateThreshold = burnRateThreshold
 
     if (!key || !key.startsWith('ahe_')) {
       throw new Error(
@@ -413,6 +424,47 @@ export class AgentHelm {
       },
       timestamp: new Date().toISOString(),
     })
+
+    // Burn-rate monitoring: sliding 60-second window
+    const now = Date.now()
+    this._tokenWindow.push({ timestamp: now, used })
+    this._tokenWindow = this._tokenWindow.filter(
+      (item) => now - item.timestamp < 60000
+    )
+
+    const tokensPerMinute = this._tokenWindow.reduce(
+      (sum, item) => sum + item.used,
+      0
+    )
+
+    if (
+      tokensPerMinute > this._burnRateThreshold &&
+      !this._burnRateAlerted
+    ) {
+      this._burnRateAlerted = true
+      this.warn(
+        `\uD83D\uDD25 Token burn rate: ${tokensPerMinute.toLocaleString()}/min ` +
+          `exceeds threshold (${this._burnRateThreshold.toLocaleString()}/min)`
+      )
+
+      // Send a special burn_rate log for Telegram alerts
+      this.send('/log', {
+        key: this.getAuthKey(),
+        agent_id: this._agentId,
+        type: 'burn_rate',
+        level: 'warning',
+        message: `Token burn rate: ${tokensPerMinute.toLocaleString()}/min`,
+        data: {
+          tokens_per_minute: tokensPerMinute,
+          threshold: this._burnRateThreshold,
+          window_seconds: 60,
+          model,
+        },
+        timestamp: new Date().toISOString(),
+      })
+    } else if (tokensPerMinute <= this._burnRateThreshold) {
+      this._burnRateAlerted = false
+    }
   }
 
   /**
