@@ -97,6 +97,7 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
+            <span className="text-zinc-500 text-2xl md:text-3xl block font-mono mb-2">/resilient-observability</span>
             Take the <span className="text-emerald-500 relative">
               Helm
               <svg className="absolute w-full h-3 -bottom-1 left-0 text-emerald-500/30" viewBox="0 0 100 10" preserveAspectRatio="none">
@@ -220,10 +221,12 @@ export default function LandingPage() {
             <div className="divide-y divide-zinc-800">
               {[
                 ["Costs", "$20/mo + Usage", "Free to Start"],
+                ["Resilience", "State lost on crash", "Auto-Resume & Checkpoints"],
                 ["Lock-in", "Claude Only", "Any LLM (Open Source)"],
+                ["Storage", "Heavy Snapshots", "Optimized State Deltas"],
                 ["Availability", "Mac must be awake", "Cloud-native (Always on)"],
                 ["Interface", "Desktop Only", "Telegram + Dashboard"],
-                ["Control", "Auto-only", "Remote CLI + Manual Overrides"]
+                ["Control", "Auto-only", "/resume + State Overrides"]
               ].map(([feature, claude, helm], i) => (
                 <div key={i} className="grid grid-cols-2 text-sm">
                   <div className="p-4 text-zinc-400 flex flex-col gap-1">
@@ -256,11 +259,11 @@ export default function LandingPage() {
             <div className="bg-[#111] border-2 border-emerald-500/50 rounded-xl p-8 relative overflow-hidden group hover:border-emerald-500 transition-all hover:scale-[1.02] shadow-emerald-500/5 hover:shadow-emerald-500/10 shadow-xl">
               <div className="absolute top-4 right-4 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-emerald-500/30">New</div>
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <Send className="w-6 h-6 text-emerald-500" />
+                <RefreshCw className="w-6 h-6 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Dispatch Tasks Remotely</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Fault-Tolerant Execution</h3>
               <p className="text-gray-400 leading-relaxed">
-                Send tasks to your agents from Telegram. "/dispatch lead-agent find 10 leads". Work continues without your laptop.
+                Step-level checkpointing ensures your agent never starts from zero. If it crashes, resume from the exact state with one click.
               </p>
             </div>
 

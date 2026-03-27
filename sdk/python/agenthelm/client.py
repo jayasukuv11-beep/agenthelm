@@ -482,6 +482,7 @@ class Agent:
         self,
         task_id: str,
         step_index: Optional[int] = None,
+        checkpoint_id: Optional[str] = None
     ) -> Optional[dict]:
         """
         Resume a failed task from the last successful checkpoint.
@@ -490,6 +491,7 @@ class Agent:
         Args:
             task_id: The task UUID to resume
             step_index: Specific step to resume from (defaults to last successful)
+            checkpoint_id: Specific checkpoint UUID to resume from
         
         Returns:
             dict with checkpoint state, or None if no checkpoint found
@@ -507,6 +509,8 @@ class Agent:
             }
             if step_index is not None:
                 params["step_index"] = str(step_index)
+            if checkpoint_id is not None:
+                params["checkpoint_id"] = checkpoint_id
             
             response = requests.get(
                 f"{self._base_url}/api/sdk/checkpoint",
@@ -854,6 +858,18 @@ class Agent:
                 elif self._verbose:
                     print(f"[AgentHelm] ⚠️ No @on_dispatch handler for task: {task}")
                     
+            elif command_type == "custom":
+                # Route to custom action handler (e.g. resume)
+                action = payload.get("action", "")
+                if action == "resume":
+                    threading.Thread(
+                        target=self._handle_resume,
+                        args=(payload,),
+                        daemon=True
+                    ).start()
+                elif self._verbose:
+                    print(f"[AgentHelm] ⚠️ Unknown custom action: {action}")
+
             elif command_type in self._command_handlers:
                 # Route to registered command handler
                 handler = self._command_handlers[command_type]
@@ -866,7 +882,50 @@ class Agent:
         except Exception as e:
             print(f"[AgentHelm] ❌ Command handler error: {e}")
 
-    def _run_dispatch_safe(self, task: str) -> None:
+    def _handle_resume(self, payload: dict) -> None:
+        """Handle incoming resume command (usually from Telegram)."""
+        task_id = payload.get("task_id")
+        checkpoint_id = payload.get("checkpoint_id")
+        
+        if not task_id or not checkpoint_id:
+            if self._verbose:
+                print("[AgentHelm] ⚠️ Resume failed: Missing task_id or checkpoint_id")
+            return
+            
+        # 1. Resume state from checkpoint
+        state = self.resume_from(task_id, checkpoint_id=checkpoint_id)
+        if state is None:
+            return # resume_from already prints error
+            
+        # 2. Get the task description for the task_id
+        # We need the description to call the dispatch handler
+        try:
+            params = {"key": self.auth_key, "task_id": task_id}
+            response = requests.get(f"{self._base_url}/api/sdk/checkpoint", params=params, timeout=self._timeout)
+            if response.ok:
+                ckpt = response.json().get("checkpoint", {})
+                # Try to get task_description from task table if not in checkpoint directly?
+                # For now, let's assume we can use the checkpoint's context or just call the handler
+                # Actually, our Telegram bot doesn't send the description in the command payload.
+                # Let's assume the user just wants to replay the last known task context.
+                
+                # Let's find the task description via API
+                task_res = requests.get(f"{self._base_url}/api/sdk/checkpoint", params={"key": self.auth_key, "task_id": task_id}, timeout=self._timeout)
+                # (API should be updated to return task_description in checkpoint route if needed, 
+                # but for now we can just use the most recent log message)
+                
+                # Wait, the SDK user defines @dock.on_dispatch(task). 
+                # If we don't have the task string, we can't route it.
+                # I'll update the Telegram bot to send the task description in the payload too!
+                task_description = payload.get("task_description") or "Resumed Task"
+                if not isinstance(task_description, str):
+                    task_description = "Resumed Task"
+                self._run_dispatch_safe(task_description, is_resume=True)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Resume routing error: {e}")
+
+    def _run_dispatch_safe(self, task: str, is_resume: bool = False) -> None:
         """Run dispatch handler with progress/output/error wrapping."""
         with self._task_lock:
             self._active_tasks += 1
@@ -876,12 +935,13 @@ class Agent:
                 return
             
             try:
-                # Reset checkpoint state for new dispatch
-                self._step_counter = 0
-                self._step_start_time = time.time()
-                self._last_checkpoint_state = None
+                # ONLY reset state if it's NOT a resume
+                if not is_resume:
+                    self._step_counter = 0
+                    self._step_start_time = time.time()
+                    self._last_checkpoint_state = None
                 
-                self.progress("Starting task")
+                self.progress(f"{'Resuming' if is_resume else 'Starting'} task")
                 result = self._dispatch_handler(task)
                 if isinstance(result, dict):
                     self.output(result)

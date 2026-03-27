@@ -146,6 +146,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await handleStop(chatId, user.id, text)
     } else if (cmd === '/dispatch') {
       await handleDispatch(chatId, user.id, text, plan)
+    } else if (cmd === '/resume') {
+      await handleResume(chatId, user.id, text)
     } else if (cmd === '/summary') {
       await handleSummary(chatId, user.id, plan)
     } else if (cmd === '/credits') {
@@ -234,6 +236,32 @@ async function handleCallbackQuery(
     await sendMessage(chatId, '✅ Task dispatch confirmed.')
     await answerCallbackQuery(callbackQueryId, 'Dispatch confirmed.')
   }
+
+  if (action === 'confirm_resume') {
+    const [taskId, checkpointId] = id.split('|')
+    const { data: checkpoint } = await supabaseAdmin
+      .from('agent_checkpoints')
+      .select('agent_id')
+      .eq('id', checkpointId)
+      .single()
+
+    if (checkpoint) {
+      await supabaseAdmin.from('agent_commands').insert({
+        agent_id: checkpoint.agent_id,
+        command_type: 'custom',
+        payload: { 
+          action: 'resume',
+          task_id: taskId,
+          checkpoint_id: checkpointId,
+          source: 'telegram'
+        },
+        status: 'pending'
+      })
+      await deleteMessage(chatId, messageId)
+      await sendMessage(chatId, '🚀 Resume command sent to agent.')
+    }
+    await answerCallbackQuery(callbackQueryId, 'Resume confirmed.')
+  }
 }
 
 export async function GET(): Promise<NextResponse> {
@@ -298,6 +326,7 @@ async function handleStart(
       `/run — start an agent\n` +
       `/stop — stop an agent\n` +
       `/dispatch — send a task to an agent\n` +
+      `/resume — resume a failed task\n` +
       `/credits — check token usage\n` +
       `/help — show all commands\n` +
       `/disconnect — unlink Telegram`,
@@ -320,7 +349,8 @@ async function handleHelp(chatId: number): Promise<void> {
       `<b>Control:</b>\n` +
       `/run [name] — start an agent\n` +
       `/stop [name] — stop an agent\n` +
-      `/dispatch [name] [task] — send task to agent\n\n` +
+      `/dispatch [name] [task] — send task to agent\n` +
+      `/resume [name] — resume last failed task\n\n` +
       `<b>Account:</b>\n` +
       `/disconnect — unlink this Telegram\n` +
       `/help — show this message\n\n` +
@@ -450,12 +480,41 @@ async function handleStatus(
     ? getTimeAgo(new Date(agent.last_ping))
     : 'Never'
 
+  // Phase 5: Get current step and last checkpoint
+  const { data: latestCheckpoint } = await supabaseAdmin
+    .from('agent_checkpoints')
+    .select('step_index, step_name, created_at')
+    .eq('agent_id', agent.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  const { data: latestLog } = await supabaseAdmin
+    .from('agent_logs')
+    .select('message, data')
+    .eq('agent_id', agent.id)
+    .eq('type', 'progress')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
   let statusText =
     `${statusEmoji} <b>${agent.name}</b>\n\n` +
     `Status: <b>${agent.status}</b>\n` +
     `Type: ${agent.agent_type ?? 'unknown'}\n` +
-    `Last ping: ${lastPing}\n` +
-    `Tokens today: ${tokensToday.toLocaleString()}\n`
+    `Last ping: ${lastPing}\n`
+
+  if (latestCheckpoint) {
+    const checkpointTime = getTimeAgo(new Date(latestCheckpoint.created_at))
+    statusText += `📍 Step: ${latestCheckpoint.step_index} (${latestCheckpoint.step_name})\n`
+    statusText += `🕒 Checkpoint: ${checkpointTime}\n`
+  }
+
+  if (latestLog && agent.status === 'running') {
+    statusText += `🔄 Progress: ${latestLog.message}\n`
+  }
+
+  statusText += `Tokens today: ${tokensToday.toLocaleString()}\n`
 
   if (agent.error_message) {
     statusText += `\n⚠️ Last error:\n${agent.error_message}`
@@ -731,6 +790,85 @@ async function handleDispatch(
   )
 }
 
+// ─── Command: /resume ─────────────────────────────────────────────────────────
+
+async function handleResume(
+  chatId: number,
+  userId: string,
+  text: string
+): Promise<void> {
+  const agentName = text.replace('/resume', '').trim()
+  const agent = await findAgent(userId, agentName)
+
+  if (!agent) {
+    await sendMessage(
+      chatId,
+      '❌ Agent not found.\n\nUsage: /resume [agent name]\nExample: /resume Lead Agent'
+    )
+    return
+  }
+
+  // 1. Find the last failed task for this agent
+  const { data: lastFailedTask } = await supabaseAdmin
+    .from('agent_tasks')
+    .select('id, task_description, created_at')
+    .eq('agent_id', agent.id)
+    .eq('status', 'failed')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!lastFailedTask) {
+    await sendMessage(
+      chatId,
+      `ℹ️ No failed tasks found for <b>${agent.name}</b> to resume from.`,
+      'HTML'
+    )
+    return
+  }
+
+  // 2. Find the last successful checkpoint for that task
+  const { data: lastCheckpoint } = await supabaseAdmin
+    .from('agent_checkpoints')
+    .select('id, step_name, step_index, created_at')
+    .eq('task_id', lastFailedTask.id)
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!lastCheckpoint) {
+    await sendMessage(
+      chatId,
+      `⚠️ Found failed task "${lastFailedTask.task_description}", but no successful checkpoints exist to resume from.`,
+      'HTML'
+    )
+    return
+  }
+
+  const timeAgo = getTimeAgo(new Date(lastCheckpoint.created_at))
+
+  await sendMessage(
+    chatId,
+    `🔄 <b>Last Failed Task:</b> "${lastFailedTask.task_description}"\n` +
+      `📍 <b>Last Success:</b> Step ${lastCheckpoint.step_index} (${lastCheckpoint.step_name})\n` +
+      `🕒 ${timeAgo}\n\n` +
+      `Do you want to resume <b>${agent.name}</b> from this point?`,
+    'HTML',
+    {
+      inline_keyboard: [
+        [
+          { 
+            text: '🚀 Resume Now', 
+            callback_data: `confirm_resume:${lastFailedTask.id}|${lastCheckpoint.id}` 
+          },
+          { text: '❌ Cancel', callback_data: 'cancel:0' },
+        ],
+      ],
+    }
+  )
+}
+
 // ─── Command: /credits ────────────────────────────────────────────────────────
 
 async function handleCredits(chatId: number, userId: string): Promise<void> {
@@ -912,6 +1050,7 @@ type GeminiIntent = {
     | 'summary'
     | 'dispatch'
     | 'credits'
+    | 'resume'
     | 'help'
     | 'unknown'
   agent_name: string | null
@@ -943,7 +1082,7 @@ Available commands:
 agents, status, logs, run, stop, summary, credits, help, disconnect
 
 Classify the intent as exactly one of:
-agents | status | logs | run | stop | summary | dispatch | credits | help | unknown
+agents | status | logs | run | stop | summary | dispatch | credits | resume | help | unknown
 
 Also extract agent_name if a specific agent is mentioned, or null.
 
@@ -985,6 +1124,9 @@ Reply with JSON only, no markdown:
         break
       case 'credits':
         await handleCredits(chatId, userId)
+        break
+      case 'resume':
+        await handleResume(chatId, userId, `/resume ${agent_name ?? ''}`)
         break
       case 'help':
         await handleHelp(chatId)

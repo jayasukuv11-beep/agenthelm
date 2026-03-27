@@ -19,7 +19,17 @@ class AgentHelm {
         this.pingTimer = null;
         this.commandTimer = null;
         this.flushTimer = null;
-        const { key, name = 'Node Agent', agentType = 'node', version = '1.0.0', baseUrl = DEFAULT_BASE_URL, autoPing = true, pingInterval = 30000, commandPollInterval = 5000, verbose = true, timeout = 5000, } = options;
+        // Checkpoint state
+        this._currentTaskId = null;
+        this._stepCounter = 0;
+        this._lastCheckpointState = null;
+        this._stepStartTime = null;
+        // Burn-rate monitoring
+        this._tokenWindow = [];
+        this._burnRateAlerted = false;
+        this.dispatchHandler = null;
+        const { key, name = 'Node Agent', agentType = 'node', version = '1.0.0', baseUrl = DEFAULT_BASE_URL, autoPing = true, pingInterval = 30000, commandPollInterval = 5000, verbose = true, timeout = 5000, burnRateThreshold = 10000, } = options;
+        this._burnRateThreshold = burnRateThreshold;
         if (!key || !key.startsWith('ahe_')) {
             throw new Error('Invalid AgentHelm key. ' +
                 'Keys must start with "ahe_". ' +
@@ -124,18 +134,144 @@ class AgentHelm {
         this.log(`[${percent}%] ${message}`, 'info', { percent, message });
     }
     /**
+     * Save a checkpoint at the current step for resumability.
+     * Call between each tool/chain step to enable resume on crash.
+     * @param stepName - Human-readable label for this step
+     * @param state - Serializable state object at this step
+     * @param options - Optional step_index, input/output data, status
+     */
+    checkpoint(stepName, state, options = {}) {
+        const { stepIndex, inputData, outputData, status = 'completed', } = options;
+        const idx = stepIndex ?? this._stepCounter;
+        this._stepCounter = idx + 1;
+        // Calculate latency since last checkpoint
+        let latencyMs = null;
+        if (this._stepStartTime !== null) {
+            latencyMs = Math.round(Date.now() - this._stepStartTime);
+        }
+        this._stepStartTime = Date.now();
+        // Delta encoding: step 0 = full snapshot, step 1+ = delta only
+        let stateDelta = null;
+        let sendSnapshot = state;
+        if (idx > 0 && this._lastCheckpointState !== null) {
+            stateDelta = this.computeDelta(this._lastCheckpointState, state);
+            sendSnapshot = null; // Don't send full snapshot for deltas
+        }
+        this._lastCheckpointState = state;
+        const payload = {
+            key: this.getAuthKey(),
+            agent_id: this._agentId,
+            task_id: this._currentTaskId,
+            step_index: idx,
+            step_name: stepName,
+            status,
+            state_snapshot: sendSnapshot,
+            state_delta: stateDelta,
+            input_data: inputData ?? null,
+            output_data: outputData ?? null,
+            latency_ms: latencyMs,
+        };
+        if (status === 'failed') {
+            payload.error_data = outputData ?? null;
+        }
+        this.send('/checkpoint', payload);
+        // Phase 4: Check for user interventions (stop, pause, override)
+        this.processInterventions().catch((err) => {
+            if (this.verbose) {
+                console.error('[AgentHelm] \u26A0\uFE0F Failed to check interventions:', err);
+            }
+        });
+        if (this.verbose) {
+            console.log(`[AgentHelm] \uD83D\uDCCC Checkpoint: ${stepName} (step ${idx})`);
+        }
+    }
+    /**
+     * Resume a failed task from the last successful checkpoint.
+     * Returns the state snapshot at that checkpoint, or null.
+     * @param taskId - The task UUID to resume
+     * @param checkpointId - Specific checkpoint UUID to resume from
+     * @param stepIndex - Specific step to resume from (defaults to last successful)
+     */
+    async resumeFrom(taskId, checkpointId, stepIndex) {
+        try {
+            let url = `${this.baseUrl}/checkpoint` +
+                `?key=${encodeURIComponent(this.getAuthKey())}` +
+                `&task_id=${encodeURIComponent(taskId)}`;
+            if (checkpointId !== undefined) {
+                url += `&checkpoint_id=${encodeURIComponent(checkpointId)}`;
+            }
+            if (stepIndex !== undefined) {
+                url += `&step_index=${stepIndex}`;
+            }
+            const res = await this.fetchGet(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.checkpoint) {
+                    this._currentTaskId = taskId;
+                    this._stepCounter = data.checkpoint.step_index + 1;
+                    this._stepStartTime = Date.now();
+                    this._lastCheckpointState = data.checkpoint.state_snapshot;
+                    if (this.verbose) {
+                        console.log(`[AgentHelm] \uD83D\uDD04 Resuming from: ` +
+                            `${data.checkpoint.step_name} (step ${data.checkpoint.step_index})`);
+                    }
+                    return data.checkpoint.state_snapshot;
+                }
+                if (this.verbose) {
+                    console.log(`[AgentHelm] \u26A0\uFE0F No checkpoint found for task ${taskId.slice(0, 8)}...`);
+                }
+                return null;
+            }
+            return null;
+        }
+        catch {
+            if (this.verbose) {
+                console.log('[AgentHelm] \u26A0\uFE0F Failed to resume from checkpoint');
+            }
+            return null;
+        }
+    }
+    /**
      * Register a handler for dispatched tasks from the dashboard/Telegram.
      * @param handler - Function called with task name and data object
      */
     onDispatch(handler) {
+        this.dispatchHandler = handler;
         this.onCommand('dispatch', async (payload) => {
-            const task = String(payload.task ?? '');
-            const result = await handler(task, payload);
-            if (result) {
-                this.output(result, 'dispatch_result');
+            await this.runDispatchSafe(String(payload.task ?? ''), payload);
+        });
+        this.onCommand('custom', async (payload) => {
+            if (payload.action === 'resume') {
+                const taskId = payload.task_id;
+                const checkpointId = payload.checkpoint_id;
+                const taskDescription = (payload.task_description ?? 'Resumed Task');
+                await this.resumeFrom(taskId, checkpointId);
+                await this.runDispatchSafe(taskDescription, payload, true);
             }
         });
         return this;
+    }
+    async runDispatchSafe(task, data, isResume = false) {
+        if (!this.dispatchHandler)
+            return;
+        try {
+            if (!isResume) {
+                this._stepCounter = 0;
+                this._stepStartTime = Date.now();
+                this._lastCheckpointState = null;
+            }
+            this.progress(0, `${isResume ? 'Resuming' : 'Starting'} task: ${task}`);
+            const result = await this.dispatchHandler(task, data);
+            if (result) {
+                this.output(result, 'dispatch_result');
+            }
+        }
+        catch (err) {
+            if (this.verbose) {
+                console.error('[AgentHelm] \u274C Task failed:', err);
+            }
+            this.error(`Task failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
     }
     /**
      * Track token usage for credits dashboard.
@@ -164,6 +300,35 @@ class AgentHelm {
             },
             timestamp: new Date().toISOString(),
         });
+        // Burn-rate monitoring: sliding 60-second window
+        const now = Date.now();
+        this._tokenWindow.push({ timestamp: now, used });
+        this._tokenWindow = this._tokenWindow.filter((item) => now - item.timestamp < 60000);
+        const tokensPerMinute = this._tokenWindow.reduce((sum, item) => sum + item.used, 0);
+        if (tokensPerMinute > this._burnRateThreshold &&
+            !this._burnRateAlerted) {
+            this._burnRateAlerted = true;
+            this.warn(`\uD83D\uDD25 Token burn rate: ${tokensPerMinute.toLocaleString()}/min ` +
+                `exceeds threshold (${this._burnRateThreshold.toLocaleString()}/min)`);
+            // Send a special burn_rate log for Telegram alerts
+            this.send('/log', {
+                key: this.getAuthKey(),
+                agent_id: this._agentId,
+                type: 'burn_rate',
+                level: 'warning',
+                message: `Token burn rate: ${tokensPerMinute.toLocaleString()}/min`,
+                data: {
+                    tokens_per_minute: tokensPerMinute,
+                    threshold: this._burnRateThreshold,
+                    window_seconds: 60,
+                    model,
+                },
+                timestamp: new Date().toISOString(),
+            });
+        }
+        else if (tokensPerMinute <= this._burnRateThreshold) {
+            this._burnRateAlerted = false;
+        }
     }
     /**
      * Send a reply back to a dashboard/Telegram chat message.
@@ -399,6 +564,112 @@ class AgentHelm {
             // Put back at front if still failing
             this.queue.push(item.endpoint, item.payload);
         }
+    }
+    /**
+     * Compute what changed between two state snapshots.
+     * Returns a dict of {key: {op, value}} operations.
+     */
+    computeDelta(previous, current) {
+        const delta = {};
+        const allKeys = Array.from(new Set(Object.keys(previous).concat(Object.keys(current))));
+        for (let i = 0; i < allKeys.length; i++) {
+            const key = allKeys[i];
+            if (!(key in previous)) {
+                delta[key] = { op: 'add', value: current[key] };
+            }
+            else if (!(key in current)) {
+                delta[key] = { op: 'remove' };
+            }
+            else if (JSON.stringify(previous[key]) !== JSON.stringify(current[key])) {
+                delta[key] = { op: 'replace', value: current[key] };
+            }
+        }
+        return delta;
+    }
+    /**
+     * Check for and apply user interventions (stop, pause, override, etc.).
+     * Should be called at checkpoint boundaries.
+     */
+    async processInterventions() {
+        if (!this._currentTaskId)
+            return;
+        try {
+            if (!this._agentId)
+                return;
+            const url = `${this.baseUrl}/interventions` +
+                `?key=${encodeURIComponent(this.getAuthKey())}` +
+                `&agent_id=${encodeURIComponent(this._agentId)}` +
+                `&task_id=${encodeURIComponent(this._currentTaskId)}`;
+            const res = await this.fetchGet(url);
+            if (!res.ok)
+                return;
+            const data = (await res.json());
+            const interventions = data.interventions || [];
+            if (interventions.length === 0)
+                return;
+            const appliedIds = [];
+            for (const intervention of interventions) {
+                if (this.verbose) {
+                    console.log(`[AgentHelm] \uD83D\uDEA8 Intervention detected: ${intervention.type}`);
+                }
+                if (intervention.type === 'stop') {
+                    this.stop();
+                    throw new Error('Agent stopped by user intervention');
+                }
+                if (intervention.type === 'state_override') {
+                    if (this._lastCheckpointState) {
+                        Object.assign(this._lastCheckpointState, intervention.payload);
+                        if (this.verbose) {
+                            console.log(`[AgentHelm] \uD83D\uDCDD State override applied: ${Object.keys(intervention.payload).join(', ')}`);
+                        }
+                    }
+                }
+                if (intervention.type === 'pause') {
+                    if (this.verbose) {
+                        console.log('[AgentHelm] \u23F8 Agent paused by user. Waiting for resume...');
+                    }
+                    // Polling for resume
+                    let resumed = false;
+                    while (!resumed) {
+                        await new Promise((resolve) => setTimeout(resolve, 5000));
+                        const checkRes = await this.fetchGet(url);
+                        if (checkRes.ok) {
+                            const checkData = (await checkRes.json());
+                            const pending = checkData.interventions || [];
+                            const resumeInt = pending.find((p) => p.type === 'resume');
+                            if (resumeInt) {
+                                appliedIds.push(resumeInt.id);
+                                resumed = true;
+                                if (this.verbose) {
+                                    console.log('[AgentHelm] \u25B6\uFE0F Agent resumed');
+                                }
+                            }
+                        }
+                    }
+                }
+                appliedIds.push(intervention.id);
+            }
+            if (appliedIds.length > 0) {
+                await this.fetchPatch('/interventions', { ids: appliedIds });
+            }
+        }
+        catch (err) {
+            if (err instanceof Error && err.message === 'Agent stopped by user intervention') {
+                throw err;
+            }
+            throw err;
+        }
+    }
+    /**
+     * Helper for PATCH requests.
+     */
+    async fetchPatch(endpoint, payload) {
+        const url = `${this.baseUrl}${endpoint}?key=${encodeURIComponent(this.getAuthKey())}`;
+        await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
     }
 }
 exports.AgentHelm = AgentHelm;

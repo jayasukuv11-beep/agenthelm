@@ -9,6 +9,7 @@ export interface AgentHelmOptions {
     commandPollInterval?: number;
     verbose?: boolean;
     timeout?: number;
+    burnRateThreshold?: number;
 }
 export interface TrackTokensOptions {
     used: number;
@@ -20,6 +21,12 @@ export interface TrackTokensOptions {
 export type LogLevel = 'info' | 'warning' | 'error' | 'success';
 export type CommandHandler = (payload: Record<string, unknown>) => void | Promise<void>;
 export type ChatHandler = (message: string) => void | Promise<void>;
+export interface CheckpointOptions {
+    stepIndex?: number;
+    inputData?: Record<string, unknown>;
+    outputData?: Record<string, unknown>;
+    status?: 'running' | 'completed' | 'failed' | 'skipped';
+}
 export declare class AgentHelm {
     private readonly key;
     private readonly _name;
@@ -42,6 +49,13 @@ export declare class AgentHelm {
     private pingTimer;
     private commandTimer;
     private flushTimer;
+    private _currentTaskId;
+    private _stepCounter;
+    private _lastCheckpointState;
+    private _stepStartTime;
+    private _tokenWindow;
+    private _burnRateThreshold;
+    private _burnRateAlerted;
     constructor(options: AgentHelmOptions);
     /**
      * Send a log message to AgentHelm dashboard.
@@ -80,10 +94,28 @@ export declare class AgentHelm {
      */
     progress(percent: number, message: string): void;
     /**
+     * Save a checkpoint at the current step for resumability.
+     * Call between each tool/chain step to enable resume on crash.
+     * @param stepName - Human-readable label for this step
+     * @param state - Serializable state object at this step
+     * @param options - Optional step_index, input/output data, status
+     */
+    checkpoint(stepName: string, state: Record<string, unknown>, options?: CheckpointOptions): void;
+    /**
+     * Resume a failed task from the last successful checkpoint.
+     * Returns the state snapshot at that checkpoint, or null.
+     * @param taskId - The task UUID to resume
+     * @param checkpointId - Specific checkpoint UUID to resume from
+     * @param stepIndex - Specific step to resume from (defaults to last successful)
+     */
+    resumeFrom(taskId: string, checkpointId?: string, stepIndex?: number): Promise<Record<string, unknown> | null>;
+    /**
      * Register a handler for dispatched tasks from the dashboard/Telegram.
      * @param handler - Function called with task name and data object
      */
     onDispatch(handler: (task: string, data: Record<string, unknown>) => unknown): this;
+    private dispatchHandler;
+    private runDispatchSafe;
     /**
      * Track token usage for credits dashboard.
      * @param options - Token tracking options
@@ -130,6 +162,20 @@ export declare class AgentHelm {
     private pollCommands;
     private handleCommand;
     private flushQueue;
+    /**
+     * Compute what changed between two state snapshots.
+     * Returns a dict of {key: {op, value}} operations.
+     */
+    private computeDelta;
+    /**
+     * Check for and apply user interventions (stop, pause, override, etc.).
+     * Should be called at checkpoint boundaries.
+     */
+    private processInterventions;
+    /**
+     * Helper for PATCH requests.
+     */
+    private fetchPatch;
 }
 /**
  * One-line shortcut to connect an agent to AgentHelm.
