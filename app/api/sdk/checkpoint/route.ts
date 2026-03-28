@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       status = 'completed',
       state_snapshot,
       state_delta,
+      state_hash,
       input_data,
       output_data,
       tokens_used = 0,

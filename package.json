@@ -33,6 +33,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",
+    "resend": "^6.9.4",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7"
   },

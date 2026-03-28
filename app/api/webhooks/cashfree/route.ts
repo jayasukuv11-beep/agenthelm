@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { createClient } from "@supabase/supabase-js";
+import { sendIndieSubscriptionEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Configuration Error" }, { status: 500 });
     }
 
-    // Verify Signature manually to ensure compatibility with Next.js Request streams
+    // Verify Signature manually
     const signatureString = timestamp + rawBody;
     const computedSignature = crypto
       .createHmac("sha256", secretKey)
@@ -30,7 +37,6 @@ export async function POST(req: Request) {
     const payload = JSON.parse(rawBody);
     console.log("Cashfree Webhook Received:", payload.type);
     
-    // Check webhook event type
     switch (payload.type) {
       case "PAYMENT_SUCCESS_WEBHOOK": {
         const orderId = payload.data.order.order_id;
@@ -38,8 +44,47 @@ export async function POST(req: Request) {
         
         console.log(`✅ Payment confirmed for order: ${orderId} (Amount: ₹${paymentAmount})`);
         
-        // TODO: Update your database using the orderId. Example:
-        // await db.updateOrder(orderId, { status: "PAID" });
+        // 1. Fetch the subscription to get the associated user
+        const { data: subData, error: subError } = await supabaseAdmin
+          .from('subscriptions')
+          .select('user_id, plan')
+          .eq('order_id', orderId)
+          .single();
+
+        if (subError || !subData) {
+          console.error('Subscription not found for order:', orderId, subError);
+          break;
+        }
+
+        const userId = subData.user_id;
+
+        // 2. Update Subscription status
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ 
+            status: 'active', 
+            activated_at: new Date().toISOString() 
+          })
+          .eq('order_id', orderId);
+
+        // 3. Update Profile plan
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .update({ plan: subData.plan })
+          .eq('id', userId)
+          .select('email, full_name')
+          .single();
+
+        if (profileError || !profileData) {
+          console.error('Failed to update profile for user:', userId, profileError);
+          break;
+        }
+
+        // 4. Send Confirmation Email (if plan is indie)
+        if (subData.plan === 'indie') {
+           console.log(`Sending Indie Confirmation email to: ${profileData.email}`);
+           await sendIndieSubscriptionEmail(profileData.email, profileData.full_name);
+        }
         
         break;
       }
@@ -47,7 +92,10 @@ export async function POST(req: Request) {
       case "PAYMENT_FAILED_WEBHOOK": {
          const orderId = payload.data.order.order_id;
          console.warn(`❌ Payment failed for order: ${orderId}`);
-         // TODO: Mark order as failed in database
+         await supabaseAdmin
+           .from('subscriptions')
+           .update({ status: 'failed' })
+           .eq('order_id', orderId);
         break;
       }
 
