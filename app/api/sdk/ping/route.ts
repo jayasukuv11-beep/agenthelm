@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Rate limit exceeded (6 per min)' }, { status: 429 })
     }
 
-    const auth = await validateConnectKey(key)
+    const auth: any = await validateConnectKey(key)
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }

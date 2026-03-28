@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const auth = await validateConnectKey(key)
+    const auth: any = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any

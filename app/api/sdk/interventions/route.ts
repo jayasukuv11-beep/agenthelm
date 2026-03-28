@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     const agent_id = searchParams.get('agent_id')
     const task_id = searchParams.get('task_id')
 
-    const auth = await validateConnectKey(key)
+    const auth: any = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
     // Support both SDK (connect key) and Dashboard (session) requests
     if (key) {
-      const auth = await validateConnectKey(key)
+      const auth: any = await validateConnectKey(key)
       if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
       const { userId, supabaseAdmin } = auth as any
@@ -149,7 +149,7 @@ export async function PATCH(req: Request) {
     const body = await req.json()
     const { ids } = body
 
-    const auth = await validateConnectKey(key)
+    const auth: any = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const { supabaseAdmin } = auth as any
