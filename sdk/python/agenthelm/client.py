@@ -5,10 +5,13 @@ AgentHelm Python SDK Client
 import os
 import time
 import json
+import hashlib
 import threading
 import traceback
+import functools
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import Optional, Callable, Any, Dict
+from typing import Optional, Callable, Any, Dict, List
 
 import requests
 
@@ -107,6 +110,16 @@ class Agent:
         # Offline queue
         self._queue = OfflineQueue(maxsize=1000)
         
+        # Async send pool (non-blocking for logs/tokens/progress)
+        self._send_pool = ThreadPoolExecutor(
+            max_workers=4,
+            thread_name_prefix="agenthelm-send"
+        )
+        
+        # Classification-First execution tracking
+        self._tool_execution_history: List[dict] = []  # recent executions for dedup
+        self._irreversible_timeout: int = 60  # seconds to wait for human approval
+        
         # Register agent on startup
         self._register()
         
@@ -157,7 +170,7 @@ class Agent:
                 "data": data,
                 "timestamp": self._now()
             }
-            self._send("/api/sdk/log", payload)
+            self._send_async("/api/sdk/log", payload)
         except Exception as e:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to log: {e}")
@@ -189,7 +202,7 @@ class Agent:
                 "label": label,
                 "timestamp": self._now()
             }
-            self._send("/api/sdk/output", payload)
+            self._send_async("/api/sdk/output", payload)
         except Exception as e:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to output: {e}")
@@ -241,7 +254,7 @@ class Agent:
                 },
                 "timestamp": self._now(),
             }
-            self._send("/api/sdk/log", payload)
+            self._send_async("/api/sdk/log", payload)
         except Exception as e:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to progress: {e}")
@@ -262,7 +275,7 @@ class Agent:
                 "data": data,
                 "timestamp": self._now()
             }
-            self._send("/api/sdk/log", payload)
+            self._send_async("/api/sdk/log", payload)
         except Exception as e:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to warn: {e}")
@@ -307,7 +320,7 @@ class Agent:
                 "data": error_data,
                 "timestamp": self._now()
             }
-            self._send("/api/sdk/log", payload)
+            self._send_async("/api/sdk/log", payload)
         except Exception as e:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to error: {e}")
@@ -361,7 +374,7 @@ class Agent:
             },
             "timestamp": self._now()
         }
-        self._send("/api/sdk/log", payload)
+        self._send_async("/api/sdk/log", payload)
         
         # Burn-rate monitoring: sliding 60-second window
         now = time.time()
@@ -393,7 +406,7 @@ class Agent:
                 },
                 "timestamp": self._now()
             }
-            self._send("/api/sdk/log", burn_payload)
+            self._send_async("/api/sdk/log", burn_payload)
         elif tokens_per_minute <= self._burn_rate_threshold:
             self._burn_rate_alerted = False
     
@@ -428,6 +441,14 @@ class Agent:
                 dock.checkpoint("analysis_complete", {"analysis": result2})
         """
         try:
+            # Validate state is JSON-serializable before anything
+            try:
+                json.dumps(state, default=str)
+            except (TypeError, ValueError) as e:
+                if self._verbose:
+                    print(f"[AgentHelm] ❌ State is not JSON-serializable: {e}")
+                return
+            
             if step_index is None:
                 step_index = self._step_counter
                 self._step_counter += 1
@@ -447,7 +468,10 @@ class Agent:
                 state_delta = self._compute_delta(self._last_checkpoint_state, state)
                 send_snapshot = None  # Don't send full snapshot for deltas
             
-            self._last_checkpoint_state = state
+            # SHA256 integrity hash for corruption detection
+            state_hash = hashlib.sha256(
+                json.dumps(state, sort_keys=True, default=str).encode()
+            ).hexdigest()
             
             payload = {
                 "key": self.auth_key,
@@ -458,6 +482,7 @@ class Agent:
                 "status": status,
                 "state_snapshot": send_snapshot,
                 "state_delta": state_delta,
+                "state_hash": state_hash,
                 "input_data": input_data,
                 "output_data": output_data,
                 "latency_ms": latency_ms,
@@ -466,13 +491,19 @@ class Agent:
             if status == "failed":
                 payload["error_data"] = output_data
             
-            self._send("/api/sdk/checkpoint", payload)
+            # ATOMICITY FIX: Only update internal state if the server confirms
+            success = self._send("/api/sdk/checkpoint", payload)
+            if success:
+                self._last_checkpoint_state = state
+            else:
+                if self._verbose:
+                    print(f"[AgentHelm] ⚠️ Checkpoint NOT persisted — state rollback")
             
             # Phase 4: Check for user interventions (stop, pause, override)
             self._process_interventions()
             
             if self._verbose:
-                print(f"[AgentHelm] 📌 Checkpoint: {step_name} (step {step_index})")
+                print(f"[AgentHelm] 📌 Checkpoint: {step_name} (step {step_index}) [hash:{state_hash[:8]}]")
                 
         except Exception as e:
             if self._verbose:
@@ -755,8 +786,9 @@ class Agent:
     
     def _send(self, endpoint: str, payload: dict) -> bool:
         """
-        Send request to AgentHelm API.
+        Send request to AgentHelm API (synchronous).
         Falls back to offline queue on failure.
+        Used for critical paths: checkpoint, register.
         """
         payload["key"] = self.auth_key
         try:
@@ -771,6 +803,17 @@ class Agent:
             if self._queue.size() < 1000:
                 self._queue.push(endpoint, payload)
             return False
+    
+    def _send_async(self, endpoint: str, payload: dict) -> None:
+        """
+        Non-blocking send for non-critical telemetry (logs, tokens, progress).
+        Prevents slow downstream (e.g., Telegram notifications) from blocking agent.
+        """
+        try:
+            self._send_pool.submit(self._send, endpoint, payload)
+        except RuntimeError:
+            # Pool shut down — fall back to sync
+            self._send(endpoint, payload)
     
     def _start_ping_timer(self) -> None:
         """Start the heartbeat timer."""
@@ -1078,6 +1121,241 @@ class Agent:
             elif previous[key] != current[key]:
                 delta[key] = {"op": "replace", "value": current[key]}
         return delta
+    
+    # ─── CLASSIFICATION-FIRST DECORATORS ─────────────────
+    
+    def read(self, func: Callable) -> Callable:
+        """
+        Decorator: marks a tool call as read-only.
+        Unlimited retries, no human confirmation needed.
+        
+        Example:
+            @dock.read
+            def search_web(query):
+                return google.search(query)
+        """
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            tool_name = func.__name__
+            self._log_tool_execution(tool_name, "read", args, kwargs)
+            if self._verbose:
+                print(f"[AgentHelm] 🔍 READ: {tool_name}")
+            return func(*args, **kwargs)
+        return wrapper
+    
+    def side_effect(self, max_retries: int = 3, dedup: bool = True):
+        """
+        Decorator: marks a tool call as having side effects.
+        Bounded retries with optional idempotency dedup.
+        
+        Example:
+            @dock.side_effect(max_retries=3, dedup=True)
+            def send_slack_message(channel, text):
+                return slack.post(channel, text)
+        """
+        def decorator(func: Callable) -> Callable:
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                tool_name = func.__name__
+                
+                # Compute idempotency key from function name + args
+                input_str = json.dumps(
+                    {"fn": tool_name, "args": str(args), "kwargs": str(kwargs)},
+                    sort_keys=True, default=str
+                )
+                idempotency_key = hashlib.sha256(input_str.encode()).hexdigest()
+                
+                # Dedup check: skip if identical call was made recently
+                if dedup:
+                    for prev in self._tool_execution_history:
+                        if (prev.get("idempotency_key") == idempotency_key
+                                and prev.get("status") == "executed"):
+                            if self._verbose:
+                                print(
+                                    f"[AgentHelm] ⏭️ DEDUP: {tool_name} "
+                                    f"skipped (identical call already executed)"
+                                )
+                            return prev.get("result")
+                
+                # Retry logic
+                last_error = None
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        result = func(*args, **kwargs)
+                        execution = {
+                            "tool_name": tool_name,
+                            "classification": "side_effect",
+                            "idempotency_key": idempotency_key,
+                            "status": "executed",
+                            "attempt": attempt,
+                            "result": result,
+                            "timestamp": self._now()
+                        }
+                        self._tool_execution_history.append(execution)
+                        self._log_tool_execution(
+                            tool_name, "side_effect", args, kwargs,
+                            status="executed", attempt=attempt
+                        )
+                        if self._verbose:
+                            print(
+                                f"[AgentHelm] ⚡ SIDE_EFFECT: {tool_name} "
+                                f"(attempt {attempt}/{max_retries}) ✅"
+                            )
+                        return result
+                    except Exception as e:
+                        last_error = e
+                        if self._verbose:
+                            print(
+                                f"[AgentHelm] ⚡ SIDE_EFFECT: {tool_name} "
+                                f"(attempt {attempt}/{max_retries}) ❌ {e}"
+                            )
+                        if attempt < max_retries:
+                            time.sleep(min(2 ** attempt, 10))  # exponential backoff
+                
+                # All retries exhausted
+                self._log_tool_execution(
+                    tool_name, "side_effect", args, kwargs,
+                    status="failed", attempt=max_retries
+                )
+                self.warn(
+                    f"Side-effect '{tool_name}' failed after {max_retries} retries: "
+                    f"{last_error}"
+                )
+                raise last_error  # type: ignore[misc]
+            return wrapper
+        return decorator
+    
+    def irreversible(self, confirm: str = "telegram", timeout: Optional[int] = None):
+        """
+        Decorator: marks a tool call as irreversible.
+        One-shot execution. Requires human confirmation before firing.
+        Auto-rejects after timeout (default 60s).
+        
+        Example:
+            @dock.irreversible(confirm="telegram", timeout=60)
+            def delete_database_record(record_id):
+                return db.delete(record_id)
+        """
+        wait_seconds = timeout or self._irreversible_timeout
+        
+        def decorator(func: Callable) -> Callable:
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                tool_name = func.__name__
+                
+                input_str = json.dumps(
+                    {"fn": tool_name, "args": str(args), "kwargs": str(kwargs)},
+                    sort_keys=True, default=str
+                )
+                input_hash = hashlib.sha256(input_str.encode()).hexdigest()
+                
+                if self._verbose:
+                    print(
+                        f"[AgentHelm] 🛑 IRREVERSIBLE: {tool_name} — "
+                        f"requesting human approval ({confirm})..."
+                    )
+                
+                # Request approval via the Pre-Action Gate
+                approval_payload = {
+                    "key": self.auth_key,
+                    "agent_id": self._agent_id,
+                    "task_id": self._current_task_id,
+                    "tool_name": tool_name,
+                    "classification": "irreversible",
+                    "input_hash": input_hash,
+                    "input_preview": str(args)[:200],
+                    "confirm_channel": confirm,
+                    "status": "pending_approval"
+                }
+                self._send("/api/sdk/execution", approval_payload)
+                
+                # Poll for approval/rejection
+                start_time = time.time()
+                while time.time() - start_time < wait_seconds:
+                    try:
+                        response = requests.get(
+                            f"{self._base_url}/api/sdk/execution",
+                            params={
+                                "key": self.auth_key,
+                                "agent_id": self._agent_id,
+                                "input_hash": input_hash
+                            },
+                            timeout=self._timeout
+                        )
+                        if response.status_code == 200:
+                            data = response.json()
+                            status = data.get("status")
+                            if status == "approved":
+                                if self._verbose:
+                                    print(
+                                        f"[AgentHelm] ✅ APPROVED: {tool_name} — executing"
+                                    )
+                                result = func(*args, **kwargs)
+                                self._log_tool_execution(
+                                    tool_name, "irreversible", args, kwargs,
+                                    status="executed"
+                                )
+                                return result
+                            elif status == "rejected":
+                                if self._verbose:
+                                    print(
+                                        f"[AgentHelm] ❌ REJECTED: {tool_name} — skipped"
+                                    )
+                                self._log_tool_execution(
+                                    tool_name, "irreversible", args, kwargs,
+                                    status="rejected"
+                                )
+                                return None
+                    except Exception:
+                        pass
+                    time.sleep(3)  # poll every 3 seconds
+                
+                # Timeout — auto-reject for safety
+                if self._verbose:
+                    print(
+                        f"[AgentHelm] ⏰ TIMEOUT: {tool_name} — "
+                        f"auto-rejected after {wait_seconds}s"
+                    )
+                self._log_tool_execution(
+                    tool_name, "irreversible", args, kwargs,
+                    status="timeout_rejected"
+                )
+                self.warn(
+                    f"Irreversible action '{tool_name}' auto-rejected "
+                    f"after {wait_seconds}s timeout (no human response)"
+                )
+                return None
+            return wrapper
+        return decorator
+    
+    def _log_tool_execution(
+        self,
+        tool_name: str,
+        classification: str,
+        args: tuple,
+        kwargs: dict,
+        status: str = "executed",
+        attempt: int = 1
+    ) -> None:
+        """Log a tool execution to the dashboard (non-blocking)."""
+        payload = {
+            "key": self.auth_key,
+            "agent_id": self._agent_id,
+            "task_id": self._current_task_id,
+            "type": "tool_execution",
+            "level": "info" if status == "executed" else "warning",
+            "message": f"[{classification.upper()}] {tool_name} — {status}",
+            "data": {
+                "tool_name": tool_name,
+                "classification": classification,
+                "status": status,
+                "attempt": attempt
+            },
+            "timestamp": self._now()
+        }
+        self._send_async("/api/sdk/log", payload)
+    
+    # ─── STATIC / DUNDER ──────────────────────────────────
     
     def __repr__(self) -> str:
         return (
