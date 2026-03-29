@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/dashboard/agents", icon: Users, label: "Agents" },
   { href: "/dashboard/credits", icon: CreditCard, label: "Credits" },
+  { href: "/dashboard/guide", icon: HelpCircle, label: "Guide" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 

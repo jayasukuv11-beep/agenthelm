@@ -52,7 +52,7 @@ export function CashfreeCheckoutButton({
         mode: process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === "SANDBOX" ? "sandbox" : "production",
       });
 
-      let checkoutOptions = {
+      const checkoutOptions = {
         paymentSessionId: data.payment_session_id,
         redirectTarget: "_modal",
       };

@@ -219,7 +219,7 @@ export async function POST(req: Request) {
     }
 
     // Validate + normalize data size
-    let safeData: unknown = data === undefined ? null : data
+    const safeData: unknown = data === undefined ? null : data
     if (safeData !== null) {
       try {
         const json = JSON.stringify(safeData)

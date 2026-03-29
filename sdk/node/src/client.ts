@@ -911,9 +911,9 @@ export class AgentHelm {
             await new Promise((resolve) => setTimeout(resolve, 5000))
             const checkRes = await this.fetchGet(url)
             if (checkRes.ok) {
-              const checkData = (await checkRes.json()) as any
+              const checkData = (await checkRes.json()) as { interventions?: { id: string; type: string }[] }
               const pending = checkData.interventions || []
-              const resumeInt = pending.find((p: any) => p.type === 'resume')
+              const resumeInt = pending.find((p) => p.type === 'resume')
               if (resumeInt) {
                 appliedIds.push(resumeInt.id)
                 resumed = true

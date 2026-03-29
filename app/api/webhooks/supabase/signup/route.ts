@@ -10,28 +10,34 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    // Basic security check: you can set a custom header in Supabase Webhook
-    // e.g., x-webhook-secret: your_secret
-    const secret = req.headers.get('x-webhook-secret');
-    if (secret !== process.env.SETUP_SECRET && process.env.NODE_ENV === 'production') {
-       console.error('Unauthorized Signup Webhook Access');
+    // Basic security check
+    const secret = req.headers.get('x-webhook-secret')?.trim();
+    const expectedSecret = process.env.SETUP_SECRET?.trim();
+    
+    console.log('Webhook Debug - Received Secret:', secret ? 'EXISTS' : 'MISSING');
+    
+    if (secret !== expectedSecret && process.env.NODE_ENV === 'production') {
+       console.error('Unauthorized Signup Webhook Access. Expected secret exists:', !!expectedSecret);
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = await req.json();
-    console.log('Signup Webhook Payload:', payload);
+    console.log('Signup Webhook Payload Structure:', Object.keys(payload));
 
-    // Supabase Webhook payloads for INSERT have the record in 'record' or 'new'
-    // depending on version, but usually it is direct or inside 'record'
+    // Supabase Webhook payloads for INSERT have the record in 'record'
     const profile = payload.record || payload;
     const { email, full_name } = profile;
 
+    console.log('Webhook Debug - Profile Email:', email);
+    console.log('Webhook Debug - Profile Full Name:', full_name);
+
     if (!email) {
+      console.error('Webhook Error - No email found in payload');
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    console.log(`Sending welcome email to: ${email}`);
-    const result = await sendWelcomeEmail(email, full_name);
+    console.log(`Attempting to send welcome email to: ${email}`);
+    const result = await sendWelcomeEmail(email, full_name || '');
 
     if (!result.success) {
        // Log the error but return 200 so Supabase doesn't retry unnecessarily
