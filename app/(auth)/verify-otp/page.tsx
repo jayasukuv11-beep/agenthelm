@@ -154,7 +154,7 @@ function VerifyOTPContent() {
             Verify your email
           </CardTitle>
           <CardDescription className="text-gray-400">
-            We sent a 6-digit code to {email || "your email"}
+            We sent a 6-digit code or magic link to {email || "your email"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -176,8 +176,11 @@ function VerifyOTPContent() {
                 />
               ))}
             </div>
+            <div className="text-center text-sm text-gray-400 mt-2">
+              Got a magic link? Just click the link in your email to sign in directly!
+            </div>
             
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            {error && <p className="text-red-400 text-sm text-center font-medium">{error}</p>}
             
             <div className="flex justify-center">
               {loading && <Loader2 className="h-6 w-6 text-[#10b981] animate-spin" />}

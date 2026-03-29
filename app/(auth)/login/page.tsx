@@ -130,7 +130,7 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
-            {success && <p className="text-[#10b981] text-sm">Check your email for the OTP! Redirecting...</p>}
+            {success && <p className="text-[#10b981] text-sm font-medium">Check your email for the code or magic link! Redirecting...</p>}
             
             <Button
               type="submit"

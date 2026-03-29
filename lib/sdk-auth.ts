@@ -91,8 +91,8 @@ export async function validateConnectKey(keyOrToken: string | null) {
       plan: profile.plan,
       supabaseAdmin // Need to return this or instances to share the connection
     }
-  } catch (err: any) {
-    console.error('validateConnectKey error:', err.message)
+  } catch (err: unknown) {
+    console.error('validateConnectKey error:', err instanceof Error ? err.message : String(err))
     return { error: 'Internal server error validating key', status: 500 }
   }
 }

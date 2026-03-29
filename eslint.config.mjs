@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "sdk/node/dist/**",
+    "sdk/node/build-esm.js",
+    "sdk/python/**",
+    "node_modules/**",
   ]),
 ]);
 
