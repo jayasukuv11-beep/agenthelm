@@ -97,22 +97,23 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            <span className="text-zinc-500 text-2xl md:text-3xl block font-mono mb-2">/resilient-observability</span>
-            Take the <span className="text-emerald-500 relative">
-              Helm
+            <span className="text-red-500/80 text-2xl md:text-3xl block font-mono mb-2">/human_in_the_loop</span>
+            Stop your AI Agents from <br className="hidden md:block" />
+            <span className="text-emerald-500 relative">
+              burninating
               <svg className="absolute w-full h-3 -bottom-1 left-0 text-emerald-500/30" viewBox="0 0 100 10" preserveAspectRatio="none">
                 <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="4" fill="none" />
               </svg>
-            </span><br className="hidden md:block" /> of Your AI Agents
+            </span> your API budget.
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Add one line. Dispatch tasks to your agents from your phone. Monitor logs, track tokens, get instant alerts, and control every agent from Telegram — even when your laptop is off.
+            AgentHelm is a Mission Control SDK for your AI agents. Implement "Classification-First" safety boundaries in minutes. Get live Telegram alerts for sensitive tool calls and safely resume agents from exact checkpoints.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12 w-full sm:w-auto">
             <Link href="/login" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-lg px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)]">
-              Take the Helm — Free <ArrowRight className="w-5 h-5" />
+              Deploy your first safe agent <ArrowRight className="w-5 h-5" />
             </Link>
             <Link href="#how-it-works" className="border border-gray-700 text-gray-400 hover:text-white hover:border-emerald-500 font-medium text-lg px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-[#111]">
               See How It Works <ArrowRight className="w-5 h-5 rotate-90" />
@@ -132,20 +133,21 @@ export default function LandingPage() {
               </div>
               <pre className="text-zinc-300">
                 <code className="block">
-                  <span className="text-zinc-500"># Install</span><br/>
+                  <span className="text-zinc-500"># Install the SDK</span><br/>
                   <span className="text-zinc-100">pip install agenthelm-sdk</span><br/><br/>
                   
-                  <span className="text-zinc-500"># Connect & listen for tasks</span><br/>
-                  <span className="text-emerald-400">from</span> agenthelm <span className="text-emerald-400">import</span> Agent<br/><br/>
-
-                  agent = Agent(key=<span className="text-emerald-300">"ahe_live_..."</span>)<br/>
+                  <span className="text-zinc-500"># Protect sensitive functions</span><br/>
+                  <span className="text-emerald-400">import</span> agenthelm <span className="text-emerald-400">as</span> helm<br/><br/>
                   
-                  <span className="text-blue-400">@agent.on_dispatch</span><br/>
-                  <span className="text-emerald-400">def</span> <span className="text-blue-400">handle_task</span>(task, data):<br/>
-                  &nbsp;&nbsp;agent.log(<span className="text-emerald-300">f"Dispatch received: {"{task}"}"</span>)<br/>
-                  &nbsp;&nbsp;agent.progress(<span className="text-zinc-400">25</span>, <span className="text-emerald-300">"Searching..."</span>)<br/>
-                  &nbsp;&nbsp;agent.track_tokens(used=<span className="text-zinc-400">500</span>, model=<span className="text-emerald-300">"gpt-4o"</span>, cost_per_1k=<span className="text-zinc-400">0.005</span>)<br/>
-                  &nbsp;&nbsp;<span className="text-emerald-400">return</span> {"{"}<span className="text-emerald-300">"url"</span>: <span className="text-emerald-300">"leads.csv"</span>{"}"}
+                  <span className="text-zinc-500"># Pauses agent. Requires Human Approval via Telegram</span><br/>
+                  <span className="text-red-400">@helm.irreversible</span><br/>
+                  <span className="text-emerald-400">def</span> <span className="text-blue-400">drop_database_tables</span>():<br/>
+                  &nbsp;&nbsp;<span className="text-zinc-400"># ...</span><br/><br/>
+
+                  <span className="text-zinc-500"># Continues safely but creates a checkpoint</span><br/>
+                  <span className="text-yellow-400">@helm.side_effect</span><br/>
+                  <span className="text-emerald-400">def</span> <span className="text-blue-400">charge_credit_card</span>(amount):<br/>
+                  &nbsp;&nbsp;<span className="text-zinc-400"># ...</span>
                 </code>
               </pre>
             </div>
@@ -157,9 +159,9 @@ export default function LandingPage() {
       <section id="features" className="py-16 md:py-24 px-6 bg-[#09090b]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Running AI agents is a black box</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Stop AI Agent Loops before they burn your budget</h2>
             <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              You built it. You deployed it. Now you have no idea what it's doing.
+              You built it. You deployed it. Now it's stuck in a loop calling an expensive API.
             </p>
           </div>
 
@@ -200,38 +202,36 @@ export default function LandingPage() {
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
-            <Badge variant="outline" className="border-red-500/50 text-red-400 px-3 py-1 rounded-full bg-red-500/5 animate-pulse">
-              vs Claude Dispatch
+            <Badge variant="outline" className="border-emerald-500/50 text-emerald-400 px-3 py-1 rounded-full bg-emerald-500/5">
+              The Missing Piece
             </Badge>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-[1.1]">
-              The Open Alternative to <br/>
-              <span className="text-zinc-500">Claude Dispatch</span>
+              You have an Orchestrator.<br/>
+              <span className="text-zinc-500">Now you need Mission Control.</span>
             </h2>
             <div className="space-y-4 text-zinc-400 text-lg">
-              <p>Claude is powerful but expensive and locked to one provider. It requires your Mac to be awake and is limited to specific use cases.</p>
-              <p>AgentHelm Dispatch works with <strong className="text-emerald-400">any agent</strong>, on any server, using any LLM provider. Control your agents from Telegram while your laptop is closed at the beach.</p>
+              <p>Frameworks like <strong className="text-white">LangGraph</strong> and <strong className="text-white">CrewAI</strong> are excellent at managing the internal thought process of agents.</p>
+              <p>But when an agent goes off the rails in production, they lack native, mobile-friendly remote control. AgentHelm wraps around these frameworks to provide an external Governance Layer with Human-in-the-loop safety.</p>
             </div>
           </div>
 
           <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm overflow-hidden shadow-2xl">
             <div className="grid grid-cols-2 border-b border-zinc-800">
-              <div className="p-4 text-center text-zinc-500 font-medium">Claude Dispatch</div>
-              <div className="p-4 text-center bg-emerald-500/10 text-emerald-400 font-bold border-l border-zinc-800">AgentHelm</div>
+              <div className="p-4 text-center text-zinc-500 font-medium">Orchestrators (LangGraph)</div>
+              <div className="p-4 text-center bg-emerald-500/10 text-emerald-400 font-bold border-l border-zinc-800">AgentHelm Governance</div>
             </div>
             <div className="divide-y divide-zinc-800">
               {[
-                ["Costs", "$20/mo + Usage", "Free to Start"],
-                ["Resilience", "State lost on crash", "Auto-Resume & Checkpoints"],
-                ["Lock-in", "Claude Only", "Any LLM (Open Source)"],
-                ["Storage", "Heavy Snapshots", "Optimized State Deltas"],
-                ["Availability", "Mac must be awake", "Cloud-native (Always on)"],
-                ["Interface", "Desktop Only", "Telegram + Dashboard"],
-                ["Control", "Auto-only", "/resume + State Overrides"]
-              ].map(([feature, claude, helm], i) => (
+                ["Core Focus", "Internal Agent Logic", "External Observability"],
+                ["Intervention", "Code Changes Required", "1-Click Telegram Approval"],
+                ["Resumes", "Requires DB Config", "Out-of-the-box Hydration"],
+                ["Monitoring", "Terminal Logs", "Real-time Mobile Dashboard"],
+                ["Boundaries", "Manual Checks", "Classification-First Decorators"],
+              ].map(([feature, framework, helm], i) => (
                 <div key={i} className="grid grid-cols-2 text-sm">
                   <div className="p-4 text-zinc-400 flex flex-col gap-1">
                     <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-bold">{feature}</span>
-                    <span>{claude}</span>
+                    <span>{framework}</span>
                   </div>
                   <div className="p-4 bg-emerald-500/5 text-zinc-200 border-l border-zinc-800 flex items-center gap-2">
                     <Check className="w-4 h-4 text-emerald-500 shrink-0" />
