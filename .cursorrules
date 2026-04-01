@@ -1,0 +1,28 @@
+# AgentHelm Cursor Rules
+> Optimized for building sovereign AI Agent infrastructure.
+
+## Project Architecture
+- **Framework**: Next.js (App Router), TailwindCSS, TypeScript.
+- **Database**: Supabase (Postgres) with heavily documented RLS policies.
+- **Redis (Upstash)**: Used for Rate-limiting and Idempotency locks.
+- **SDKs**: Python (primary) and Node.js (secondary).
+- **Billing**: Cashfree (Indian) / Stripe (International).
+
+## Naming Conventions
+- **Database Tables**: snake_case (e.g. `agent_logs`).
+- **TypeScript**: PascalCase for components/types, camelCase for variables/functions.
+- **React Components**: Function-based components with `use client` or `use server` markers.
+
+## Primary Stack Preferences
+- Always use **Lucide React** for icons.
+- Prefer **Radix UI** primitives and **Shadcn UI** components.
+- Use **Postgres Functions** (`rpc`) for complex atomic database operations.
+
+## SDK Usage Standards
+- Always use the `@helm` decorators (Python) when defining tools.
+- Never hardcode the `baseUrl`; use `DEFAULT_BASE_URL` or environment variables.
+- Ensure `track_tokens` is called after every LLM completion to secure revenue and monitor burn-rates.
+
+## Telemetry Patterns
+- Use `dock.progress(percent, message)` to ensure Telegram users see live status updates.
+- Use `dock.checkpoint(name, state)` before any tool that might fail.

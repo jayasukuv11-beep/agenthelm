@@ -1,0 +1,41 @@
+# AgentHelm
+> The High-Agency AI Developer Platform.
+
+AgentHelm is a developer-first platform for building, observing, and scaling autonomous AI agents. It provides a "Classification-First" SDK that categorizes tool actions to safely automate long-running tasks.
+
+## Core Features
+- **Observability**: Real-time telemetry, token windows, and agent reasoning chains.
+- **Orchestration**: Supervisor-first swarm patterns for complex task delegation.
+- **Memory (autoDream)**: Background context consolidation using "Sleep-time Compute".
+- **Safety Gates**: Pre-action human confirmation for irreversible agent decisions.
+- **Budget Protection**: Dollar-based spend limits and idempotency locks.
+
+## Getting Started
+To connect an agent, use a connect key (`ahe_live_...`) and the appropriate SDK.
+
+### Python SDK
+```python
+import agenthelm
+dock = agenthelm.connect("YOUR_KEY")
+
+@dock.on_dispatch
+def handle_task(task):
+    return "Task completed"
+
+dock.listen()
+```
+
+### Node.js SDK
+```typescript
+import { AgentHelm } from 'agenthelm';
+const dock = new AgentHelm({ key: 'YOUR_KEY' });
+
+dock.onDispatch(async (task) => {
+  return "Task completed";
+});
+```
+
+## Documentation Reference
+- Full API Reference: [llms-full.txt](llms-full.txt)
+- SDK Repositories: [agenthelm/agenthelm-python](https://github.com/agenthelm/agenthelm-python)
+- Dashboard: [agenthelm.online](https://agenthelm.online)
