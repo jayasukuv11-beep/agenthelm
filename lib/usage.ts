@@ -9,6 +9,7 @@ const supabaseAdmin = createClient(
 export type UserUsage = {
   agentCount: number
   monthlyTokens: number
+  monthlyCostUsd: number
   plan: 'free' | 'indie' | 'studio'
   tokensLimit: number
   agentLimit: number
@@ -29,7 +30,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
       .eq('user_id', userId),
     supabaseAdmin
       .from('credit_usage')
-      .select('tokens_used')
+      .select('tokens_used, cost_usd')
       .eq('user_id', userId)
       .gte('created_at', firstDayOfMonth),
     supabaseAdmin
@@ -40,6 +41,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   ])
 
   const monthlyTokens = (usageData ?? []).reduce((sum, r) => sum + (r.tokens_used || 0), 0)
+  const monthlyCostUsd = (usageData ?? []).reduce((sum, r) => sum + (r.cost_usd || 0), 0)
   const plan = (profile?.plan || 'free') as 'free' | 'indie' | 'studio'
   
   // Default limits based on plan if not specified in profile
@@ -49,6 +51,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   return {
     agentCount: agentCount || 0,
     monthlyTokens,
+    monthlyCostUsd,
     plan,
     tokensLimit,
     agentLimit
