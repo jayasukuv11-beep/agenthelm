@@ -16,6 +16,8 @@ from typing import Optional, Callable, Any, Dict, List
 import requests
 
 from .queue import OfflineQueue
+from .memory import MemoryEngine
+from .swarms import SwarmCoordinator
 
 # Default API URL — can be overridden for self-hosted
 DEFAULT_BASE_URL = "https://agenthelm.online"
@@ -109,6 +111,10 @@ class Agent:
         
         # Offline queue
         self._queue = OfflineQueue(maxsize=1000)
+        
+        # Phase 1: Convergence Features
+        self.memory = MemoryEngine()
+        self.swarms = SwarmCoordinator(lead_name=self._name)
         
         # Async send pool (non-blocking for logs/tokens/progress)
         self._send_pool = ThreadPoolExecutor(
@@ -410,6 +416,28 @@ class Agent:
         elif tokens_per_minute <= self._burn_rate_threshold:
             self._burn_rate_alerted = False
     
+    def sync_memory(self) -> None:
+        """
+        Syncs the local Tier 2 memory index (MEMORY.md) to Agent Helm.
+        This allows the dashboard to reflect the agent's current 'brain state'
+        without sending raw API keys or daily episodic logs.
+        """
+        try:
+            index_content = self.memory.read_index()
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "index_content": index_content,
+                "timestamp": self._now()
+            }
+            # Fire and forget over async worker pool
+            self._send_async("/api/sdk/memory", payload)
+            if self._verbose:
+                print(f"[AgentHelm] 🧠 Synced agent memory context ({len(index_content)} bytes)")
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to sync memory: {e}")
+
     def checkpoint(
         self,
         step_name: str,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendIndieSubscriptionEmail } from "@/lib/email";
+import { acquireLock } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,16 @@ export async function POST(req: Request) {
     const payload = JSON.parse(rawBody);
     console.log("Cashfree Webhook Received:", payload.type);
     
+    // Idempotency check: Cashfree might send the exact same webhook multiple times
+    const webhookId = payload.data.order?.order_id || timestamp;
+    const lockKey = `webhook_process:${webhookId}:${payload.type}`;
+    // We fail-open (true) here so if Redis is down, we don't drop webhooks
+    const locked = await acquireLock(lockKey, 86400, true);
+    if (!locked) {
+      console.log(`[Webhook Idempotency] Skipping duplicate webhook ${lockKey}`);
+      return NextResponse.json({ status: "OK", duplicate: true }, { status: 200 });
+    }
+
     switch (payload.type) {
       case "PAYMENT_SUCCESS_WEBHOOK": {
         const orderId = payload.data.order.order_id;

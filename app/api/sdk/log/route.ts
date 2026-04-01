@@ -16,30 +16,8 @@ const RATE_LIMIT_WINDOW_SECONDS = 60 * 60
 // Dedupe: suppress duplicates for a while when `event_id` is provided
 const EVENT_DEDUPE_TTL_SECONDS = 60 * 60 * 24 // 24h
 
-type UpstashConfig = { url: string; token: string }
+import { getUpstashConfig, upstashRest, acquireLock } from '@/lib/redis'
 
-function getUpstashConfig(): UpstashConfig | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
-  return { url: url.replace(/\/+$/, ''), token }
-}
-
-async function upstashRest(cmdPath: string): Promise<any | null> {
-  const cfg = getUpstashConfig()
-  if (!cfg) return null
-
-  try {
-    const res = await fetch(`${cfg.url}/${cmdPath}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${cfg.token}` },
-    })
-    if (!res.ok) return null
-    return await res.json().catch(() => null)
-  } catch {
-    return null
-  }
-}
 
 async function isRateLimited(connectKey: string): Promise<boolean> {
   const cfg = getUpstashConfig()
@@ -157,15 +135,25 @@ async function completeDispatchTask(args: {
 
   const { data: tasks } = await supabaseAdmin
     .from('agent_tasks')
-    .select('id')
+    .select('id, outcome_fee_usd')
     .eq('agent_id', agent_id)
     .eq('source', 'telegram')
     .in('status', ['pending', 'running'])
     .order('created_at', { ascending: false })
     .limit(1)
 
-  const task = tasks?.[0] as { id: string } | undefined
+  const task = tasks?.[0] as { id: string, outcome_fee_usd?: number } | undefined
   if (!task) return
+
+  // IDEMPOTENCY LOCK: Prevent double-charges due to network HTTP retries payload duplicate submissions.
+  // Fail-closed (false) heavily protects against duplicate billing if Redis goes down, 
+  // but if we want to prioritize task completion over perfect billing, we could pass true instead.
+  // We use `false` (fail-closed) because billing integrity is critical.
+  const locked = await acquireLock(`agenthelm:billing:dedupe:${task.id}`, 86400, false)
+  if (!locked) {
+    console.warn(`[Billing Idempotency] Skipping duplicate completeDispatchTask for task ${task.id}`)
+    return
+  }
 
   await supabaseAdmin
     .from('agent_tasks')
@@ -175,6 +163,33 @@ async function completeDispatchTask(args: {
       completed_at: new Date().toISOString(),
     })
     .eq('id', task.id)
+
+  // PHASE 2: Outcome-Based Metering
+  if (task.outcome_fee_usd && task.outcome_fee_usd > 0) {
+    await supabaseAdmin
+      .from('credit_usage')
+      .insert({
+        user_id: userId,
+        agent_id,
+        tokens_used: 0,
+        model: 'Outcome Fee',
+        cost_usd: task.outcome_fee_usd
+      })
+      
+    // Deduct from profile balance
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('outcome_credits_balance')
+      .eq('id', userId)
+      .single()
+      
+    if (profile) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ outcome_credits_balance: Number(profile.outcome_credits_balance) - task.outcome_fee_usd })
+        .eq('id', userId)
+    }
+  }
 
   const summary = formatOutputSummary(outputData)
   const message = summary
@@ -262,6 +277,23 @@ export async function POST(req: Request) {
         message: `Monthly token limit reached for ${usage.plan} plan (${usage.tokensLimit.toLocaleString()}). Upgrade for more capacity.`,
         upgrade_url: '/dashboard/settings'
       }, { status: 402 })
+    }
+
+    // Phase 2: Budget Cap Enforcement ($10 hard limit)
+    const MAX_BUDGET_USD = 10.00;
+    if (usage.monthlyCostUsd >= MAX_BUDGET_USD) {
+       const { data: currentAgent } = await supabaseAdmin!.from('agents').select('status, name').eq('id', agent_id).single()
+       
+       // Only send the telegram message once when the agent transitions to error state
+       if (currentAgent?.status !== 'error') {
+           await supabaseAdmin!.from('agents').update({ status: 'error', error_message: 'Budget Cap Exceeded ($10.00)' }).eq('id', agent_id)
+           await sendTelegramToUser(userId, `🛑 *Budget Cap Reached!*\n${currentAgent?.name || 'Agent'} has hit your $${MAX_BUDGET_USD.toFixed(2)} spend limit and has been forcefully stopped to protect your wallet.`)
+       }
+       
+       return NextResponse.json({
+         error: 'payment_required',
+         message: `Budget cap of $${MAX_BUDGET_USD.toFixed(2)} exceeded. Agent stopped.`
+       }, { status: 402 })
     }
 
     // If no valid JWT connects them, verify ownership via DB
