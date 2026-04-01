@@ -19,6 +19,7 @@ import {
 export default function DashboardPage() {
   const [agents, setAgents] = useState<AgentCardProps[]>([]);
   const [stats, setStats] = useState({ total: 0, running: 0, tokens: 0, cost: 0 });
+  const [currency, setCurrency] = useState<string>("USD");
   const [connectKey, setConnectKey] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -69,14 +70,15 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch Profile for connect key
+      // Fetch Profile for connect key and currency
       const { data: profile } = await supabase
         .from('profiles')
-        .select('connect_key')
+        .select('connect_key, preferred_currency')
         .eq('id', user.id)
         .single();
         
       if (profile?.connect_key) setConnectKey(profile.connect_key);
+      if (profile?.preferred_currency) setCurrency(profile.preferred_currency);
 
       // Fetch Agents
       const { data: agentsData } = await supabase
@@ -230,6 +232,7 @@ export default function DashboardPage() {
         runningAgents={stats.running}
         tokensUsed={stats.tokens}
         cost={stats.cost}
+        currency={currency as any}
       />
 
       <div>
