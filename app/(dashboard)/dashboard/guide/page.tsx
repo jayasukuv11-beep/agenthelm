@@ -10,7 +10,9 @@ import {
   Search,
   CheckCircle2,
   AlertTriangle,
-  Code2
+  Code2,
+  Globe,
+  Bot
 } from "lucide-react";
 
 export default function GuidePage() {
@@ -163,6 +165,33 @@ export default function GuidePage() {
         </div>
       </section>
 
+      {/* New Infrastructure Features */}
+      <section className="grid md:grid-cols-2 gap-8">
+        <div className="bg-[#111111] border border-[#1f2937] rounded-xl p-8 space-y-4 hover:border-[#10b981]/30 transition-colors">
+          <div className="flex items-center gap-3">
+            <Globe className="w-5 h-5 text-blue-400" />
+            <h3 className="text-xl font-semibold text-white">Multi-Currency Billing</h3>
+          </div>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            Credits and subscription costs are now dynamically localized based on your region. 
+            Indian users see <code className="text-blue-300">INR (₹)</code> while international 
+            users use <code className="text-blue-300">USD ($)</code>.
+          </p>
+        </div>
+
+        <div className="bg-[#111111] border border-[#1f2937] rounded-xl p-8 space-y-4 hover:border-[#10b981]/30 transition-colors">
+          <div className="flex items-center gap-3">
+            <Bot className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-xl font-semibold text-white">AI-Ready Protocol</h3>
+          </div>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            The platform is now machine-readable via <code className="text-emerald-300">llms.txt</code>. 
+            Optimized for AI coding assistants like Cursor and Windsurf to instantly 
+            understand your secure agent architecture.
+          </p>
+        </div>
+      </section>
+
       {/* Persistence & Integrity */}
       <section className="grid md:grid-cols-2 gap-8">
         <div className="bg-[#111111] border border-[#1f2937] rounded-xl p-8 space-y-4">
@@ -197,7 +226,7 @@ export default function GuidePage() {
         <h3 className="text-xl font-semibold">Still need help?</h3>
         <p className="text-gray-400 max-w-md">
           Join our developer community on Telegram or reach out to our team at 
-          <span className="text-[#10b981] ml-1 cursor-pointer">support@agentdock.online</span>
+          <span className="text-[#10b981] ml-1 cursor-pointer">tharagesharumugam@gmail.com</span>
         </p>
       </div>
     </div>
