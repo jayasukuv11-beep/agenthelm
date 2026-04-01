@@ -1,0 +1,75 @@
+# AgentHelm Full API Reference (AI Edition)
+> This is a machine-readable specification of the AgentHelm platform's SDKs and behavioral patterns.
+
+## 1. SDK Authentication
+All SDK calls require an `auth_key` (AgentHelm Connect Key), starting with `ahe_live_` or `ahe_test_`.
+
+### Key Acquisition
+Dashboard > Settings > API Keys.
+
+---
+
+## 2. Python SDK (`agenthelm`)
+The Python SDK is the preferred way to build autonomous agents.
+
+### Initialization
+```python
+import agenthelm
+dock = agenthelm.connect("ahe_live_xxxxx", name="My Agent")
+```
+
+### Core Log Methods
+Log levels: `info`, `warning`, `error`, `success`.
+- `dock.log("Message", level="info", data={})`: Basic telemetry.
+- `dock.warn("Message")`: Alerts dashboard and Telegram.
+- `dock.error("Message", error=e)`: Stops execution flow.
+- `dock.success("Message")`: Marks milestone accomplishment.
+- `dock.progress(percent, message)`: Updates progress bar.
+- `dock.output(data)`: Final task result.
+
+### Token Tracking (Billing & Safety)
+- `dock.track_tokens(used, model="gpt-4o")`: Deducts credits and monitors burn-rate.
+
+### Resumability & Checkpointing
+- `dock.checkpoint("Step Name", state={})`: Saves serialized state. Prevents data loss on crash.
+- `dock.resume_from(task_id)`: Restores agent state and counter.
+
+### Handlers
+- `@dock.on_dispatch`: Called when a new task is sent from Telegram or Dashboard.
+- `@dock.on_chat`: Called when a user messages the agent directly.
+- `@dock.on_command(cmd_type)`: Custom command router.
+
+### Classification-First Safety Decorators
+- `@dock.read`: Mark tool as read-only.
+- `@dock.side_effect(max_retries=3, dedup=True)`: Mark tool as having side effects (idempotent).
+- `@dock.irreversible(confirm="telegram")`: Blocks execution until a human clicks 'Approve'.
+
+---
+
+## 3. Node.js SDK (`agenthelm`)
+
+### Initialization
+```typescript
+import { AgentHelm } from 'agenthelm';
+const dock = new AgentHelm({ key: 'ahe_live_xxxxx', name: 'Node Agent' });
+```
+
+### Core Methods
+Identical nomenclature to the Python SDK:
+- `dock.log(message, level?)`
+- `dock.checkpoint(stepName, state, options?)`
+- `dock.onDispatch((task, data) => { ... })`
+- `dock.trackTokens({ used, model })`
+
+---
+
+## 4. Platform Behavioral Patterns
+
+### Red-Line Intervention
+If an agent's `monthlyCostUsd` exceeds the user-configured budget cap (default $10.00), the API will return a `HTTP 402 Payment Required` and the agent status will be set to `error`. 
+
+### Idempotency Locks
+The `completeDispatchTask` endpoint uses a Redis-based lock (`agenthelm:billing:dedupe:{task_id}`) to prevent double-charging users during network retries.
+
+### Internal Swarm Patterns
+To build a swarm, use `HelmSupervisor`. It handles the `lead_name` and manages child process lifecycles.

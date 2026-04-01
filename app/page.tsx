@@ -12,18 +12,30 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { UpgradeButton } from '@/components/dashboard/UpgradeButton'
+import { MULTI_CURRENCY_PLANS, type CurrencyCode, getCurrencySymbol } from "@/lib/currency"
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [currency, setCurrency] = useState<CurrencyCode>("USD")
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
     }
     window.addEventListener("scroll", handleScroll)
+    
+    // Auto-detect currency via API
+    fetch('/api/geo')
+      .then(r => r.json())
+      .then(data => setCurrency(data.currency))
+      .catch(() => setCurrency("USD"))
+
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  const plans = MULTI_CURRENCY_PLANS[currency]
+  const symbol = getCurrencySymbol(currency)
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white font-sans selection:bg-[#10b981] selection:text-white">
@@ -641,7 +653,7 @@ export default function LandingPage() {
             <div className="bg-[#111] border border-gray-800 rounded-2xl p-8 flex flex-col text-left">
               <h3 className="text-xl font-medium text-white mb-1">Starter</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-white">₹0</span>
+                <span className="text-4xl font-extrabold text-white">{symbol}0</span>
               </div>
               <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">Forever free</p>
 
@@ -674,10 +686,12 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-medium text-emerald-400 mb-1">Indie</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-white">₹399</span>
+                <span className="text-4xl font-extrabold text-white">{symbol}{plans.indie.amount}</span>
                 <span className="text-gray-500">/month</span>
               </div>
-              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">~$5/month</p>
+              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">
+                {currency === 'INR' ? '≈ $5/month' : '≈ ₹400/month'}
+              </p>
 
               <ul className="space-y-4 mb-8 flex-1">
                 {[
@@ -710,10 +724,12 @@ export default function LandingPage() {
             <div className="bg-[#111] border border-gray-800 rounded-2xl p-8 flex flex-col text-left">
               <h3 className="text-xl font-medium text-white mb-1">Studio</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-white">₹1,299</span>
+                <span className="text-4xl font-extrabold text-white">{symbol}{plans.studio.amount.toLocaleString()}</span>
                 <span className="text-gray-500">/month</span>
               </div>
-              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">~$16/month</p>
+              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">
+                {currency === 'INR' ? '≈ $15/month' : '≈ ₹1300/month'}
+              </p>
 
               <ul className="space-y-4 mb-8 flex-1">
                 {[

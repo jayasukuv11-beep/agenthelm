@@ -1,0 +1,25 @@
+---
+description: Native support for the AgentHelm Python SDK.
+globs: ["**/*.py", "sdk/python/**/*.py"]
+---
+
+# AgentHelm Python SDK Rules
+
+## Core Initialization
+- Always use `import agenthelm`.
+- `dock = agenthelm.connect("YOUR_KEY")` is the standard entry point.
+
+## Tool Decoration (Safety First)
+- **Read-only tools**: Use `@dock.read` (e.g. searching, listing files).
+- **Side-effect tools**: Use `@dock.side_effect(max_retries=3)` (e.g. sending Slack, writing small files).
+- **High-risk tools**: Use `@dock.irreversible(confirm="telegram")` (e.g. deleting users, executing trades).
+
+## Observability Best Practices
+- Call `dock.progress(percent, "Message")` inside long-running loops.
+- Use `dock.checkpoint("Step Name", state)` before executing any function that interacts with external APIs.
+- Ensure `dock.track_tokens(used, model)` is called after every generic LLM call.
+
+## Handling Communications
+- Define `@dock.on_dispatch` to handle incoming tasks from the AgentHelm ecosystem.
+- Define `@dock.on_chat` to handle direct user interactions.
+- Always call `dock.listen()` to keep the agent alive if it's a long-running service.
