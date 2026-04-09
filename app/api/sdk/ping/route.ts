@@ -107,12 +107,20 @@ export async function POST(req: Request) {
     // Issue the short-lived JWT for the Handshake Protocol
     const agentToken = await issueAgentToken(userId, agentId, auth.plan)
 
+    // Phase 5: Fetch tool permissions
+    const { data: permissions } = await supabaseAdmin!
+      .from('agent_tool_permissions')
+      .select('allowed_tools, block_mode')
+      .eq('agent_id', agentId)
+      .single()
+
     return NextResponse.json({ 
       agent_id: agentId, 
       user_id: userId,
       plan: auth.plan,
       success: true,
-      agent_token: agentToken
+      agent_token: agentToken,
+      permissions: permissions || null
     })
 
   } catch (err: any) {

@@ -140,6 +140,23 @@ export declare class AgentHelm {
      */
     onChat(handler: ChatHandler): this;
     /**
+     * Safety Gate: Read-only action (Always safe, no gating)
+     */
+    read<T>(task: () => Promise<T> | T): Promise<T>;
+    /**
+     * Safety Gate: Side Effect (Logs and retries, but non-blocking)
+     */
+    sideEffect<T>(task: () => Promise<T> | T, options?: {
+        maxRetries?: number;
+    }): Promise<T>;
+    /**
+     * Safety Gate: Irreversible (BLOCKS until approved by Human via Telegram/Dashboard)
+     */
+    irreversible<T>(task: () => Promise<T> | T, options?: {
+        confirm?: string;
+        timeout?: number;
+    }): Promise<T | null>;
+    /**
      * Gracefully stop the agent and notify dashboard.
      */
     stop(): void;

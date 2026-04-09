@@ -8,14 +8,14 @@ Monitor, dispatch, and control your AI agents from your phone or dashboard.
 pip install agenthelm-sdk
 
 ## Features
+- **🛡️ Safety Firewall**: Mark tools as `@read`, `@side_effect`, or `@irreversible` (HIL).
 - **⚡️ One-line Integration**: Add `agenthelm.connect()` and you're live.
-- **🛰️ Remote Dispatch**: Trigger functions in your agent via Telegram or Dashboard using `@agent.on_dispatch`.
-- **📊 Token Tracking**: Real-time monitoring of LLM costs and usage.
-- **🤝 Handshake Protocol**: Secure, JWT-based authentication for high-performance telemetry.
-- **📡 Offline Queue**: Never lose a log; the SDK buffers data if the connection drops.
-- **🤖 AI Failure Analysis**: Gemini-powered log analysis to explain and fix agent crashes.
+- **🛰️ Remote Dispatch**: Trigger functions in your agent via Telegram or Dashboard.
+- **📊 Token Tracking**: Real-time monitoring of LLM costs and usage (INR/USD).
+- **🛰️ Integrity Checkpoints**: Save/Resume agent state with SHA256 hashing.
+- **🤝 Handshake Protocol**: Secure, JWT-based authentication.
 
-## Usage
+# Usage (Standard)
 ```python
 from agenthelm import Agent
 
@@ -26,20 +26,41 @@ agent = Agent(
     version="1.0.0"
 )
 
-# Handle remote tasks
+# Log events
+agent.log("Agent is active", level="info")
+
+# Track LLM costs
+agent.track_tokens(used=500, model="gpt-4o", cost_per_1k=0.01)
+```
+
+## 🛡️ Safety Firewall (Classification-First)
+Protect your mission-critical functions by classifying them.
+
+```python
+# 1. Read-only (Always safe, no gating)
+@agent.read()
+def get_weather(city):
+    return weather_api.fetch(city)
+
+# 2. Side Effect (Logs and retries, but non-blocking)
+@agent.side_effect(max_retries=3)
+def send_email(to, subject):
+    return mail.send(to, subject)
+
+# 3. Irreversible (BLOCKS until approved by Human via Telegram/Dashboard)
+@agent.irreversible(confirm="telegram", timeout=60)
+def delete_database_record(record_id):
+    return db.delete(record_id)
+```
+
+# Handling Dispatch
+```python
 @agent.on_dispatch
 def handle_research(task):
     agent.progress("Starting research...")
     # Your logic here
     return {"status": "complete", "leads": 5}
 
-# Log events
-agent.log("Agent is active", level="info")
-
-# Track LLM costs
-agent.track_tokens(used=500, model="gpt-4o", cost_per_1k=0.01)
-
-# Block and listen for commands
 agent.listen()
 ```
 

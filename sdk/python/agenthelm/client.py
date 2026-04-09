@@ -15,12 +15,55 @@ from typing import Optional, Callable, Any, Dict, List
 
 import requests
 
+from collections import deque
+
 from .queue import OfflineQueue
 from .memory import MemoryEngine
 from .swarms import SwarmCoordinator
+from .otel import OTELExporter
 
 # Default API URL — can be overridden for self-hosted
 DEFAULT_BASE_URL = "https://agenthelm.online"
+
+
+# ─── Professional Exceptions ────────────────────────────────────────────────
+
+class AgentHelmError(Exception):
+    """Base exception for all AgentHelm SDK errors."""
+    pass
+
+class HardLimitBreached(AgentHelmError):
+    """Raised when iterations, tokens, or duration exceed hard caps."""
+    pass
+
+class LoopDetected(AgentHelmError):
+    """Raised when the agent enters a repetitive tool-call loop."""
+    pass
+
+class InjectionDetected(AgentHelmError):
+    """Raised when prompt injection is identified in input or output."""
+    pass
+
+class PermissionDenied(AgentHelmError):
+    """Raised when an agent attempts to call a non-whitelisted tool."""
+    pass
+
+
+from dataclasses import dataclass, field
+
+@dataclass
+class Stats:
+    """Real-time metrics for the agent session."""
+    total_tool_calls: int = 0
+    total_tokens: int = 0
+    total_cost_usd: float = 0.0
+    hard_limit_breaches: int = 0
+    loop_detections: int = 0
+    injection_attempts: int = 0
+    irreversible_approved: int = 0
+    irreversible_rejected: int = 0
+    guardrail_fires: int = 0
+    latency_sum_ms: int = 0
 
 
 class Agent:
@@ -46,7 +89,26 @@ class Agent:
         command_poll_interval: int = 5,
         verbose: bool = True,
         timeout: int = 10,
-        burn_rate_threshold: int = 10000
+        burn_rate_threshold: int = 10000,
+        # Phase 1 Configs
+        max_iterations: Optional[int] = None,
+        max_tokens_per_run: Optional[int] = None,
+        max_run_duration: Optional[int] = None,
+        on_limit_breach: str = "stop",
+        loop_detection: bool = False,
+        loop_window: int = 10,
+        loop_max_repeats: int = 3,
+        block_on_injection: bool = False,
+        # Phase 2 Configs
+        otel_export: bool = False,
+        otel_endpoint: Optional[str] = None,
+        # Phase 3 Configs
+        capture_reasoning: bool = False,
+        capture_providers: List[str] = None,
+        # Phase 4 Configs
+        sla_target_ms: Optional[int] = None,
+        sla_percentile: int = 95,
+        max_context_tokens: Optional[int] = None
     ):
         """
         Initialize AgentHelm connection.
@@ -76,6 +138,16 @@ class Agent:
         self._version = version
         self._base_url = base_url.rstrip("/")
         self._verbose = verbose
+        
+        # Professional Grade Stats & Observability
+        self.stats = Stats()
+        
+        # Local Introspection Buffers (for testing & offline viewing)
+        self._logs: List[dict] = []
+        self._tool_executions: List[dict] = []
+        self._checkpoints: List[dict] = []
+        self._reasoning_steps: List[dict] = []
+        self._episodic_log: List[dict] = []
         self._timeout = 10
         self._ping_interval = ping_interval
         self._command_poll_interval = command_poll_interval
@@ -104,6 +176,43 @@ class Agent:
         self._burn_rate_threshold: int = burn_rate_threshold
         self._burn_rate_alerted = False
         
+        # Hard Limits & Execution State
+        self._plan = "free"
+        self._max_iterations = max_iterations
+        self._max_tokens_per_run = max_tokens_per_run
+        self._max_run_duration = max_run_duration
+        self._on_limit_breach = on_limit_breach
+        self._run_start_time: Optional[float] = None
+        self._iteration_count = 0
+        self._run_token_total = 0
+        
+        # Loop & Injection configs
+        self._loop_detection = loop_detection
+        self._loop_window_size = loop_window
+        self._loop_max_repeats = loop_max_repeats
+        self._loop_window: list = []
+        self._block_on_injection = block_on_injection
+        
+        # Phase 2 OTEL
+        self._otel_export = otel_export
+        self._otel_endpoint = otel_endpoint
+        self._otel_exporter: Optional[OTELExporter] = None
+        
+        # Phase 3 Debugging Suite
+        self._capture_reasoning = capture_reasoning
+        self._capture_providers = capture_providers or ["openai", "anthropic"]
+        self._reasoning_capture = None
+        
+        # Phase 4 Enterprise Hardening Configs
+        self._sla_target_ms = sla_target_ms
+        self._sla_percentile = sla_percentile
+        self._max_context_tokens = max_context_tokens
+        self._context_drift_alerted = False
+        
+        # Phase 5 Enterprise Hardening Configs
+        self._permissions: Optional[dict] = None
+        self._evals: List[dict] = []
+        
         # Command + chat handlers
         self._command_handlers: Dict[str, Callable] = {}
         self._chat_handler: Optional[Callable] = None
@@ -114,7 +223,8 @@ class Agent:
         
         # Phase 1: Convergence Features
         self.memory = MemoryEngine()
-        self.swarms = SwarmCoordinator(lead_name=self._name)
+        self.memory._poisoning_alert_callback = self._handle_memory_poisoning
+        self.swarms = SwarmCoordinator(lead_name=self._name, send_fn=self._send_handoff)
         
         # Async send pool (non-blocking for logs/tokens/progress)
         self._send_pool = ThreadPoolExecutor(
@@ -361,6 +471,13 @@ class Agent:
         cost_usd = round((used / 1000.0) * cost_per_1k, 8)
         self._tokens_today += used
         self._tokens_session += used
+        self._run_token_total += used
+        
+        # Update Stats
+        self.stats.total_tokens += used
+        self.stats.total_cost_usd += cost_usd
+        
+        self._check_hard_limits()
         
         payload = {
             "key": self._key,
@@ -415,6 +532,38 @@ class Agent:
             self._send_async("/api/sdk/log", burn_payload)
         elif tokens_per_minute <= self._burn_rate_threshold:
             self._burn_rate_alerted = False
+        
+        # Phase 4: Context Drift Monitor
+        if self._max_context_tokens and not self._context_drift_alerted:
+            usage_ratio = self._tokens_session / self._max_context_tokens
+            if usage_ratio >= 0.9:
+                self._context_drift_alerted = True
+                pct = int(usage_ratio * 100)
+                suggestions = [
+                    "1. Prune conversation history (keep last 5 turns)",
+                    "2. Summarize retrieved documents before injecting",
+                    "3. Reset agent memory index via dock.memory.prune()"
+                ]
+                drift_msg = (
+                    f"\u26a0\ufe0f Context drift: {self._tokens_session:,}/{self._max_context_tokens:,} "
+                    f"tokens ({pct}%). Suggested actions:\n" + "\n".join(suggestions)
+                )
+                self.warn(drift_msg)
+                drift_payload = {
+                    "key": self._key,
+                    "agent_id": self._agent_id,
+                    "type": "context_drift",
+                    "level": "warning",
+                    "message": drift_msg,
+                    "data": {
+                        "tokens_session": self._tokens_session,
+                        "max_context_tokens": self._max_context_tokens,
+                        "usage_ratio": round(usage_ratio, 3),
+                        "model": model
+                    },
+                    "timestamp": self._now()
+                }
+                self._send_async("/api/sdk/log", drift_payload)
     
     def sync_memory(self) -> None:
         """
@@ -501,6 +650,16 @@ class Agent:
                 json.dumps(state, sort_keys=True, default=str).encode()
             ).hexdigest()
             
+            # Capture SDK metadata for resumability/rollback
+            # We save the CURRENT iteration count.
+            sdk_metadata = {
+                "iteration_count": self._iteration_count,
+                "run_token_total": self._run_token_total,
+                "total_tokens": self.stats.total_tokens,
+                "total_tool_calls": self.stats.total_tool_calls,
+                "timestamp": self._now()
+            }
+            
             payload = {
                 "key": self.auth_key,
                 "agent_id": self._agent_id,
@@ -514,10 +673,14 @@ class Agent:
                 "input_data": input_data,
                 "output_data": output_data,
                 "latency_ms": latency_ms,
+                "sdk_metadata": sdk_metadata
             }
             
             if status == "failed":
                 payload["error_data"] = output_data
+            
+            # Local capture for testing
+            self._checkpoints.append(payload)
             
             # ATOMICITY FIX: Only update internal state if the server confirms
             success = self._send("/api/sdk/checkpoint", payload)
@@ -587,6 +750,15 @@ class Agent:
                     self._step_start_time = time.time()
                     self._last_checkpoint_state = checkpoint.get("state_snapshot")
                     
+                    # Restore SDK Metadata (Iteration fix)
+                    meta = checkpoint.get("sdk_metadata", {})
+                    self._iteration_count = meta.get("iteration_count", self._iteration_count)
+                    self._run_token_total = meta.get("run_token_total", self._run_token_total)
+                    if "total_tokens" in meta:
+                        self.stats.total_tokens = meta["total_tokens"]
+                    if "total_tool_calls" in meta:
+                        self.stats.total_tool_calls = meta["total_tool_calls"]
+                    
                     if self._verbose:
                         step_name = checkpoint.get("step_name", "unknown")
                         idx = checkpoint.get("step_index", "?")
@@ -602,6 +774,21 @@ class Agent:
             if self._verbose:
                 print(f"[AgentHelm] ⚠️ Failed to resume: {e}")
             return None
+
+    def rollback(self, step_index: int) -> Optional[dict]:
+        """
+        Programmatically rollback the agent to a specific step index.
+        Restores both user state and SDK internal counters.
+        """
+        if not self._current_task_id:
+            if self._verbose:
+                print("[AgentHelm] ⚠️ Cannot rollback: No active task context.")
+            return None
+            
+        if self._verbose:
+            print(f"[AgentHelm] ⏪ Rolling back to step {step_index}...")
+            
+        return self.resume_from(self._current_task_id, step_index=step_index)
     
     def reply(self, message: str) -> None:
         """
@@ -647,11 +834,96 @@ class Agent:
                 "status": "stopped",
                 "timestamp": self._now()
             })
+            
+            # Phase 4: SLA / Latency Contract check
+            if self._sla_target_ms and self._run_start_time:
+                run_latency_ms = int((time.time() - self._run_start_time) * 1000)
+                if run_latency_ms > self._sla_target_ms:
+                    sla_msg = (
+                        f"\u26a0\ufe0f SLA breach: run took {run_latency_ms:,}ms "
+                        f"(target: {self._sla_target_ms:,}ms)"
+                    )
+                    if self._verbose:
+                        print(f"[AgentHelm] {sla_msg}")
+                    sla_payload = {
+                        "key": self._key,
+                        "agent_id": self._agent_id,
+                        "task_id": self._current_task_id,
+                        "type": "sla_breach",
+                        "level": "warning",
+                        "message": sla_msg,
+                        "data": {
+                            "run_latency_ms": run_latency_ms,
+                            "sla_target_ms": self._sla_target_ms,
+                            "sla_percentile": self._sla_percentile
+                        },
+                        "timestamp": self._now()
+                    }
+                    self._send_async("/api/sdk/log", sla_payload)
+                    
+                # Always record latency_ms on the task for p50/p95 dashboards
+                if self._current_task_id:
+                    try:
+                        self._send_async("/api/sdk/output", {
+                            "key": self.auth_key,
+                            "agent_id": self._agent_id,
+                            "task_id": self._current_task_id,
+                            "latency_ms": run_latency_ms
+                        })
+                    except Exception:
+                        pass
+            
             if self._verbose:
-                print(f"[AgentHelm] ⏹  {self._name} stopped")
+                print(f"[AgentHelm] \u23f9  {self._name} stopped")
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ Failed to stop: {e}")
+                print(f"[AgentHelm] \u26a0\ufe0f Failed to stop: {e}")
+
+    def _log_reasoning_step(self, step_data: dict) -> None:
+        """Sends an auto-captured reasoning step (from monkeys) to SDK."""
+        if not self._current_task_id:
+            return  # Needs an active task context to be useful
+        
+        payload = {
+            "key": self.auth_key,
+            "agent_id": self._agent_id,
+            "task_id": self._current_task_id,
+            **step_data
+        }
+        self._send_async("/api/sdk/reasoning", payload)
+        
+    def _send_handoff(self, payload: dict) -> None:
+        """Sends handoff tracking to SDK."""
+        self._send_async("/api/sdk/handoffs", {
+            "key": self.auth_key,
+            "agent_id": self._agent_id,
+            "task_id": self._current_task_id,
+            **payload
+        })
+    
+    def _handle_memory_poisoning(self, alert_data: dict) -> None:
+        """Phase 4: Handles memory poisoning alerts from MemoryEngine."""
+        msg = (
+            f"\u26a0\ufe0f Memory Poisoning Alert: "
+            f"{alert_data['writes_in_window']} writes in {alert_data['window_seconds']}s "
+            f"(threshold: {alert_data['threshold']}). "
+            f"Size growth: {alert_data['size_growth_ratio']}x"
+        )
+        if self._verbose:
+            print(f"[AgentHelm] {msg}")
+        
+        self.warn(msg)
+        poison_payload = {
+            "key": self._key,
+            "agent_id": self._agent_id,
+            "task_id": self._current_task_id,
+            "type": "memory_poisoning",
+            "level": "error",
+            "message": msg,
+            "data": alert_data,
+            "timestamp": self._now()
+        }
+        self._send_async("/api/sdk/log", poison_payload)
     
     def listen(self) -> None:
         """
@@ -762,6 +1034,11 @@ class Agent:
         return self._connected
     
     @property
+    def api_key(self) -> str:
+        """Expose the connect key."""
+        return self._key
+    
+    @property
     def name(self) -> str:
         """Agent display name."""
         return self._name
@@ -790,6 +1067,8 @@ class Agent:
                 if data.get("agent_token"):
                     self._agent_token = data.get("agent_token")
                 self._connected = True
+                self._plan = data.get("plan", "free")
+                self._permissions = data.get("permissions")
                 if self._verbose:
                     agent_short = "unknown"
                     if self._agent_id:
@@ -798,6 +1077,32 @@ class Agent:
                         f"[AgentHelm] ✅ Connected: "
                         f"{self._name} ({agent_short})"
                     )
+                
+                # Phase 2: OpenTelemetry Export
+                if self._otel_export:
+                    if self._plan == "studio":
+                        self._otel_exporter = OTELExporter(
+                            endpoint=self._otel_endpoint,
+                            agent_name=self._name,
+                            version=self._version
+                        )
+                    else:
+                        if self._verbose:
+                            print("[AgentHelm] ⚠️ OpenTelemetry export is restricted to 'Studio' plan. Traces will not be exported.")
+
+                # Phase 3: Reasoning Capture
+                if self._capture_reasoning:
+                    if self._plan == "studio":
+                        from .reasoning import ReasoningCapture
+                        self._reasoning_capture = ReasoningCapture(
+                            send_fn=self._log_reasoning_step,
+                            agent_id=self._agent_id,
+                            verbose=self._verbose
+                        )
+                        self._reasoning_capture.patch_providers(self._capture_providers)
+                    else:
+                        if self._verbose:
+                            print("[AgentHelm] ⚠️ Reasoning chain capture is restricted to 'Studio' plan. Capture disabled.")
             elif response.status_code == 401:
                 if self._verbose:
                     print("[AgentHelm] ❌ Invalid connect key.")
@@ -1011,6 +1316,10 @@ class Agent:
                     self._step_counter = 0
                     self._step_start_time = time.time()
                     self._last_checkpoint_state = None
+                    self._iteration_count = 0
+                    self._run_token_total = 0
+                    self._run_start_time = time.time()
+                    self._loop_window = []
                 
                 self.progress(f"{'Resuming' if is_resume else 'Starting'} task")
                 result = self._dispatch_handler(task)
@@ -1165,10 +1474,26 @@ class Agent:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             tool_name = func.__name__
+            self._enforce_tool_execution_safety(tool_name, args, kwargs)
             self._log_tool_execution(tool_name, "read", args, kwargs)
             if self._verbose:
                 print(f"[AgentHelm] 🔍 READ: {tool_name}")
-            return func(*args, **kwargs)
+            
+            span = None
+            if self._otel_exporter:
+                span = self._otel_exporter.start_span(tool_name, {"tool.classification": "read"})
+            
+            try:
+                result = func(*args, **kwargs)
+                if self._block_on_injection and isinstance(result, str):
+                    self.scan_input(result)
+                if span:
+                    self._otel_exporter.end_span(span)
+                return result
+            except Exception as e:
+                if span:
+                    self._otel_exporter.end_span(span, error=e)
+                raise
         return wrapper
     
     def side_effect(self, max_retries: int = 3, dedup: bool = True):
@@ -1185,6 +1510,7 @@ class Agent:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 tool_name = func.__name__
+                self._enforce_tool_execution_safety(tool_name, args, kwargs)
                 
                 # Compute idempotency key from function name + args
                 input_str = json.dumps(
@@ -1206,10 +1532,16 @@ class Agent:
                             return prev.get("result")
                 
                 # Retry logic
+                # Retry logic
                 last_error = None
                 for attempt in range(1, max_retries + 1):
+                    span = None
+                    if self._otel_exporter:
+                        span = self._otel_exporter.start_span(tool_name, {"tool.classification": "side_effect", "attempt": attempt})
+                        
                     try:
                         result = func(*args, **kwargs)
+                        
                         execution = {
                             "tool_name": tool_name,
                             "classification": "side_effect",
@@ -1229,9 +1561,14 @@ class Agent:
                                 f"[AgentHelm] ⚡ SIDE_EFFECT: {tool_name} "
                                 f"(attempt {attempt}/{max_retries}) ✅"
                             )
+                            
+                        if span:
+                            self._otel_exporter.end_span(span)
                         return result
                     except Exception as e:
                         last_error = e
+                        if span:
+                            self._otel_exporter.end_span(span, error=e)
                         if self._verbose:
                             print(
                                 f"[AgentHelm] ⚡ SIDE_EFFECT: {tool_name} "
@@ -1270,6 +1607,7 @@ class Agent:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 tool_name = func.__name__
+                self._enforce_tool_execution_safety(tool_name, args, kwargs)
                 
                 input_str = json.dumps(
                     {"fn": tool_name, "args": str(args), "kwargs": str(kwargs)},
@@ -1318,12 +1656,24 @@ class Agent:
                                     print(
                                         f"[AgentHelm] ✅ APPROVED: {tool_name} — executing"
                                     )
-                                result = func(*args, **kwargs)
-                                self._log_tool_execution(
-                                    tool_name, "irreversible", args, kwargs,
-                                    status="executed"
-                                )
-                                return result
+                                
+                                span = None
+                                if self._otel_exporter:
+                                    span = self._otel_exporter.start_span(tool_name, {"tool.classification": "irreversible"})
+                                    
+                                try:
+                                    result = func(*args, **kwargs)
+                                    self._log_tool_execution(
+                                        tool_name, "irreversible", args, kwargs,
+                                        status="executed"
+                                    )
+                                    if span:
+                                        self._otel_exporter.end_span(span)
+                                    return result
+                                except Exception as e:
+                                    if span:
+                                        self._otel_exporter.end_span(span, error=e)
+                                    raise
                             elif status == "rejected":
                                 if self._verbose:
                                     print(
@@ -1356,6 +1706,131 @@ class Agent:
             return wrapper
         return decorator
     
+    def _check_hard_limits(self) -> None:
+        """Enforces max iterations, token budgets, and duration limits."""
+        # Free tier always caps at 25 if not upgraded
+        effective_max_iter = 25 if self._plan == "free" else self._max_iterations
+        if effective_max_iter and self._iteration_count > effective_max_iter:
+            self._trigger_limit_breach(f"Max iterations exceeded ({effective_max_iter})")
+            
+        if self._max_tokens_per_run and self._run_token_total > self._max_tokens_per_run:
+            self._trigger_limit_breach(f"Max tokens exceeded ({self._max_tokens_per_run})")
+            
+        if self._max_run_duration and self._run_start_time:
+            if time.time() - self._run_start_time > self._max_run_duration:
+                self._trigger_limit_breach(f"Max run duration exceeded ({self._max_run_duration}s)")
+                
+    def _trigger_limit_breach(self, reason: str) -> None:
+        """Handles a limit breach by stopping the agent."""
+        if self._verbose:
+            print(f"[AgentHelm] 🛑 HARD LIMIT BREACH: {reason}")
+        
+        # Log to agent_logs
+        payload = {
+            "key": self.auth_key,
+            "agent_id": self._agent_id,
+            "task_id": self._current_task_id,
+            "type": "hard_limit",
+            "level": "error",
+            "message": f"Hard Limit Reached: {reason}",
+            "timestamp": self._now()
+        }
+        self._send_async("/api/sdk/log", payload)
+        
+        if self._on_limit_breach == "stop":
+            self.stats.hard_limit_breaches += 1
+            self.stop()
+            raise HardLimitBreached(f"AgentHelm Hard Limit: {reason}")
+            
+    def _enforce_tool_execution_safety(self, tool_name: str, args: tuple, kwargs: dict) -> None:
+        """Called before any tool executes to enforce loops, permissions, and limit increments."""
+        self._iteration_count += 1
+        self._check_hard_limits()
+        
+        # Phase 5: Scoped Permissions check
+        if self._permissions and self._plan == "studio":
+            allowed = self._permissions.get("allowed_tools")
+            block_mode = self._permissions.get("block_mode", True)
+            if allowed is not None and tool_name not in allowed:
+                msg = f"Tool '{tool_name}' not in allowed permissions list."
+                if block_mode:
+                    self.stats.guardrail_fires += 1
+                    self.error(f"Permission Denied: {msg}")
+                    raise PermissionDenied(f"AgentHelm Security: {msg}")
+                else:
+                    self.warn(f"Permission Warning: {msg}")
+        
+        if not self._loop_detection or self._plan == "free":
+            return
+            
+        input_str = json.dumps(
+            {"fn": tool_name, "args": str(args), "kwargs": str(kwargs)},
+            sort_keys=True, default=str
+        )
+        call_hash = hashlib.sha256(input_str.encode()).hexdigest()
+        
+        self._loop_window.append(call_hash)
+        if len(self._loop_window) > self._loop_window_size:
+            self._loop_window.pop(0)
+            
+        if self._loop_window.count(call_hash) >= self._loop_max_repeats:
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "task_id": self._current_task_id,
+                "type": "loop_detected",
+                "level": "warning",
+                "message": f"Loop Detected: {tool_name} called {self._loop_max_repeats} times with same arguments.",
+                "timestamp": self._now()
+            }
+            self._send_async("/api/sdk/log", payload)
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ LOOP DETECTED: {tool_name}")
+            self.stats.loop_detections += 1
+            self.stop()
+            raise LoopDetected(f"AgentHelm Loop Prevented: {tool_name}")
+            
+    def scan_input(self, text: str) -> dict:
+        """
+        Scans input for Prompt Injection patterns.
+        """
+        import re
+        patterns = [
+            r"ignore\s+(all\s+)?(previous\s+)?instructions",
+            r"you\s+are\s+now",
+            r"system\s+prompt"
+        ]
+        score = 1.0
+        flags = []
+        text_lower = str(text).lower()
+        for p in patterns:
+            if re.search(p, text_lower):
+                score -= 0.5
+                flags.append("instruction_override")
+                
+        # For Free tier, only regex applies. For Indie+, we'd call an LLM heuristic here.
+        # But this SDK implementation handles the rule-based scanner.
+        score = max(0.0, score)
+        
+        action = "blocked" if (self._block_on_injection and score <= 0.5) else "warned"
+        if score < 1.0:
+            self.stats.injection_attempts += 1
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "task_id": self._current_task_id,
+                "input_text": str(text)[:5000],
+                "trust_score": score,
+                "flags": flags,
+                "action_taken": action
+            }
+            self._send_async("/api/sdk/injection", payload)
+            if action == "blocked":
+                self.stop()
+                raise InjectionDetected(f"AgentHelm Security: Prompt Injection Blocked (score: {score})")
+                
+        return {"score": score, "flags": flags, "action": action}
+
     def _log_tool_execution(
         self,
         tool_name: str,
@@ -1366,6 +1841,9 @@ class Agent:
         attempt: int = 1
     ) -> None:
         """Log a tool execution to the dashboard (non-blocking)."""
+        if status == "executed":
+            self.stats.total_tool_calls += 1
+            
         payload = {
             "key": self.auth_key,
             "agent_id": self._agent_id,
@@ -1382,6 +1860,125 @@ class Agent:
             "timestamp": self._now()
         }
         self._send_async("/api/sdk/log", payload)
+        
+    # Phase 5: Evaluation & Validation
+    
+    def validate_output(self, output: Any, schema: dict) -> bool:
+        """
+        Validates output against a provided JSON schema.
+        Returns True if valid, False otherwise.
+        """
+        try:
+            import jsonschema
+            jsonschema.validate(instance=output, schema=schema)
+            return True
+        except ImportError:
+            self.warn("jsonschema library is required for validate_output. pip install jsonschema")
+            return False
+        except Exception as e:
+            self.warn(f"Output validation failed: {e}")
+            return False
+
+    def add_eval(
+        self,
+        name: str,
+        input_data: dict,
+        expected_tools: List[str] = None,
+        expected_output: str = None,
+        max_tool_calls: int = 10,
+        max_tokens: int = 20000,
+        judge_rubric: dict = None,
+        judge_model: str = "gpt-4o-mini",
+        runner_fn: Callable = None
+    ) -> None:
+        """
+        Register a new evaluation scenario for this agent.
+        Requires Studio plan for LLM-as-judge semantic evaluations.
+        """
+        self._evals.append({
+            "name": name,
+            "input_data": input_data,
+            "expected_tools": expected_tools or [],
+            "expected_output": expected_output,
+            "max_tool_calls": max_tool_calls,
+            "max_tokens": max_tokens,
+            "judge_rubric": judge_rubric,
+            "judge_model": judge_model,
+            "runner_fn": runner_fn
+        })
+        
+    def run_evals(self) -> Dict[str, Any]:
+        """
+        Executes all registered evaluation tests and posts results to AgentHelm.
+        """
+        results = {"passed": 0, "failed": 0, "details": []}
+        
+        if not self._evals:
+            if self._verbose:
+                print("[AgentHelm] No evaluations registered. Use `add_eval()` first.")
+            return results
+            
+        for eval_set in self._evals:
+            if not eval_set["runner_fn"]:
+                if self._verbose:
+                    print(f"[AgentHelm] ⚠️ Skipping Eval '{eval_set['name']}': No runner_fn provided.")
+                continue
+                
+            if self._verbose:
+                print(f"[AgentHelm] 🧪 Running Eval: {eval_set['name']}...")
+                
+            # Reset counters
+            self._iteration_count = 0
+            self._run_token_total = 0
+            
+            start_t = time.time()
+            error_msg = None
+            try:
+                eval_set["runner_fn"](eval_set["input_data"])
+            except Exception as e:
+                error_msg = str(e)
+            latency_ms = int((time.time() - start_t) * 1000)
+            
+            # Simple check based on errors/tool limits
+            passed = error_msg is None and self._iteration_count <= eval_set["max_tool_calls"]
+            tool_matches = True # Complex tool sequence matching handled via API
+            
+            # Submitting result to evaluator API
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "name": eval_set["name"],
+                "passed": passed,
+                "tool_matches": tool_matches,
+                "tokens_used": self._run_token_total,
+                "latency_ms": latency_ms,
+                "error_message": error_msg,
+                "judge_rubric": eval_set["judge_rubric"],
+                "judge_model": eval_set["judge_model"]
+            }
+            
+            try:
+                res = requests.post(
+                    f"{self._base_url}/api/sdk/evals/results",
+                    json=payload,
+                    timeout=self._timeout
+                )
+                if res.status_code == 200:
+                    api_data = res.json()
+                    passed = api_data.get("passed", passed)
+                    if passed:
+                        results["passed"] += 1
+                    else:
+                        results["failed"] += 1
+                    results["details"].append(api_data)
+                else:
+                    results["failed"] += 1
+            except Exception as e:
+                if self._verbose:
+                    print(f"[AgentHelm] ⚠️ Failed to submit eval result: {e}")
+                results["failed"] += 1
+                
+        return results
     
     # ─── STATIC / DUNDER ──────────────────────────────────
     

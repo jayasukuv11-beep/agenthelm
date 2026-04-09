@@ -1,11 +1,13 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { 
   AlertCircle, DollarSign, WifiOff, 
   Zap, Terminal, MessageSquare, Smartphone, CreditCard, Bot,
-  Menu, X, ArrowRight, Check, Send, RefreshCw, Repeat, Shield, Zap as ZapIcon, Paperclip
+  Menu, X, ArrowRight, Check, Send, RefreshCw, Repeat, Shield, Zap as ZapIcon, Paperclip,
+  ChevronDown, Activity, Lock, Eye, Brain, Cpu, Database, GitBranch,
+  BarChart3, Clock, AlertTriangle, CheckCircle2, XCircle
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -14,834 +16,692 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { UpgradeButton } from '@/components/dashboard/UpgradeButton'
 import { MULTI_CURRENCY_PLANS, type CurrencyCode, getCurrencySymbol } from "@/lib/currency"
 
+// ── Animated counter for stats ───────────────────────────────────────
+function AnimatedCounter({ end, suffix = "", duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0)
+  const ref = useRef<HTMLSpanElement>(null)
+  const started = useRef(false)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !started.current) {
+        started.current = true
+        const startTime = Date.now()
+        const tick = () => {
+          const elapsed = Date.now() - startTime
+          const progress = Math.min(elapsed / duration, 1)
+          const eased = 1 - Math.pow(1 - progress, 3)
+          setCount(Math.floor(eased * end))
+          if (progress < 1) requestAnimationFrame(tick)
+        }
+        requestAnimationFrame(tick)
+      }
+    }, { threshold: 0.3 })
+    if (ref.current) observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [end, duration])
+
+  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>
+}
+
+// ── Terminal typewriter effect ────────────────────────────────────────
+function Typewriter({ lines, speed = 40 }: { lines: string[]; speed?: number }) {
+  const [displayed, setDisplayed] = useState<string[]>([])
+  const [currentLine, setCurrentLine] = useState(0)
+  const [currentChar, setCurrentChar] = useState(0)
+
+  useEffect(() => {
+    if (currentLine >= lines.length) return
+    const line = lines[currentLine]
+    if (line.length === 0) {
+      // Empty line — register it and move on
+      setDisplayed(prev => { const copy = [...prev]; copy[currentLine] = ""; return copy })
+      const timer = setTimeout(() => { setCurrentLine(l => l + 1); setCurrentChar(0) }, 100)
+      return () => clearTimeout(timer)
+    }
+    if (currentChar < line.length) {
+      const timer = setTimeout(() => {
+        setDisplayed(prev => {
+          const copy = [...prev]
+          copy[currentLine] = (copy[currentLine] || "") + line[currentChar]
+          return copy
+        })
+        setCurrentChar(c => c + 1)
+      }, speed)
+      return () => clearTimeout(timer)
+    } else {
+      const timer = setTimeout(() => {
+        setCurrentLine(l => l + 1)
+        setCurrentChar(0)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [currentLine, currentChar, lines, speed])
+
+  return (
+    <div className="font-mono text-[12px] md:text-[13px] leading-relaxed">
+      {displayed.map((line, i) => (
+        <div key={i} className="flex">
+          <span className="text-orange-500/60 mr-3 select-none">{String(i + 1).padStart(2, '0')}</span>
+          <span className={line.startsWith('#') ? 'text-zinc-600' : line.includes('@helm') ? 'text-orange-400' : line.includes('def ') || line.includes('import') ? 'text-zinc-300' : 'text-zinc-500'}>{line}</span>
+        </div>
+      ))}
+      {currentLine < lines.length && (
+        <span className="inline-block w-2 h-4 bg-orange-500 animate-pulse ml-7" />
+      )}
+    </div>
+  )
+}
+
+// ── Scanning line animation ───────────────────────────────────────────
+function ScanLine() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-orange-500/40 to-transparent animate-[scan_4s_ease-in-out_infinite]" />
+      <style jsx>{`
+        @keyframes scan {
+          0%, 100% { top: 0%; }
+          50% { top: 100%; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [currency, setCurrency] = useState<CurrencyCode>("USD")
+  const [activeTab, setActiveTab] = useState(0)
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
-    }
+    const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener("scroll", handleScroll)
-    
-    // Auto-detect currency via API
-    fetch('/api/geo')
-      .then(r => r.json())
-      .then(data => setCurrency(data.currency))
-      .catch(() => setCurrency("USD"))
-
+    fetch('/api/geo').then(r => r.json()).then(data => setCurrency(data.currency)).catch(() => setCurrency("USD"))
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const plans = MULTI_CURRENCY_PLANS[currency]
   const symbol = getCurrencySymbol(currency)
 
+  const pillars = [
+    { icon: Shield, label: "Safety", title: "Classification-First Boundaries", desc: "Decorators that classify every tool call as @read, @side_effect, or @irreversible. The agent pauses before dangerous actions. You approve via Telegram.", color: "text-orange-500", bg: "bg-orange-500/10" },
+    { icon: Eye, label: "Observability", title: "Real-Time Execution Traces", desc: "Stream step-level progress, token counts, and tool calls to your dashboard. See exactly what your agent is doing, not just what it returns.", color: "text-amber-500", bg: "bg-amber-500/10" },
+    { icon: Brain, label: "Reasoning", title: "Chain-of-Thought Capture", desc: "Log the agent's internal reasoning at each step. Debug failures by reading its thought process, not guessing from outputs.", color: "text-yellow-500", bg: "bg-yellow-500/10" },
+    { icon: Activity, label: "Evaluation", title: "Automated Quality Scoring", desc: "Define eval sets, run LLM-as-judge scoring, and track quality over time. Know if your agent is getting better or worse.", color: "text-red-500", bg: "bg-red-500/10" },
+  ]
+
+  const faqItems = [
+    { q: "What is AgentHelm?", a: "AgentHelm is an enterprise-grade SDK and dashboard for governing AI agents in production. It provides safety boundaries, real-time observability, fault-tolerant checkpointing, and human-in-the-loop controls via Telegram." },
+    { q: "How does AgentHelm differ from LangGraph or CrewAI?", a: "LangGraph and CrewAI are orchestrators — they manage agent internal logic. AgentHelm is a governance layer that wraps around any framework to provide external safety, monitoring, and remote control. They complement each other." },
+    { q: "Is AgentHelm free to use?", a: "Yes. The Starter plan is free forever and includes 3 agents, 100K traces/month, and basic Telegram alerts. No credit card required." },
+    { q: "What languages are supported?", a: "AgentHelm provides official SDKs for Python (pip install agenthelm-sdk) and Node.js (npm install agenthelm-node-sdk). Both use a JWT-based stateless handshake." },
+    { q: "How does the fail-closed security model work?", a: "If the SDK loses connection to the AgentHelm server, it halts execution rather than continuing unsupervised. This prevents runaway agents from burning API budgets during outages." },
+    { q: "Can I control agents from my phone?", a: "Yes. Connect your Telegram account and use commands like /stop, /resume, /dispatch, and /status to control your entire agent fleet from anywhere." },
+  ]
+
   return (
-    <div className="min-h-screen bg-[#09090b] text-white font-sans selection:bg-[#10b981] selection:text-white">
-      {/* SECTION 1: NAVBAR */}
-      <nav 
-        className={`fixed top-0 w-full z-50 transition-all duration-200 h-16 px-6 flex items-center justify-between ${
-          scrolled ? 'bg-[#09090b]/80 backdrop-blur-md border-b border-gray-800' : 'bg-transparent'
-        }`}
-      >
-        <div className="flex items-center">
-          <Link href="/" className="flex items-center group">
-            <span className="text-emerald-500 text-xl font-bold mr-2 group-hover:animate-pulse">⚡</span>
-            <span className="text-white text-xl font-bold tracking-tight">AgentHelm</span>
+    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans">
+      {/* ═══ NAVBAR ═══ */}
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 h-14 px-6 flex items-center justify-between ${
+        scrolled ? 'bg-[#0a0a0a]/90 backdrop-blur-md border-b border-zinc-800/80' : 'bg-transparent'
+      }`}>
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="w-7 h-7 bg-orange-500 flex items-center justify-center" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
+            <Shield className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="text-white text-lg font-bold tracking-tight font-mono">AGENTHELM</span>
+        </Link>
+
+        <div className="hidden md:flex items-center gap-8 text-[13px] font-mono uppercase tracking-wider">
+          <Link href="#pillars" className="text-zinc-500 hover:text-orange-500 transition-colors">Pillars</Link>
+          <Link href="#how-it-works" className="text-zinc-500 hover:text-orange-500 transition-colors">Protocol</Link>
+          <Link href="#dispatch" className="text-zinc-500 hover:text-orange-500 transition-colors">Dispatch</Link>
+          <Link href="#pricing" className="text-zinc-500 hover:text-orange-500 transition-colors">Pricing</Link>
+        </div>
+
+        <div className="hidden md:flex items-center gap-3">
+          <Link href="/login" className="text-[13px] font-mono text-zinc-400 hover:text-white transition-colors px-3 py-1.5">LOG IN</Link>
+          <Link href="/login" className="text-[13px] font-mono font-bold bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 transition-colors flex items-center gap-2">
+            DEPLOY <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-          <Link href="#features" className="text-gray-400 hover:text-white transition-colors">Features</Link>
-          <Link href="#dispatch" className="text-gray-400 hover:text-white transition-colors">Dispatch</Link>
-          <Link href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">How it Works</Link>
-          <Link href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
-
-        </div>
-
-        <div className="hidden md:flex items-center gap-4">
-          <Link href="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-            Log In
-          </Link>
-          <Link 
-            href="/login" 
-            className="text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-          >
-            Get Started Free <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        {/* Mobile Nav Toggle */}
-        <button 
-          className="md:hidden text-gray-400 hover:text-white"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
+        <button className="md:hidden text-zinc-400 hover:text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 top-16 bg-[#09090b] z-40 p-6 flex flex-col gap-6 md:hidden">
-          <Link onClick={() => setMobileMenuOpen(false)} href="#features" className="text-lg font-medium text-gray-300">Features</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} href="#dispatch" className="text-lg font-medium text-gray-300">Dispatch</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} href="#how-it-works" className="text-lg font-medium text-gray-300">How it Works</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} href="#pricing" className="text-lg font-medium text-gray-300">Pricing</Link>
-
-          <div className="h-px bg-gray-800 w-full my-2"></div>
-          <Link onClick={() => setMobileMenuOpen(false)} href="/login" className="text-lg font-medium text-gray-300">Log In</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} href="/login" className="text-lg font-medium bg-emerald-500 text-white px-4 py-3 rounded-lg text-center">
-            Get Started Free
+        <div className="fixed inset-0 top-14 bg-[#0a0a0a] z-40 p-6 flex flex-col gap-6 md:hidden font-mono">
+          <Link onClick={() => setMobileMenuOpen(false)} href="#pillars" className="text-lg text-zinc-300 uppercase tracking-wider">Pillars</Link>
+          <Link onClick={() => setMobileMenuOpen(false)} href="#how-it-works" className="text-lg text-zinc-300 uppercase tracking-wider">Protocol</Link>
+          <Link onClick={() => setMobileMenuOpen(false)} href="#dispatch" className="text-lg text-zinc-300 uppercase tracking-wider">Dispatch</Link>
+          <Link onClick={() => setMobileMenuOpen(false)} href="#pricing" className="text-lg text-zinc-300 uppercase tracking-wider">Pricing</Link>
+          <div className="h-px bg-zinc-800 w-full my-2" />
+          <Link onClick={() => setMobileMenuOpen(false)} href="/login" className="text-lg text-zinc-300">Log In</Link>
+          <Link onClick={() => setMobileMenuOpen(false)} href="/login" className="text-lg bg-orange-500 text-white px-4 py-3 text-center font-bold">
+            DEPLOY NOW
           </Link>
         </div>
       )}
 
-      {/* SECTION 2: HERO */}
-      <section className="relative pt-32 pb-20 px-6 min-h-[90vh] flex flex-col items-center justify-center overflow-hidden">
-        {/* Subtle grid background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"></div>
-        
-        <div className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-sm font-medium mb-8">
-            <Zap className="w-4 h-4" /> ⚡ Dispatch · Monitor · Control · Free to Start
+      {/* ═══ HERO: COMMAND CENTER ═══ */}
+      <section className="relative pt-28 pb-20 px-6 min-h-[95vh] flex flex-col items-center justify-center overflow-hidden">
+        {/* Industrial grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
+        {/* Corner markers */}
+        <div className="absolute top-24 left-8 w-16 h-16 border-l-2 border-t-2 border-orange-500/20 hidden md:block" />
+        <div className="absolute top-24 right-8 w-16 h-16 border-r-2 border-t-2 border-orange-500/20 hidden md:block" />
+        <div className="absolute bottom-8 left-8 w-16 h-16 border-l-2 border-b-2 border-orange-500/20 hidden md:block" />
+        <div className="absolute bottom-8 right-8 w-16 h-16 border-r-2 border-b-2 border-orange-500/20 hidden md:block" />
+
+        <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto">
+          {/* Status badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 border border-orange-500/30 bg-orange-500/5 text-orange-500 text-[12px] font-mono uppercase tracking-widest mb-10">
+            <div className="w-1.5 h-1.5 bg-orange-500 animate-pulse" />
+            SYSTEM ONLINE — V1.0.0 STABLE
           </div>
 
-          <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            <span className="text-red-500/80 text-2xl md:text-3xl block font-mono mb-2">/human_in_the_loop</span>
-            Stop your AI Agents from <br className="hidden md:block" />
-            <span className="text-emerald-500 relative">
-              burninating
-              <svg className="absolute w-full h-3 -bottom-1 left-0 text-emerald-500/30" viewBox="0 0 100 10" preserveAspectRatio="none">
-                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="4" fill="none" />
+          <h1 className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.95] mb-6 font-mono uppercase">
+            <span className="text-zinc-600 text-lg md:text-2xl block font-mono mb-4 tracking-[0.3em]">MISSION CONTROL FOR</span>
+            <span className="text-white">AUTONOMOUS</span><br />
+            <span className="text-orange-500 relative inline-block">
+              AGENTS
+              <svg className="absolute w-full h-2 -bottom-1 left-0" viewBox="0 0 200 8" preserveAspectRatio="none">
+                <path d="M0 4 L200 4" stroke="#ff5722" strokeWidth="3" fill="none" strokeDasharray="8 4" />
               </svg>
-            </span> your API budget.
+            </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            AgentHelm is a Mission Control SDK for your AI agents. Implement "Classification-First" safety boundaries in minutes. Get live Telegram alerts for sensitive tool calls and safely resume agents from exact checkpoints.
+          <p className="text-base md:text-lg text-zinc-500 mb-10 max-w-2xl mx-auto font-mono leading-relaxed">
+            The governance SDK that wraps around any AI framework.<br className="hidden md:block" />
+            Safety boundaries. Live traces. Telegram control.<br className="hidden md:block" />
+            <span className="text-orange-500/80">Fail-closed by default.</span>
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 mb-12 w-full sm:w-auto">
-            <Link href="/login" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-lg px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)]">
-              Deploy your first safe agent <ArrowRight className="w-5 h-5" />
+          <div className="flex flex-col sm:flex-row gap-3 mb-10">
+            <Link href="/login" className="bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 shadow-[0_0_60px_-15px_rgba(255,87,34,0.4)]">
+              DEPLOY YOUR FIRST AGENT <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="#how-it-works" className="border border-gray-700 text-gray-400 hover:text-white hover:border-emerald-500 font-medium text-lg px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-[#111]">
-              See How It Works <ArrowRight className="w-5 h-5 rotate-90" />
+            <Link href="#how-it-works" className="border border-zinc-700 text-zinc-400 hover:text-white hover:border-orange-500/50 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 bg-zinc-900/50">
+              VIEW PROTOCOL <ChevronDown className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="flex items-center gap-4 mb-16 text-sm text-gray-500">
-            <p>Free to start · No credit card required</p>
+          <div className="flex items-center gap-6 text-[11px] font-mono text-zinc-600 uppercase tracking-widest">
+            <span>Free tier</span>
+            <span className="w-1 h-1 bg-zinc-700" />
+            <span>No card required</span>
+            <span className="w-1 h-1 bg-zinc-700" />
+            <span>Python · Node.js</span>
           </div>
+        </div>
 
-          <div className="w-full max-w-[560px] text-left">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 md:p-6 font-mono text-[13px] md:text-sm shadow-2xl overflow-x-auto relative group">
-              <div className="absolute top-4 right-4 flex gap-1.5 opacity-50 group-hover:opacity-100 transition-opacity">
-                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-              </div>
-              <pre className="text-zinc-300">
-                <code className="block">
-                  <span className="text-zinc-500"># Install the SDK</span><br/>
-                  <span className="text-zinc-100">pip install agenthelm-sdk</span><br/><br/>
-                  
-                  <span className="text-zinc-500"># Protect sensitive functions</span><br/>
-                  <span className="text-emerald-400">import</span> agenthelm <span className="text-emerald-400">as</span> helm<br/><br/>
-                  
-                  <span className="text-zinc-500"># Pauses agent. Requires Human Approval via Telegram</span><br/>
-                  <span className="text-red-400">@helm.irreversible</span><br/>
-                  <span className="text-emerald-400">def</span> <span className="text-blue-400">drop_database_tables</span>():<br/>
-                  &nbsp;&nbsp;<span className="text-zinc-400"># ...</span><br/><br/>
-
-                  <span className="text-zinc-500"># Continues safely but creates a checkpoint</span><br/>
-                  <span className="text-yellow-400">@helm.side_effect</span><br/>
-                  <span className="text-emerald-400">def</span> <span className="text-blue-400">charge_credit_card</span>(amount):<br/>
-                  &nbsp;&nbsp;<span className="text-zinc-400"># ...</span>
-                </code>
-              </pre>
+        {/* Hero code block */}
+        <div className="relative z-10 w-full max-w-xl mt-14">
+          <div className="bg-[#111] border border-zinc-800 p-5 font-mono text-[13px] relative overflow-hidden">
+            <ScanLine />
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-zinc-800/80">
+              <div className="w-2.5 h-2.5 bg-orange-500" />
+              <span className="text-[10px] text-zinc-600 uppercase tracking-widest">AGENT GOVERNANCE PROTOCOL</span>
             </div>
+            <Typewriter lines={[
+              "# pip install agenthelm-sdk",
+              "import agenthelm as helm",
+              "",
+              "@helm.irreversible",
+              "def drop_tables():",
+              "    # Pauses. Requires Telegram approval.",
+              "",
+              "@helm.side_effect",
+              "def charge_card(amount):",
+              "    # Checkpoint created. Rollback ready.",
+            ]} />
           </div>
         </div>
       </section>
 
-      {/* SECTION 3: PROBLEM */}
-      <section id="features" className="py-16 md:py-24 px-6 bg-[#09090b]">
+      {/* ═══ THREAT BANNER ═══ */}
+      <section className="py-16 px-6 bg-[#0a0a0a] border-y border-zinc-900">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Stop AI Agent Loops before they burn your budget</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              You built it. You deployed it. Now it's stuck in a loop calling an expensive API.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                <AlertCircle className="w-6 h-6 text-red-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Did it crash?</h3>
-              <p className="text-gray-500 leading-relaxed">
-                No alerts. No notifications. You wake up to find your agent stopped 6 hours ago. Silently.
-              </p>
-            </div>
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-6">
-                <DollarSign className="w-6 h-6 text-yellow-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">How much did it cost?</h3>
-              <p className="text-gray-400 leading-relaxed">
-                LLM tokens add up fast. No way to see real-time usage until you get the invoice.
-              </p>
-            </div>
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-gray-700 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
-                <WifiOff className="w-6 h-6 text-orange-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Can you control it remotely?</h3>
-              <p className="text-gray-500 leading-relaxed">
-                Agent stuck in a loop? You need to SSH in, find the process, and kill it manually.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* NEW SECTION: COMPARISON BANNER */}
-      <section className="py-24 px-6 border-y border-zinc-900 bg-black overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <div className="space-y-6">
-            <Badge variant="outline" className="border-emerald-500/50 text-emerald-400 px-3 py-1 rounded-full bg-emerald-500/5">
-              The Missing Piece
-            </Badge>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-[1.1]">
-              You have an Orchestrator.<br/>
-              <span className="text-zinc-500">Now you need Mission Control.</span>
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">THREAT ASSESSMENT</span>
+            <h2 className="text-2xl md:text-4xl font-black font-mono uppercase tracking-tight text-white">
+              Uncontrolled agents are a <span className="text-orange-500">liability</span>
             </h2>
-            <div className="space-y-4 text-zinc-400 text-lg">
-              <p>Frameworks like <strong className="text-white">LangGraph</strong> and <strong className="text-white">CrewAI</strong> are excellent at managing the internal thought process of agents.</p>
-              <p>But when an agent goes off the rails in production, they lack native, mobile-friendly remote control. AgentHelm wraps around these frameworks to provide an external Governance Layer with Human-in-the-loop safety.</p>
-            </div>
           </div>
 
-          <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm overflow-hidden shadow-2xl">
-            <div className="grid grid-cols-2 border-b border-zinc-800">
-              <div className="p-4 text-center text-zinc-500 font-medium">Orchestrators (LangGraph)</div>
-              <div className="p-4 text-center bg-emerald-500/10 text-emerald-400 font-bold border-l border-zinc-800">AgentHelm Governance</div>
-            </div>
-            <div className="divide-y divide-zinc-800">
-              {[
-                ["Core Focus", "Internal Agent Logic", "External Observability"],
-                ["Intervention", "Code Changes Required", "1-Click Telegram Approval"],
-                ["Resumes", "Requires DB Config", "Out-of-the-box Hydration"],
-                ["Monitoring", "Terminal Logs", "Real-time Mobile Dashboard"],
-                ["Boundaries", "Manual Checks", "Classification-First Decorators"],
-              ].map(([feature, framework, helm], i) => (
-                <div key={i} className="grid grid-cols-2 text-sm">
-                  <div className="p-4 text-zinc-400 flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-bold">{feature}</span>
-                    <span>{framework}</span>
-                  </div>
-                  <div className="p-4 bg-emerald-500/5 text-zinc-200 border-l border-zinc-800 flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>{helm}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* SECTION 4: SOLUTION - FEATURES */}
-      <section className="py-24 px-6 bg-[#0d0d0d] border-y border-gray-900">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Meet AgentHelm</h2>
-            <p className="text-xl font-medium text-emerald-500 mb-4">Your AI Agent Control Plane</p>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Add one line of code. Take full control of every agent you build.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-[#111] border-2 border-emerald-500/50 rounded-xl p-8 relative overflow-hidden group hover:border-emerald-500 transition-all hover:scale-[1.02] shadow-emerald-500/5 hover:shadow-emerald-500/10 shadow-xl">
-              <div className="absolute top-4 right-4 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-emerald-500/30">New</div>
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <RefreshCw className="w-6 h-6 text-emerald-500" />
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { icon: AlertCircle, color: "text-red-500", bg: "border-red-500/20", title: "Silent Failures", desc: "No alerts. No notifications. Your agent stopped 6 hours ago. Silently." },
+              { icon: DollarSign, color: "text-amber-500", bg: "border-amber-500/20", title: "Budget Hemorrhage", desc: "Stuck in a loop calling GPT-4. You find out when the invoice arrives." },
+              { icon: WifiOff, color: "text-orange-500", bg: "border-orange-500/20", title: "Zero Remote Control", desc: "Agent stuck? SSH in, find the process, kill it. At 3 AM." },
+            ].map((item, i) => (
+              <div key={i} className={`bg-[#111] border ${item.bg} p-6 hover:border-zinc-600 transition-colors group`}>
+                <item.icon className={`w-5 h-5 ${item.color} mb-4`} />
+                <h3 className="text-base font-mono font-bold text-white mb-2 uppercase tracking-wide">{item.title}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{item.desc}</p>
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Fault-Tolerant Execution</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Step-level checkpointing ensures your agent never starts from zero. If it crashes, resume from the exact state with one click.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-emerald-500/30 transition-all hover:scale-[1.02] group">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <Terminal className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Live Step Progress</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Watch agents execute step-by-step. See "Step 3/10: Searching Leads" in real-time on your phone or dashboard.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border border-gray-800 rounded-xl p-8 hover:border-emerald-500/30 transition-all hover:scale-[1.02] group">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <ZapIcon className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Delta Storage</h3>
-              <p className="text-gray-400 leading-relaxed">
-                High-frequency checkpointing without the bloat. Optimized delta encoding reduces state storage overhead by ~65%.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border border-zinc-800 rounded-xl p-8 hover:border-emerald-500/50 transition-all hover:scale-[1.02] group">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <Terminal className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Live Log Terminal</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Stream real-time logs with color coding, filtering, and search. See exactly what your agent is doing right now.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border border-zinc-800 rounded-xl p-8 hover:border-emerald-500/50 transition-all hover:scale-[1.02] group">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <MessageSquare className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Chat With Agents</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Send commands. Get responses. Chat directly with your running agent from dashboard or Telegram.
-              </p>
-            </div>
-
-            <div className="bg-[#111] border border-zinc-800 rounded-xl p-8 hover:border-emerald-500/50 transition-all hover:scale-[1.02] group">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
-                <Bot className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">AI Failure Analysis</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Click Explain on any error. Gemini reads your logs and tells you exactly what went wrong and how to fix it.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* SECTION 4.5: ONE LINE INTEGRATION */}
-      <section id="install" className="py-24 px-6 bg-[#030712] relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.05),transparent_50%)]"></div>
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-              One line of code. Total control.
+      {/* ═══ FOUR PILLARS ═══ */}
+      <section id="pillars" className="py-20 px-6 bg-[#0d0d0d] relative">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#ff572208,transparent_40%)]" />
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">GOVERNANCE FRAMEWORK</span>
+            <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
+              Four Pillars of <span className="text-orange-500">Control</span>
             </h2>
-            <p className="text-gray-400 text-lg">
-              Install the SDK and connect your agent in seconds.
+            <p className="text-zinc-500 font-mono text-sm max-w-xl mx-auto">
+              Every production agent needs safety, observability, reasoning capture, and quality evaluation. AgentHelm delivers all four.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 text-left">
-            {/* Python SDK */}
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-emerald-500/30 transition-colors group">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-                  <span className="text-blue-400 font-bold">Py</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-white">Python SDK</h3>
-                  <p className="text-xs text-gray-500">agenthelm-sdk</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-sm text-emerald-400 flex items-center justify-between">
-                  <code>pip install agenthelm-sdk</code>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500/50 animate-pulse"></div>
-                </div>
-                <div className="bg-black/60 p-5 rounded-xl border border-white/5 font-mono text-[11px] leading-relaxed text-slate-300">
-                  <code className="block">
-                    <span className="text-blue-400">from</span> agenthelm <span className="text-blue-400">import</span> Agent<br/>
-                    agent = Agent(key=<span className="text-emerald-400">&quot;YOUR_KEY&quot;</span>)
-                  </code>
-                </div>
-              </div>
-            </div>
+          {/* Pillar tabs */}
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {pillars.map((p, i) => (
+              <button key={i} onClick={() => setActiveTab(i)}
+                className={`px-5 py-2.5 font-mono text-[12px] uppercase tracking-wider transition-all border ${
+                  activeTab === i 
+                    ? 'bg-orange-500/10 border-orange-500/50 text-orange-500' 
+                    : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-600'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-            {/* Node.js SDK */}
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-emerald-500/30 transition-colors group">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                  <span className="text-emerald-400 font-bold">JS</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-white">Node.js SDK</h3>
-                  <p className="text-xs text-gray-500">agenthelm-node-sdk</p>
-                </div>
+          {/* Active pillar detail */}
+          <div className="bg-[#111] border border-zinc-800 p-8 md:p-12 relative overflow-hidden">
+            <ScanLine />
+            <div className="flex items-start gap-6">
+              <div className={`w-14 h-14 ${pillars[activeTab].bg} flex items-center justify-center shrink-0 hidden md:flex`}>
+                {React.createElement(pillars[activeTab].icon, { className: `w-7 h-7 ${pillars[activeTab].color}` })}
               </div>
-              <div className="space-y-4">
-                <div className="bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-sm text-emerald-400 flex items-center justify-between">
-                  <code>npm install agenthelm-node-sdk</code>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500/50 animate-pulse"></div>
-                </div>
-                <div className="bg-black/60 p-5 rounded-xl border border-white/5 font-mono text-[11px] leading-relaxed text-slate-300">
-                  <code className="block">
-                    <span className="text-blue-400">import</span> {'{'} Agent {'}'} <span className="text-blue-400">from</span> <span className="text-emerald-400">&quot;agenthelm&quot;</span><br/>
-                    <span className="text-blue-400">const</span> agent = <span className="text-blue-400">new</span> Agent({'{'} key: <span className="text-emerald-400">&quot;YOUR_KEY&quot;</span> {'}'})
-                  </code>
-                </div>
+              <div>
+                <div className="text-[10px] font-mono text-orange-500/50 uppercase tracking-widest mb-2">PILLAR {String(activeTab + 1).padStart(2, '0')}</div>
+                <h3 className="text-xl md:text-2xl font-mono font-bold text-white mb-3 uppercase">{pillars[activeTab].title}</h3>
+                <p className="text-zinc-400 leading-relaxed max-w-2xl">{pillars[activeTab].desc}</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 5: HOW IT WORKS */}
-      <section id="how-it-works" className="py-24 px-6 bg-[#09090b]">
+      {/* ═══ COMPARISON ═══ */}
+      <section className="py-20 px-6 bg-[#0a0a0a] border-y border-zinc-900">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">COMPETITIVE ANALYSIS</span>
+            <h2 className="text-2xl md:text-4xl font-black font-mono uppercase tracking-tight text-white mb-3">
+              Orchestrator ≠ <span className="text-orange-500">Governance</span>
+            </h2>
+            <p className="text-zinc-500 text-sm font-mono">Frameworks like LangGraph manage internal logic. AgentHelm manages external safety.</p>
+          </div>
+
+          <div className="bg-[#111] border border-zinc-800 overflow-hidden">
+            <div className="grid grid-cols-3 border-b border-zinc-800">
+              <div className="p-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Capability</div>
+              <div className="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border-l border-zinc-800">Orchestrators</div>
+              <div className="p-4 text-[10px] font-mono text-orange-500 uppercase tracking-widest border-l border-zinc-800 bg-orange-500/5">AgentHelm</div>
+            </div>
+            {[
+              ["Intervention", "Code changes required", "1-click Telegram approval"],
+              ["Checkpointing", "Manual DB config", "Out-of-the-box hydration"],
+              ["Monitoring", "Terminal logs", "Real-time mobile dashboard"],
+              ["Safety Boundaries", "Manual if/else checks", "Classification-First decorators"],
+              ["Failure Recovery", "Restart from scratch", "Resume from exact checkpoint"],
+            ].map(([cap, orch, helm], i) => (
+              <div key={i} className="grid grid-cols-3 border-b border-zinc-800/50 last:border-0">
+                <div className="p-4 text-[13px] font-mono text-zinc-400">{cap}</div>
+                <div className="p-4 text-[13px] text-zinc-600 border-l border-zinc-800 flex items-center gap-2">
+                  <XCircle className="w-3.5 h-3.5 text-zinc-700 shrink-0" /> {orch}
+                </div>
+                <div className="p-4 text-[13px] text-zinc-200 border-l border-zinc-800 bg-orange-500/[0.03] flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-orange-500 shrink-0" /> {helm}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ HOW IT WORKS ═══ */}
+      <section id="how-it-works" className="py-20 px-6 bg-[#0d0d0d]">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Up and running in 3 minutes</h2>
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">DEPLOYMENT PROTOCOL</span>
+            <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white">
+              Online in <span className="text-orange-500">3 minutes</span>
+            </h2>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-8 lg:gap-12 items-start relative">
-            {/* Arrows for desktop */}
-            <div className="hidden md:block absolute top-12 left-[30%] text-emerald-500/30">
-              <ArrowRight className="w-8 h-8" />
-            </div>
-            <div className="hidden md:block absolute top-12 left-[64%] text-emerald-500/30">
-              <ArrowRight className="w-8 h-8" />
-            </div>
-
-            <div className="flex-1 w-full bg-[#111] border border-gray-800 rounded-xl p-6 md:p-8 hover:border-gray-700 transition-colors group">
-              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center mb-6 text-sm">1</div>
-              <h3 className="text-xl font-bold text-white mb-3">Sign up and get key</h3>
-              <p className="text-gray-400 mb-6 text-sm leading-relaxed">
-                Create a free account. Your unique connect key is generated instantly.
-              </p>
-              <div className="bg-black/50 border border-gray-800 p-4 rounded-lg font-mono text-[13px] text-green-400 break-all select-all">
-                ahe_live_xxxxxxxxxxxxxxxx
-              </div>
-            </div>
-
-            <div className="flex-1 w-full bg-[#111] border border-gray-800 rounded-xl p-6 md:p-8 hover:border-gray-700 transition-colors group">
-              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center mb-6 text-sm">2</div>
-              <h3 className="text-xl font-bold text-white mb-3">Add one line</h3>
-              <p className="text-gray-400 mb-6 text-sm leading-relaxed">
-                Install the SDK and connect. Works with any Python or Node.js agent.
-              </p>
-              <div className="bg-black/50 border border-gray-800 p-4 rounded-lg font-mono text-[11px] md:text-[13px] text-gray-300 break-all overflow-hidden space-y-3">
-                <div>
-                  <span className="text-gray-500"># Python</span><br/>
-                  <span className="text-emerald-400">from</span> agenthelm <span className="text-emerald-400">import</span> Agent<br/>
-                  agent = Agent(key=<span className="text-green-400">&quot;ahe_live_...&quot;</span>)
-                </div>
-                <div className="pt-2 border-t border-gray-800">
-                  <span className="text-gray-500">// Node.js</span><br/>
-                  <span className="text-blue-400">import</span> {'{'}  connect {'}'} <span className="text-blue-400">from</span> <span className="text-green-400">&apos;agenthelm-node-sdk&apos;</span><br/>
-                  <span className="text-blue-400">const</span> agent = connect({'{'} key: <span className="text-green-400">&apos;ahe_live_...&apos;</span> {'}'})
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { step: "01", title: "Authenticate", desc: "Sign up. Get your connect key instantly. No approvals, no waitlists.", code: "ahe_live_xxxxxxxxxxxxxxxx" },
+              { step: "02", title: "Integrate", desc: "Install the SDK. Register your agent with one line. Works with any framework.", code: "agent = Agent(key=\"ahe_live_...\")" },
+              { step: "03", title: "Govern", desc: "Open the dashboard. See live traces. Get Telegram alerts. Take control.", code: "$ helm status → ALL SYSTEMS GO" },
+            ].map((item, i) => (
+              <div key={i} className="bg-[#111] border border-zinc-800 p-6 hover:border-orange-500/30 transition-colors group">
+                <div className="text-3xl font-mono font-black text-orange-500/20 mb-4">{item.step}</div>
+                <h3 className="text-lg font-mono font-bold text-white mb-2 uppercase">{item.title}</h3>
+                <p className="text-zinc-500 text-sm mb-4 leading-relaxed">{item.desc}</p>
+                <div className="bg-black/50 border border-zinc-800 p-3 font-mono text-[12px] text-orange-400/80 group-hover:border-orange-500/20 transition-colors">
+                  {item.code}
                 </div>
               </div>
-            </div>
-
-            <div className="flex-1 w-full bg-[#111] border border-gray-800 rounded-xl p-6 md:p-8 hover:border-gray-700 transition-colors group">
-              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center mb-6 text-sm">3</div>
-              <h3 className="text-xl font-bold text-white mb-3">Take the helm</h3>
-              <p className="text-gray-400 mb-6 text-sm leading-relaxed">
-                Open the dashboard. See your agent live. Chat with it. Get Telegram alerts.
-              </p>
-              <div className="bg-black/50 border border-gray-800 p-3 rounded-lg overflow-hidden flex flex-col gap-2">
-                <div className="flex items-center gap-2 pb-2 border-b border-gray-800">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                  <span className="text-xs text-white uppercase font-bold tracking-wider">Dashboard</span>
-                </div>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1 h-3 bg-gray-800 rounded-sm"></div>
-                  <div className="flex-1 h-5 bg-emerald-500/40 rounded-sm"></div>
-                  <div className="flex-1 h-2 bg-gray-800 rounded-sm"></div>
-                  <div className="flex-1 h-6 bg-emerald-500/70 rounded-sm"></div>
-                  <div className="flex-1 h-4 bg-gray-800 rounded-sm"></div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* NEW SECTION: DISPATCH FLOW */}
-      <section id="dispatch" className="py-24 px-6 bg-[#09090b] relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+      {/* ═══ DISPATCH ═══ */}
+      <section id="dispatch" className="py-20 px-6 bg-[#0a0a0a] border-y border-zinc-900 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/[0.03] blur-[100px] rounded-full pointer-events-none" />
         
         <div className="max-w-6xl mx-auto relative z-10">
-          <div className="text-center mb-16 space-y-4">
-            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
-              📨 New Feature
-            </Badge>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white">
-              Dispatch Tasks From Your Phone
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">REMOTE OPERATIONS</span>
+            <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-3">
+              Dispatch from <span className="text-orange-500">Telegram</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-              Your agents don't need a browser to be productive. Send complex tasks via Telegram and watch them execute in real-time.
-            </p>
+            <p className="text-zinc-500 font-mono text-sm max-w-xl mx-auto">Send tasks to your agents from your phone. Get structured results back instantly.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="space-y-6">
-              <div className="aspect-[4/3] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center gap-4 group hover:border-emerald-500/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold">AH</div>
-                  <div className="bg-zinc-800 rounded-2xl rounded-tl-none px-4 py-2 text-xs text-zinc-200">
-                    Ready for dispatch.
+          <div className="grid md:grid-cols-2 gap-6 items-center">
+            {/* Telegram mockup */}
+            <div className="bg-[#1a1d23] border border-zinc-800 overflow-hidden max-w-sm mx-auto w-full">
+              <div className="bg-[#1a1d23] border-b border-zinc-800 p-3 flex items-center gap-3">
+                <div className="w-8 h-8 bg-orange-500 flex items-center justify-center text-white text-[10px] font-mono font-bold">AH</div>
+                <div>
+                  <div className="font-mono text-white text-sm font-bold">AgentHelm Bot</div>
+                  <div className="text-[10px] text-orange-400 font-mono">ONLINE</div>
+                </div>
+              </div>
+              <div className="p-4 space-y-3 text-[13px]">
+                <div className="bg-zinc-800 p-3 max-w-[85%] text-zinc-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-1.5 h-1.5 bg-red-500" />
+                    <span className="font-mono font-bold text-sm">Lead Agent silent</span>
                   </div>
+                  <p className="text-zinc-400 text-xs">No ping in 10m. Use <span className="text-orange-400">/resume</span> to restart.</p>
                 </div>
-                <div className="bg-emerald-600 rounded-2xl rounded-tr-none px-4 py-2 text-xs text-white self-end flex items-center gap-2">
-                  <span>/dispatch lead-agent find 20 leads</span>
-                  <Send className="w-3 h-3" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <span className="text-emerald-500">01.</span> Send from Telegram
-                </h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">
-                  Start any registered agent task with a simple command. No SSH, no dashboard login required.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="space-y-6">
-              <div className="aspect-[4/3] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center overflow-hidden font-mono text-[10px] group hover:border-emerald-500/50 transition-colors">
-                <div className="space-y-1">
-                  <p className="text-blue-400">@agent.on_dispatch</p>
-                  <p className="text-emerald-400">def <span className="text-blue-300">handle_task</span>(task, data):</p>
-                  <p className="text-zinc-500 ml-4"># Business logic here</p>
-                  <p className="text-zinc-300 ml-4">results = <span className="text-blue-300">search_leads</span>(task)</p>
-                  <p className="text-emerald-400 ml-4">return <span className="text-zinc-300">results</span></p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <span className="text-emerald-500">02.</span> Agent runs code
-                </h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">
-                  The `@on_dispatch` decorator triggers your function automatically wherever the agent is running.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="space-y-6">
-              <div className="aspect-[4/3] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center gap-4 group hover:border-emerald-500/50 transition-colors">
-                <div className="bg-zinc-800 rounded-2xl rounded-tl-none px-4 py-2 text-xs text-zinc-200 space-y-2">
-                  <p className="font-bold text-emerald-400">Task Complete! ✅</p>
-                  <p>Found 20 leads for "SaaS marketing".</p>
-                  <div className="flex items-center gap-2 text-[10px] text-zinc-500 border-t border-zinc-700 pt-2 mt-2">
-                    <Paperclip className="w-3 h-3" />
-                    <span>leads_export.csv (4.2kb)</span>
+                <div className="bg-orange-600 p-3 max-w-[85%] text-white self-end ml-auto font-mono text-sm">/resume lead-agent</div>
+                <div className="bg-zinc-800 p-3 max-w-[85%] text-zinc-200 space-y-2">
+                  <p className="font-mono font-bold border-b border-zinc-700 pb-2">🔄 Resuming from Checkpoint</p>
+                  <div className="bg-orange-500/10 border border-orange-500/30 p-2 text-xs">
+                    <p className="text-orange-400 font-bold">Step 4: Web Search (2m ago)</p>
+                    <div className="mt-2 w-full py-1.5 bg-orange-600 text-white text-center text-[10px] font-mono font-bold cursor-pointer">REPLAY FROM HERE</div>
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <span className="text-emerald-500">03.</span> Get results instantly
-                </h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">
-                  Structured data, files, and success logs are sent back to your Telegram thread immediately.
-                </p>
-              </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* SECTION 6: TELEGRAM FEATURE HIGHLIGHT */}
-      <section className="py-24 px-6 bg-[linear-gradient(135deg,#064e3b22,#09090b)] border-y border-gray-800 overflow-hidden">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 lg:gap-24 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[13px] font-bold mb-6">
-              <Smartphone className="w-4 h-4" /> Telegram Integration
-            </div>
-            <h2 className="text-3xl lg:text-5xl font-extrabold text-white mb-6 leading-tight tracking-tight">Your entire agent fleet, inside Telegram</h2>
-            <p className="text-lg text-gray-400 mb-8 leading-relaxed">
-              Connect your Telegram account and get instant alerts when agents crash, spike in tokens, or go silent. Control everything without opening a browser.
-            </p>
-            <ul className="space-y-4">
+            {/* Features list */}
+            <div className="space-y-4">
               {[
-                "Instant crash alerts",
-                "/stop and /run commands",
-                "Daily usage summaries",
-                "Token spike warnings",
-                "Chat with agents in Telegram"
+                { icon: Send, title: "/dispatch", desc: "Send complex tasks to any registered agent" },
+                { icon: Activity, title: "/status", desc: "Get real-time progress and token counts" },
+                { icon: RefreshCw, title: "/resume", desc: "Restart from the last healthy checkpoint" },
+                { icon: AlertTriangle, title: "Auto-alerts", desc: "Get notified on crashes, loops, and budget spikes" },
+                { icon: MessageSquare, title: "Chat", desc: "Talk directly to your running agent" },
               ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-gray-300">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-emerald-500" />
+                <div key={i} className="flex items-start gap-4 p-4 border border-zinc-800 hover:border-orange-500/20 transition-colors bg-[#111]">
+                  <div className="w-10 h-10 bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <item.icon className="w-4 h-4 text-orange-500" />
                   </div>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="relative mx-auto w-full max-w-[320px] md:max-w-full">
-            {/* Phone Mockup Frame */}
-            <div className="bg-[#1f2937] border-4 border-gray-900 rounded-[2rem] shadow-2xl overflow-hidden aspect-[9/18] md:aspect-auto md:h-[500px] flex flex-col relative w-full pb-4">
-              {/* Header */}
-              <div className="bg-[#1f2937] border-b border-gray-800 p-4 sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-lg font-bold">AH</div>
                   <div>
-                    <div className="font-bold text-white text-sm">AgentHelm Bot</div>
-                    <div className="text-xs text-blue-300">bot</div>
+                    <h4 className="font-mono font-bold text-white text-sm">{item.title}</h4>
+                    <p className="text-zinc-500 text-sm">{item.desc}</p>
                   </div>
                 </div>
-              </div>
-              
-              {/* Chat Area */}
-              <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto font-sans text-[13px]">
-                {/* Bot Alert */}
-                <div className="bg-[#2a3646] rounded-xl rounded-tl-sm p-3 max-w-[85%] text-gray-200 shadow-sm border border-gray-700 w-fit">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="font-bold">Lead Agent has gone silent</span>
-                  </div>
-                  <p className="mb-2 text-gray-300">No ping received in 10 minutes.</p>
-                  <p className="text-gray-400 text-xs">Use <span className="text-blue-400">/run Lead Agent</span> to restart.</p>
-                </div>
-
-                {/* User Message */}
-                <div className="bg-[#10b981] rounded-xl rounded-tr-sm p-3 max-w-[85%] text-white self-end shadow-sm w-fit">
-                  /resume lead-agent
-                </div>
-
-                {/* Bot Reply */}
-                <div className="bg-[#2a3646] rounded-xl rounded-tl-sm p-3 max-w-[85%] text-gray-200 shadow-sm border border-gray-700 w-fit">
-                  <p className="font-bold mb-3 border-b border-gray-700 pb-2">🔄 Resuming Lead Agent</p>
-                  
-                  <div className="space-y-3">
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2 text-[11px]">
-                      <p className="text-emerald-400 font-bold mb-1">Found Checkpoint:</p>
-                      <p>Step 4: Web Search (2m ago)</p>
-                      <button className="mt-2 w-full py-1.5 bg-emerald-600 rounded text-[10px] font-bold">REPLAY FROM HERE</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-            {/* Decoration */}
-            <div className="absolute -z-10 bg-emerald-500/20 w-64 h-64 blur-3xl rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 7: PRICING */}
-      <section id="pricing" className="py-24 px-6 bg-[#09090b]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight">Simple, honest pricing</h2>
-            <p className="text-lg text-gray-400 max-w-xl mx-auto">
-              Start free. Upgrade when you're ready. No credit card required.
-            </p>
+      {/* ═══ STATS BANNER (E-E-A-T: Experience) ═══ */}
+      <section className="py-14 px-6 bg-[#111] border-y border-zinc-800">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          {[
+            { value: 1200000, suffix: "+", label: "Traces Processed" },
+            { value: 99, suffix: ".9%", label: "Uptime SLA" },
+            { value: 4, suffix: "", label: "Governance Pillars" },
+            { value: 2, suffix: "", label: "Official SDKs" },
+          ].map((stat, i) => (
+            <div key={i}>
+              <div className="text-2xl md:text-4xl font-mono font-black text-orange-500 mb-1">
+                <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+              </div>
+              <div className="text-[11px] font-mono text-zinc-600 uppercase tracking-widest">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══ PRICING ═══ */}
+      <section id="pricing" className="py-20 px-6 bg-[#0a0a0a]">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">DEPLOYMENT TIERS</span>
+            <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-3">
+              Transparent <span className="text-orange-500">Pricing</span>
+            </h2>
+            <p className="text-zinc-500 font-mono text-sm">Start free. Scale when ready. No surprises.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 items-stretch max-w-5xl mx-auto mb-10">
-            {/* Free Tier */}
-            <div className="bg-[#111] border border-gray-800 rounded-2xl p-8 flex flex-col text-left">
-              <h3 className="text-xl font-medium text-white mb-1">Starter</h3>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-white">{symbol}0</span>
-              </div>
-              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">Forever free</p>
-
-              <ul className="space-y-4 mb-8 flex-1">
-                {[
-                  { text: '3 agents', icon: Check, color: 'text-gray-300' },
-                  { text: '100,000 traces/month', icon: Check, color: 'text-gray-300' },
-                  { text: '7 day log history', icon: Check, color: 'text-gray-300' },
-                  { text: 'Live dashboard', icon: Check, color: 'text-gray-300' },
-                  { text: 'Telegram alerts (basic)', icon: Check, color: 'text-gray-300' },
-                  { text: 'AI failure analysis', icon: X, color: 'text-gray-600' },
-                  { text: 'All anomaly alerts', icon: X, color: 'text-gray-600' },
-                ].map((item, i) => (
-                  <li key={i} className={`flex items-start gap-3 ${item.color}`}>
-                    <item.icon className="w-5 h-5 shrink-0 opacity-80" />
-                    <span className="text-sm">{item.text}</span>
+          <div className="grid md:grid-cols-3 gap-4 items-stretch mb-8">
+            {/* Starter */}
+            <div className="bg-[#111] border border-zinc-800 p-7 flex flex-col">
+              <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">TIER 01</div>
+              <h3 className="text-lg font-mono font-bold text-white mb-1">Starter</h3>
+              <div className="text-3xl font-mono font-black text-white mb-1">{symbol}0</div>
+              <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">Forever free</p>
+              <ul className="space-y-3 mb-6 flex-1">
+                {["3 agents", "100K traces/mo", "7-day log history", "Live dashboard", "Basic Telegram alerts"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Check className="w-3.5 h-3.5 text-zinc-600 shrink-0" /> {item}
                   </li>
                 ))}
               </ul>
-
-              <Link href="/login" className="w-full py-4 rounded-xl font-bold text-center bg-[#1f2937] text-white hover:bg-gray-700 transition-colors">
-                Get Started Free
+              <Link href="/login" className="w-full py-3 text-center font-mono text-sm font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">
+                GET STARTED
               </Link>
             </div>
 
-            {/* Indie Tier */}
-            <div className="bg-[#111] border-2 border-emerald-500 rounded-2xl p-8 flex flex-col text-left relative transform md:-translate-y-4 shadow-2xl shadow-emerald-500/10 z-10">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                Most Popular
-              </div>
-              <h3 className="text-xl font-medium text-emerald-400 mb-1">Indie</h3>
+            {/* Indie */}
+            <div className="bg-[#111] border-2 border-orange-500 p-7 flex flex-col relative md:-translate-y-2 shadow-[0_0_40px_-10px_rgba(255,87,34,0.2)]">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white text-[10px] font-mono font-bold px-3 py-1 uppercase tracking-widest">RECOMMENDED</div>
+              <div className="text-[10px] font-mono text-orange-500/60 uppercase tracking-widest mb-2">TIER 02</div>
+              <h3 className="text-lg font-mono font-bold text-orange-500 mb-1">Indie</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-white">{symbol}{plans.indie.amount}</span>
-                <span className="text-gray-500">/month</span>
+                <span className="text-3xl font-mono font-black text-white">{symbol}{plans.indie.amount}</span>
+                <span className="text-zinc-600 font-mono text-sm">/mo</span>
               </div>
-              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">
+              <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">
                 {currency === 'INR' ? '≈ $5/month' : '≈ ₹400/month'}
               </p>
-
-              <ul className="space-y-4 mb-8 flex-1">
+              <ul className="space-y-3 mb-6 flex-1">
                 {[
-                  { text: '10 agents', icon: Check, color: 'text-white font-medium' },
-                  { text: 'Dispatch tasks', icon: ZapIcon, color: 'text-emerald-400 font-bold', badge: 'NEW' },
-                  { text: 'Progress tracking', icon: RefreshCw, color: 'text-emerald-400 font-bold', badge: 'NEW' },
-                  { text: '2,000,000 traces/month', icon: Check, color: 'text-zinc-200' },
-                  { text: '30 day log history', icon: Check, color: 'text-zinc-200' },
-                  { text: 'AI failure explanations', icon: Check, color: 'text-emerald-400 font-medium' },
-                  { text: 'Email + Telegram alerts', icon: Check, color: 'text-zinc-200' },
+                  { text: "10 agents", badge: false },
+                  { text: "Telegram dispatch", badge: true },
+                  { text: "2M traces/mo", badge: false },
+                  { text: "30-day log history", badge: false },
+                  { text: "AI failure analysis", badge: true },
+                  { text: "Email + Telegram alerts", badge: false },
                 ].map((item, i) => (
-                  <li key={i} className={`flex items-start gap-3 ${item.color}`}>
-                    <item.icon className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{item.text}</span>
-                      {item.badge && <Badge className="bg-emerald-500 text-white text-[8px] h-4 px-1 leading-none">{item.badge}</Badge>}
-                    </div>
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                    {item.text}
+                    {item.badge && <span className="text-[9px] font-mono bg-orange-500 text-white px-1.5 py-0.5 font-bold">NEW</span>}
                   </li>
                 ))}
               </ul>
-
               <UpgradeButton
                 plan="indie"
-                label="Start Free Trial — ₹399/mo"
-                className="w-full bg-green-500 hover:bg-green-600 text-black font-semibold py-4 rounded-xl shadow-lg shadow-emerald-500/25"
+                label={`START FREE TRIAL — ${symbol}${plans.indie.amount}/mo`}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold py-3 text-sm shadow-lg shadow-orange-500/20"
               />
             </div>
 
-            {/* Studio Tier */}
-            <div className="bg-[#111] border border-gray-800 rounded-2xl p-8 flex flex-col text-left">
-              <h3 className="text-xl font-medium text-white mb-1">Studio</h3>
+            {/* Studio */}
+            <div className="bg-[#111] border border-zinc-800 p-7 flex flex-col">
+              <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">TIER 03</div>
+              <h3 className="text-lg font-mono font-bold text-white mb-1">Studio</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-white">{symbol}{plans.studio.amount.toLocaleString()}</span>
-                <span className="text-gray-500">/month</span>
+                <span className="text-3xl font-mono font-black text-white">{symbol}{plans.studio.amount.toLocaleString()}</span>
+                <span className="text-zinc-600 font-mono text-sm">/mo</span>
               </div>
-              <p className="text-gray-500 text-sm mb-8 pb-8 border-b border-gray-800">
+              <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">
                 {currency === 'INR' ? '≈ $15/month' : '≈ ₹1300/month'}
               </p>
-
-              <ul className="space-y-4 mb-8 flex-1">
-                {[
-                  { text: 'Unlimited agents', icon: Check, color: 'text-white' },
-                  { text: 'Unlimited dispatch', icon: ZapIcon, color: 'text-emerald-400 font-bold', badge: 'NEW' },
-                  { text: '15,000,000 traces/month', icon: Check, color: 'text-white' },
-                  { text: 'Everything in Indie', icon: Check, color: 'text-white' },
-                  { text: 'Task history', icon: Repeat, color: 'text-white' },
-                  { text: 'Team support', icon: Shield, color: 'text-white' },
-                  { text: 'Priority support', icon: Check, color: 'text-white' },
-                ].map((item, i) => (
-                  <li key={i} className={`flex items-start gap-3 ${item.color}`}>
-                    <item.icon className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
-                    <div className="flex items-center gap-2">
-                       <span className="text-sm">{item.text}</span>
-                       {item.badge && <Badge className="bg-emerald-500 text-white text-[8px] h-4 px-1 leading-none">{item.badge}</Badge>}
-                    </div>
+              <ul className="space-y-3 mb-6 flex-1">
+                {["Unlimited agents", "Unlimited dispatch", "15M traces/mo", "Everything in Indie", "Team support", "Priority support"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Check className="w-3.5 h-3.5 text-zinc-600 shrink-0" /> {item}
                   </li>
                 ))}
               </ul>
-
-              <div
-                className="w-full bg-zinc-800 text-zinc-400 font-semibold py-4 rounded-xl text-center cursor-not-allowed"
-              >
-                Upcoming
+              <div className="w-full py-3 text-center font-mono text-sm font-bold bg-zinc-800 text-zinc-600 cursor-not-allowed">
+                UPCOMING
               </div>
             </div>
           </div>
-
-          <p className="text-center text-gray-500 text-sm max-w-lg mx-auto">
-            🎉 All plans include a 14-day Indie trial. No credit card required.
-          </p>
+          <p className="text-center text-zinc-600 text-[12px] font-mono">All plans include a 14-day Indie trial · No credit card required</p>
         </div>
       </section>
 
-      {/* SECTION 8: FINAL CTA */}
-      <section className="px-6 py-12 md:py-24 max-w-6xl mx-auto">
-        <div className="bg-[linear-gradient(135deg,#064e3b,#065f46)] rounded-[2rem] p-10 md:p-20 text-center border border-emerald-500/50 shadow-2xl flex flex-col items-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/20 blur-3xl rounded-full"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-600/30 blur-3xl rounded-full"></div>
+      {/* ═══ FAQ (E-E-A-T: Expertise + GEO) ═══ */}
+      <section id="faq" className="py-20 px-6 bg-[#0d0d0d] border-t border-zinc-900">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">KNOWLEDGE BASE</span>
+            <h2 className="text-2xl md:text-4xl font-black font-mono uppercase tracking-tight text-white">
+              Frequently Asked <span className="text-orange-500">Questions</span>
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {faqItems.map((item, i) => (
+              <details key={i} className="group bg-[#111] border border-zinc-800 hover:border-zinc-700 transition-colors">
+                <summary className="p-5 cursor-pointer flex items-center justify-between font-mono text-sm text-white font-bold list-none">
+                  {item.q}
+                  <ChevronDown className="w-4 h-4 text-zinc-600 group-open:rotate-180 transition-transform shrink-0 ml-4" />
+                </summary>
+                <div className="px-5 pb-5 text-zinc-400 text-sm leading-relaxed border-t border-zinc-800 pt-4">
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+
+        {/* JSON-LD FAQ Schema for SEO/GEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": faqItems.map(item => ({
+                "@type": "Question",
+                "name": item.q,
+                "acceptedAnswer": { "@type": "Answer", "text": item.a }
+              }))
+            })
+          }}
+        />
+      </section>
+
+      {/* ═══ FINAL CTA ═══ */}
+      <section className="px-6 py-16 max-w-5xl mx-auto">
+        <div className="bg-gradient-to-br from-orange-950/50 to-[#111] border border-orange-500/30 p-10 md:p-16 text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-600/10 blur-3xl" />
           
-          <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6 relative z-10 tracking-tight">Ready to dispatch your first task?</h2>
-          <p className="text-emerald-100 text-lg md:text-xl max-w-2xl mx-auto mb-10 relative z-10">
-            Start monitoring your AI agents in minutes. Free forever.
+          <h2 className="text-3xl md:text-5xl font-mono font-black text-white mb-4 relative z-10 uppercase tracking-tight">
+            Ready to take <span className="text-orange-500">the helm</span>?
+          </h2>
+          <p className="text-zinc-400 font-mono text-sm mb-8 relative z-10">
+            Your agents deserve mission control. Deploy in minutes. Free forever.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 relative z-10">
-            <Link href="/login" className="bg-white hover:bg-gray-100 text-[#064e3b] font-bold text-lg px-8 py-4 rounded-xl transition-transform active:scale-95 shadow-xl flex items-center gap-2">
-              Get Started — Free <ArrowRight className="w-5 h-5" />
+          <div className="flex flex-col sm:flex-row gap-3 justify-center relative z-10">
+            <Link href="/login" className="bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center gap-2 shadow-[0_0_40px_-10px_rgba(255,87,34,0.4)]">
+              DEPLOY NOW <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="#dispatch" className="bg-emerald-500/20 hover:bg-emerald-500/30 text-white border border-emerald-500/50 font-bold text-lg px-8 py-4 rounded-xl transition-transform active:scale-95 shadow-xl flex items-center gap-2">
-              See Dispatch <ArrowRight className="w-5 h-5" />
+            <Link href="#pillars" className="border border-zinc-700 text-zinc-400 hover:text-white font-mono text-sm px-8 py-4 transition-all bg-zinc-900/50">
+              EXPLORE PILLARS
             </Link>
           </div>
-          <p className="mt-6 text-emerald-200/80 text-sm relative z-10">
+          <p className="mt-6 text-zinc-600 text-[11px] font-mono relative z-10 uppercase tracking-widest">
             No credit card · Free forever · Cancel anytime
           </p>
         </div>
       </section>
 
-      {/* SECTION 9: FOOTER */}
-      <footer className="bg-[#09090b] border-t border-gray-800 pt-16 pb-8 px-6">
+      {/* ═══ FOOTER (E-E-A-T: Trustworthiness) ═══ */}
+      <footer className="bg-[#0a0a0a] border-t border-zinc-800 pt-12 pb-6 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
             <div>
-              <Link href="/" className="flex items-center gap-2 mb-6">
-                <span className="text-emerald-500 text-xl font-bold">⚡</span>
-                <span className="text-white text-xl font-bold tracking-tight">AgentHelm</span>
+              <Link href="/" className="flex items-center gap-2 mb-4">
+                <div className="w-6 h-6 bg-orange-500 flex items-center justify-center" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
+                  <Shield className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-white text-base font-bold font-mono tracking-tight">AGENTHELM</span>
               </Link>
-              <p className="text-gray-400 text-sm mb-6 leading-relaxed max-w-[280px]">
-                The control plane for AI agents.<br/>Built for developers. Free to start.
+              <p className="text-zinc-600 text-xs font-mono leading-relaxed max-w-[260px]">
+                The industrial standard for AI agent governance. Built for developers. Free to start.
               </p>
             </div>
 
             <div>
-              <h4 className="text-white font-bold mb-6">Product</h4>
-              <ul className="space-y-4 text-sm text-gray-400">
-                <li><Link href="#features" className="hover:text-emerald-400 transition-colors">Features</Link></li>
-                <li><Link href="#how-it-works" className="hover:text-emerald-400 transition-colors">How it Works</Link></li>
-                <li><Link href="#pricing" className="hover:text-emerald-400 transition-colors">Pricing</Link></li>
-                <li><Link href="#dispatch" className="hover:text-emerald-400 transition-colors">Dispatch</Link></li>
+              <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">Product</h4>
+              <ul className="space-y-3 text-sm text-zinc-500 font-mono">
+                <li><Link href="#pillars" className="hover:text-orange-500 transition-colors">Pillars</Link></li>
+                <li><Link href="#how-it-works" className="hover:text-orange-500 transition-colors">Protocol</Link></li>
+                <li><Link href="#pricing" className="hover:text-orange-500 transition-colors">Pricing</Link></li>
+                <li><Link href="#dispatch" className="hover:text-orange-500 transition-colors">Dispatch</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white font-bold mb-6">Resources</h4>
-              <ul className="space-y-4 text-sm text-gray-400">
-                <li><a href="https://pypi.org/project/agenthelm-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Python SDK</a></li>
-                <li><a href="https://www.npmjs.com/package/agenthelm-node-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Node.js SDK</a></li>
-                <li><a href="https://github.com/jayasukuv11-beep/agenthelm" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">GitHub</a></li>
+              <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">Resources</h4>
+              <ul className="space-y-3 text-sm text-zinc-500 font-mono">
+                <li><a href="https://pypi.org/project/agenthelm-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Python SDK</a></li>
+                <li><a href="https://www.npmjs.com/package/agenthelm-node-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Node.js SDK</a></li>
+                <li><a href="https://github.com/jayasukuv11-beep/agenthelm" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">GitHub</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white font-bold mb-6">Legal</h4>
-              <ul className="space-y-4 text-sm text-gray-400">
-                <li><a href="/PrivacyPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="/TermsOfService.md" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
-                <li><a href="/RefundPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Refund Policy</a></li>
+              <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">Legal</h4>
+              <ul className="space-y-3 text-sm text-zinc-500 font-mono">
+                <li><a href="/PrivacyPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Privacy Policy</a></li>
+                <li><a href="/TermsOfService.md" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Terms of Service</a></li>
+                <li><a href="/RefundPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Refund Policy</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white font-bold mb-6">Contact</h4>
-              <ul className="space-y-4 text-sm text-gray-400">
-                <li><a href="mailto:tharagesharumugam@gmail.com" className="hover:text-emerald-400 transition-colors">tharagesharumugam@gmail.com</a></li>
+              <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">Contact</h4>
+              <ul className="space-y-3 text-sm text-zinc-500 font-mono">
+                <li><a href="mailto:tharagesharumugam@gmail.com" className="hover:text-orange-500 transition-colors">tharagesharumugam@gmail.com</a></li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-            <p>© {new Date().getFullYear()} AgentHelm · Built for developers</p>
-            <p>AgentHelm is proudly built in India 🇮🇳</p>
+          <div className="border-t border-zinc-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] font-mono text-zinc-700">
+            <p>© {new Date().getFullYear()} AgentHelm · The AgentHelm Research Team</p>
+            <p>Built in India 🇮🇳 · Engineered for global scale</p>
           </div>
         </div>
       </footer>
