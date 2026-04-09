@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
+import { TraceTimeline } from "@/components/dashboard/TraceTimeline";
+import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
+import { GuardrailHealthScore } from "@/components/dashboard/GuardrailHealthScore";
+import { SLAMetrics } from "@/components/dashboard/SLAMetrics";
 import {
   Bar,
   BarChart,
@@ -147,6 +151,8 @@ function statusBadge(agent: AgentRow) {
 
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "logs";
   const supabase = useMemo(() => createClient(), []);
   const agentId = params.id;
   const testMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
@@ -180,11 +186,23 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   const [statsLoading, setStatsLoading] = useState(true);
   const [tokensToday, setTokensToday] = useState(0);
   const [totalLogs, setTotalLogs] = useState(0);
+  const [healthLogs, setHealthLogs] = useState<any[]>([]);
+  const [healthToolExecs, setHealthToolExecs] = useState<any[]>([]);
+  const [healthInterventions, setHealthInterventions] = useState<any[]>([]);
   const [errorRate, setErrorRate] = useState({ pct: 0, color: "text-green-400" });
   const [lastActiveLabel, setLastActiveLabel] = useState("—");
   const [tokensPerHour, setTokensPerHour] = useState<{ hour: number; tokens: number }[]>(
     Array.from({ length: 24 }).map((_, i) => ({ hour: i, tokens: 0 }))
   );
+
+  // Phase 5 State
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsType, setSettingsType] = useState<AgentType>("python");
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [allowedTools, setAllowedTools] = useState<string[]>([]);
+  const [blockMode, setBlockMode] = useState(true);
+  const [evalResults, setEvalResults] = useState<any[]>([]);
+  const [evalSets, setEvalSets] = useState<any[]>([]);
 
   const displayedLogs = logs
     .filter((l) => (clearAfterIso ? l.created_at > clearAfterIso : true))
@@ -251,6 +269,19 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
     setAgent(agentData as AgentRow);
     setPlan(((profileErr ? null : profileData) as ProfileRow | null)?.plan ?? "free");
     setLastPingLabel(formatAgo((agentData as AgentRow).last_ping));
+
+    // Phase 5: Initial fetch of permissions
+    const { data: permData } = await supabase
+      .from("agent_tool_permissions")
+      .select("*")
+      .eq("agent_id", agentId)
+      .maybeSingle();
+    
+    if (permData) {
+      setAllowedTools(permData.allowed_tools || []);
+      setBlockMode(permData.block_mode ?? true);
+    }
+
     setLoadingAgent(false);
   }
 
@@ -344,7 +375,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       return;
     }
 
-    const [{ data: creditRows }, { count: logsCount }, { count: errorCount }, { data: lastLog }] =
+    const [{ data: creditRows }, { count: logsCount }, { count: errorCount }, { data: lastLog }, {data: allLogs}, {data: allToolExecs}, {data: allInterventions}] =
       await Promise.all([
         supabase
           .from("credit_usage")
@@ -367,7 +398,20 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase.from("agent_logs").select("type,level,message").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(500),
+        supabase.from("tool_executions").select("classification,status,retry_count").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(500),
+        supabase.from("agent_interventions").select("action_taken").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(500),
+        supabase.from("agent_eval_results").select("*, agent_eval_sets(name)").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(10),
       ]);
+
+    setEvalResults(evalResults || []);
+
+    const logsList = allLogs || [];
+    const toolsList = allToolExecs || [];
+    const interventionsList = allInterventions || [];
+    setHealthLogs(logsList);
+    setHealthToolExecs(toolsList);
+    setHealthInterventions(interventionsList);
 
     const tokens = (creditRows ?? []).reduce((sum, r: any) => sum + Number(r.tokens_used ?? 0), 0);
     setTokensToday(tokens);
@@ -543,16 +587,26 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   async function saveSettings(nextName: string, nextType: AgentType) {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return;
+    
+    // Update core settings
     await supabase
       .from("agents")
       .update({ name: nextName, agent_type: nextType })
       .eq("id", agentId)
       .eq("user_id", authData.user.id);
+
+    // Update Phase 5 Permissions
+    await supabase
+      .from("agent_tool_permissions")
+      .upsert({
+        agent_id: agentId,
+        allowed_tools: allowedTools,
+        block_mode: blockMode,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'agent_id' });
   }
 
-  const [settingsName, setSettingsName] = useState("");
-  const [settingsType, setSettingsType] = useState<AgentType>("python");
-  const [settingsSaving, setSettingsSaving] = useState(false);
+
 
   useEffect(() => {
     if (!agent) return;
@@ -650,17 +704,27 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="logs" className="w-full">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(val) => router.push(`/dashboard/agents/${agentId}?tab=${val}`, { scroll: false })}
+        className="w-full"
+      >
         <div className="overflow-x-auto">
           <TabsList className="bg-[#0a0a0a] border border-[#1f2937]">
             <TabsTrigger value="logs" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
               Logs
+            </TabsTrigger>
+            <TabsTrigger value="traces" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+              Traces
             </TabsTrigger>
             <TabsTrigger value="chat" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
               Chat
             </TabsTrigger>
             <TabsTrigger value="stats" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
               Stats
+            </TabsTrigger>
+            <TabsTrigger value="evals" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+              Evals
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
               Settings
@@ -853,6 +917,11 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           )}
         </TabsContent>
 
+        {/* Traces tab */}
+        <TabsContent value="traces">
+          <TraceTimeline agentId={agentId} plan={plan} />
+        </TabsContent>
+
         {/* Stats tab */}
         <TabsContent value="stats">
           <div className="rounded-lg border border-[#1f2937] bg-[#0a0a0a] p-6 space-y-6">
@@ -863,7 +932,14 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <GuardrailHealthScore 
+                  plan={plan}
+                  totalLogs={healthLogs}
+                  totalToolExecutions={healthToolExecs}
+                  injectionEvents={healthInterventions}
+                />
+                
                 <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4">
                   <div className="text-sm text-gray-400">Tokens Today</div>
                   <div className="mt-2 text-2xl font-semibold text-white">{tokensToday.toLocaleString()}</div>
@@ -905,6 +981,83 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+            <CostBreakdown agentId={agentId} plan={plan} currency="USD" />
+            
+            {/* Phase 4: SLA / Latency Metrics */}
+            {(plan === "indie" || plan === "studio") && (
+              <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4 space-y-3">
+                <div className="text-sm font-medium text-white flex items-center gap-2">
+                  ⏱️ SLA / Latency Contracts
+                  {plan !== "studio" && (
+                    <Badge variant="outline" className="text-xs border-gray-600 text-gray-500 ml-2">Basic</Badge>
+                  )}
+                </div>
+                <SLAMetrics agentId={agentId} plan={plan} />
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Evals tab */}
+        <TabsContent value="evals">
+          <div className="rounded-lg border border-[#1f2937] bg-[#0a0a0a] p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-white">Evaluation Runner</h3>
+                <p className="text-sm text-gray-400">Golden test results and semantic scoring.</p>
+              </div>
+              <Badge className="bg-[#10b981]/20 text-[#10b981] border-none">Studio Required</Badge>
+            </div>
+
+            <div className="space-y-4">
+              {evalResults.length === 0 ? (
+                <div className="text-center py-12 rounded-lg border border-dashed border-[#1f2937]">
+                  <div className="text-gray-500 text-sm">No evaluation runs yet.</div>
+                  <div className="mt-2 text-xs text-gray-600">Use dock.run_evals() in your SDK to trigger tests.</div>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-md border border-[#1f2937]">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-[#111111] text-gray-400 font-medium">
+                      <tr>
+                        <th className="px-4 py-3">Scenario</th>
+                        <th className="px-4 py-3">Result</th>
+                        <th className="px-4 py-3">Matched</th>
+                        <th className="px-4 py-3">Latency</th>
+                        <th className="px-4 py-3">Scores</th>
+                        <th className="px-4 py-3 text-right">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1f2937] text-gray-300">
+                      {evalResults.map((res: any) => (
+                        <tr key={res.id} className="hover:bg-[#111111]/50">
+                          <td className="px-4 py-4 font-medium text-white">{res.agent_eval_sets?.name}</td>
+                          <td className="px-4 py-4">
+                            {res.passed ? (
+                              <Badge className="bg-green-500/20 text-green-400 border-none">PASS</Badge>
+                            ) : (
+                              <Badge className="bg-red-500/20 text-red-400 border-none">FAIL</Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">{res.tool_matches ? "✅ Tools" : "❌ Tools"}</td>
+                          <td className="px-4 py-4">{res.latency_ms}ms</td>
+                          <td className="px-4 py-4">
+                            <div className="flex flex-wrap gap-1">
+                              {res.semantic_scores && Object.entries(res.semantic_scores).map(([k, v]: any) => (
+                                <span key={k} className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">
+                                  {k}: {v}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-right text-xs text-gray-500">{formatAgo(res.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -950,6 +1103,44 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   <option value="node">node</option>
                   <option value="other">other</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-white">Scoped Tool Permissions</h3>
+                  <p className="text-sm text-gray-400 mb-4">Prevent unauthorized tool execution in production.</p>
+                </div>
+                {plan !== 'studio' && <Badge variant="outline" className="text-gray-500 border-gray-700">Studio Pro Only</Badge>}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-md bg-[#0a0a0a] border border-[#1f2937]">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium text-white">Strict Block Mode</div>
+                    <div className="text-xs text-gray-400">Blocked tools will throw a RuntimeError immediately.</div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={blockMode} 
+                    onChange={(e) => setBlockMode(e.target.checked)}
+                    className="h-4 w-4 rounded border-[#10b981] bg-[#111111] text-[#10b981] focus:ring-offset-[#111111]"
+                  />
+                </div>
+
+                <div>
+                  <div className="text-sm text-gray-400 mb-2">Allowed Tools (comma separated)</div>
+                  <Input
+                    placeholder="e.g. search_web, send_email, write_file"
+                    value={allowedTools.join(", ")}
+                    onChange={(e) => setAllowedTools(e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
+                    className="bg-[#0a0a0a] border-[#1f2937] text-white"
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    If empty, all tools are allowed for backward compatibility.
+                  </p>
+                </div>
               </div>
             </div>
 

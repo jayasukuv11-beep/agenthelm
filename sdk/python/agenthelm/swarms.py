@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 import multiprocessing
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,10 @@ class SwarmCoordinator:
     Allows a Lead agent to spawn specialized 'TeammateTool' delegates.
     """
     
-    def __init__(self, lead_name: str):
+    def __init__(self, lead_name: str, send_fn: Optional[Callable] = None):
         self.lead_name = lead_name
         self.workers: Dict[str, Teammate] = {}
+        self.send_fn = send_fn
         
     def spawn_team(self, name: str, role: str, tool_access: List[str]) -> Teammate:
         """
@@ -51,6 +52,27 @@ class SwarmCoordinator:
         for name, worker in self.workers.items():
             worker.queue.put(payload)
             
+    def handoff(self, to_agent_name: str, task_context: Dict[str, Any]) -> str:
+        """
+        Record and execute an agent-to-agent handoff.
+        Emits telemetry back to AgentHelm for the Multi-Agent Coordination View.
+        """
+        logger.info(f"[{self.lead_name}] Executing handoff to '{to_agent_name}'")
+        
+        # Telemetry
+        if self.send_fn:
+            self.send_fn({
+                "to_agent_id": to_agent_name,  # In reality, this would map to a UUID string
+                "payload": task_context,
+                "status": "pending"
+            })
+            
+        # Simulate worker handoff
+        if to_agent_name in self.workers:
+            self.workers[to_agent_name].queue.put(json.dumps({"msg": "handoff", "context": task_context}))
+            return "ok"
+        return "failed: agent not found"
+
     def request_shutdown(self, name: str):
         """
         Terminates the worker thread/process gracefully.

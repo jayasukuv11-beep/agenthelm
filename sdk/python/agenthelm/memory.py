@@ -20,6 +20,14 @@ class MemoryEngine:
         self.limit_lines = limit_lines
         self.daily_log_dir = os.path.join(self.memory_dir, "daily-log")
         
+        # Phase 4: Memory Poisoning Monitor
+        self._write_timestamps: list = []  # Track recent write times
+        self._poisoning_threshold_count = 5  # Max writes per window
+        self._poisoning_window_seconds = 60  # Sliding window
+        self._poisoning_alert_callback = None  # Set by Agent client
+        self._last_index_size = 0
+        self._poisoning_alerted = False
+        
         # Ensure memory directories exist
         os.makedirs(self.memory_dir, exist_ok=True)
         os.makedirs(self.daily_log_dir, exist_ok=True)
@@ -28,6 +36,12 @@ class MemoryEngine:
         if not os.path.exists(self.index_file):
             with open(self.index_file, "w", encoding="utf-8") as f:
                 f.write("# AgentHelm Context Index\n\n")
+        
+        # Snapshot initial index size
+        try:
+            self._last_index_size = os.path.getsize(self.index_file)
+        except OSError:
+            self._last_index_size = 0
 
     def log_episodic_event(self, event_type: str, details: Dict[str, Any]) -> str:
         """
@@ -77,8 +91,69 @@ class MemoryEngine:
         with open(self.index_file, "w", encoding="utf-8") as f:
             f.writelines(header)
             f.writelines(entries)
+        
+        # Phase 4: Memory Poisoning Anomaly Detection
+        self._check_memory_poisoning(topic)
             
         return True
+    
+    def _check_memory_poisoning(self, topic: str):
+        """Detects anomalous memory write patterns that may indicate poisoning."""
+        now = time.time()
+        self._write_timestamps.append(now)
+        # Slide window
+        self._write_timestamps = [
+            t for t in self._write_timestamps
+            if now - t < self._poisoning_window_seconds
+        ]
+        
+        writes_in_window = len(self._write_timestamps)
+        
+        # Check for file size explosion (>300% growth)
+        try:
+            current_size = os.path.getsize(self.index_file)
+        except OSError:
+            current_size = 0
+        
+        size_ratio = (current_size / max(self._last_index_size, 1))
+        
+        is_anomalous = (
+            writes_in_window >= self._poisoning_threshold_count or
+            size_ratio > 3.0
+        )
+        
+        if is_anomalous and not self._poisoning_alerted:
+            self._poisoning_alerted = True
+            alert_data = {
+                "writes_in_window": writes_in_window,
+                "window_seconds": self._poisoning_window_seconds,
+                "threshold": self._poisoning_threshold_count,
+                "index_size_before": self._last_index_size,
+                "index_size_after": current_size,
+                "size_growth_ratio": round(size_ratio, 2),
+                "last_topic": topic
+            }
+            logger.warning(f"MEMORY POISONING ALERT: {alert_data}")
+            if self._poisoning_alert_callback:
+                try:
+                    self._poisoning_alert_callback(alert_data)
+                except Exception as e:
+                    logger.error(f"Failed to send poisoning alert: {e}")
+        
+        self._last_index_size = current_size
+
+    def remember(self, topic: str, content: str) -> bool:
+        """
+        Shorthand for storing a validated memory into the index.
+        Ideal for agents to call when they learn something new.
+        """
+        # For 'remember', we assume the agent itself is verifying this is worth indexing
+        return self.update_index(
+            topic=topic,
+            pointer="agent-recall",
+            summary=content,
+            is_verified=True
+        )
 
     def read_index(self) -> str:
         """Reads the current contents of the MEMORY.md index."""

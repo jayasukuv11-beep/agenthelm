@@ -1,15 +1,23 @@
-# agenthelm-sdk
+# agenthelm-sdk (v0.5.0)
 
 Monitor your AI agents from AgentHelm.
 Add one line. See everything.
 
 ## Install
 
-npm install agenthelm-sdk
+`npm install agenthelm-node-sdk`
 
-## Quick Start (CommonJS)
+## Features
+- **🛡️ Safety Firewall**: Classify actions as `read`, `sideEffect`, or `irreversible` (Human-in-the-Loop).
+- **⚡️ One-line Integration**: Import `AgentHelm` and you're live.
+- **📊 Token Tracking**: Real-time monitoring of LLM costs (INR/USD).
+- **🛰️ Integrity Checkpoints**: Save/Resume agent state with built-in resumability.
+- **🤝 Handshake Protocol**: Secure, JWT-based authentication.
 
-const { connect } = require('agenthelm-sdk')
+## Usage (Standard)
+
+```typescript
+import { connect } from 'agenthelm-node-sdk'
 
 const dock = connect({
   key: 'ahe_live_xxxxx',
@@ -18,81 +26,51 @@ const dock = connect({
 
 dock.log('Agent started')
 dock.trackTokens({ used: 1500, model: 'gemini-flash' })
-dock.output({ leads: 12, hot: 5 })
+```
 
-dock.onCommand('stop', (payload) => {
-  dock.log('Stopping...')
-  dock.stop()
-})
+## 🛡️ Safety Firewall (Classification-First)
+Ensure mission-critical tasks are approved by a human before they execute.
 
-dock.onChat((message) => {
-  dock.reply('Got: ' + message)
-})
+```typescript
+// 1. Read-only (Always safe, no gating)
+const data = await agent.read(() => fetch_db_record(id));
 
-dock.listen()
+// 2. Side Effect (Logs and retries, but non-blocking)
+await agent.sideEffect(() => send_notification(user), { maxRetries: 5 });
 
-## Quick Start (ESM / TypeScript)
-
-import { connect } from 'agenthelm-sdk'
-
-const dock = connect({
-  key: 'ahe_live_xxxxx',
-  name: 'My Bot',
-  agentType: 'node',
-  version: '1.0.0'
-})
-
-dock.log('Bot started', 'info')
-
-try {
-  const result = await doWork()
-  dock.output(result)
-  dock.trackTokens({ used: 800, model: 'gpt-4', costPer1k: 0.03 })
-} catch (err) {
-  dock.error('Work failed', err as Error)
-}
-
-dock.onCommand('restart', async () => {
-  dock.log('Restarting...')
-  await restart()
-  dock.log('Restarted ✅', 'success')
-})
-
-dock.onChat(async (message) => {
-  const reply = await processMessage(message)
-  dock.reply(reply)
-})
-
-await dock.listen()
+// 3. Irreversible (BLOCKS until approved via Telegram or Dashboard)
+await agent.irreversible(async () => {
+  return await stripe.charges.create({ ... });
+}, { timeout: 60000 });
+```
 
 ## API
 
-connect(options) → AgentHelm instance
+`connect(options)` → `AgentHelm` instance
 
-Options:
-  key           string  required   Your connect key
-  name          string  optional   Agent display name
-  agentType     string  optional   python/node/other
-  version       string  optional   Your agent version
-  verbose       bool    optional   Log to console (default: true)
-  autoPing      bool    optional   Auto heartbeat (default: true)
-  pingInterval  number  optional   MS between pings (default: 30000)
-  timeout       number  optional   Request timeout MS (default: 5000)
+### Options:
+| Option | Type | Description |
+|---|---|---|
+| `key` | `string` | Your connect key (required) |
+| `name` | `string` | Agent display name |
+| `agentType` | `string` | `python` | `node` | `other` |
+| `version` | `string` | Your agent version |
+| `burnRateThreshold`| `number` | Alert if tokens/min exceeds this |
 
-Methods:
-  dock.log(message, level?, data?)
-  dock.output(data, label?)
-  dock.error(message, error?)
-  dock.trackTokens({ used, model, costPer1k? })
-  dock.reply(message)
-  dock.onCommand(type, handler)
-  dock.onChat(handler)
-  dock.stop()
-  dock.listen() → Promise<void>
+### Safety Methods:
+- `dock.read(task)`
+- `dock.sideEffect(task, options?)`
+- `dock.irreversible(task, options?)`
 
-Properties:
-  dock.agentId        string | null
-  dock.isConnected    boolean
-  dock.name           string
-  dock.tokensToday    number
-  dock.tokensSession  number
+### Standard Methods:
+- `dock.log(message, level?, data?)`
+- `dock.output(data, label?)`
+- `dock.error(message, error?)`
+- `dock.trackTokens({ used, model, costPer1k? })`
+- `dock.checkpoint(stepName, state, options?)`
+- `dock.resumeFrom(taskId)`
+- `dock.stop()`
+- `dock.listen()`
+
+## Documentation
+Full docs at [https://agenthelm.online](https://agenthelm.online)

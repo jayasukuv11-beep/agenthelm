@@ -364,6 +364,82 @@ class AgentHelm {
         return this;
     }
     /**
+     * Safety Gate: Read-only action (Always safe, no gating)
+     */
+    async read(task) {
+        return Promise.resolve(task());
+    }
+    /**
+     * Safety Gate: Side Effect (Logs and retries, but non-blocking)
+     */
+    async sideEffect(task, options = {}) {
+        const { maxRetries = 3 } = options;
+        let lastError;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const result = await task();
+                this.log(`[SIDE_EFFECT] Task executed (attempt ${attempt})`, 'success');
+                return result;
+            }
+            catch (err) {
+                lastError = err;
+                if (this.verbose) {
+                    console.warn(`[AgentHelm] \u26A1 SIDE_EFFECT failed (attempt ${attempt}/${maxRetries}): ${err}`);
+                }
+                if (attempt < maxRetries) {
+                    await new Promise((resolve) => setTimeout(resolve, Math.min(Math.pow(2, attempt) * 1000, 10000)));
+                }
+            }
+        }
+        this.warn(`Side-effect failed after ${maxRetries} retries.`);
+        throw lastError;
+    }
+    /**
+     * Safety Gate: Irreversible (BLOCKS until approved by Human via Telegram/Dashboard)
+     */
+    async irreversible(task, options = {}) {
+        const { confirm = 'telegram', timeout = 60000 } = options;
+        const toolName = task.name || 'anonymous_irreversible_task';
+        if (this.verbose) {
+            console.log(`[AgentHelm] \uD83D\uDED1 IRREVERSIBLE: ${toolName} \u2014 requesting human approval (${confirm})...`);
+        }
+        // Notify the gateway (Intervention needed)
+        this.log(`[IRREVERSIBLE] Action '${toolName}' pending approval via ${confirm}`, 'warning');
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeout) {
+            if (!this._running)
+                return null;
+            try {
+                const url = `${this.baseUrl}/execution` +
+                    `?key=${encodeURIComponent(this.getAuthKey())}` +
+                    `&agent_id=${encodeURIComponent(this._agentId || '')}` +
+                    `&tool_name=${encodeURIComponent(toolName)}`;
+                const res = await this.fetchGet(url);
+                if (res.ok) {
+                    const data = (await res.json());
+                    if (data.status === 'approved') {
+                        if (this.verbose) {
+                            console.log(`[AgentHelm] \u2705 APPROVED: ${toolName} \u2014 executing`);
+                        }
+                        return await task();
+                    }
+                    else if (data.status === 'rejected') {
+                        if (this.verbose) {
+                            console.log(`[AgentHelm] \u274C REJECTED: ${toolName} \u2014 skipped`);
+                        }
+                        return null;
+                    }
+                }
+            }
+            catch {
+                // Silently retry polling
+            }
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+        this.warn(`Irreversible action '${toolName}' auto-rejected after ${timeout / 1000}s timeout.`);
+        return null;
+    }
+    /**
      * Gracefully stop the agent and notify dashboard.
      */
     stop() {
