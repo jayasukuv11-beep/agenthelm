@@ -65,7 +65,7 @@ type PlanInfo = {
 
 type RangeKey = "this-month" | "last-month" | "last-7";
 
-const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"];
+const COLORS = ["#f97316", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"];
 
 function formatTokensShort(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -231,18 +231,18 @@ export default function CreditsPage() {
     <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-white tracking-tight">Credits & Billing</h1>
-          <p className="text-gray-400 text-sm">Managing consumption in {currency === 'INR' ? 'Indian Rupees (₹)' : 'US Dollars ($)'}</p>
+          <h1 className="text-[20px] font-mono font-black text-white uppercase tracking-widest">Credits & Billing</h1>
+          <p className="text-[12px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Managing consumption in {currency === 'INR' ? 'Indian Rupees (₹)' : 'US Dollars ($)'}</p>
         </div>
         
-        <div className="flex bg-[#111111] border border-[#1f2937] p-1 rounded-lg">
+        <div className="flex bg-[#111] border border-zinc-800 p-1 rounded-none">
           {(['this-month', 'last-7'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                range === r ? "bg-[#10b981] text-white" : "text-gray-400 hover:text-white"
+                "px-4 py-2 font-mono text-[11px] uppercase tracking-widest rounded-none transition-all",
+                range === r ? "bg-orange-500/10 text-orange-500 border border-orange-500/30" : "text-zinc-500 hover:text-zinc-300 border border-transparent"
               )}
             >
               {r === 'this-month' ? 'This Month' : 'Last 7 Days'}
@@ -253,7 +253,7 @@ export default function CreditsPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-pulse">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-[#111111] rounded-xl border border-[#1f2937]" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-[#111] rounded-none border border-zinc-800" />)}
         </div>
       ) : (
         <StatsRow 
@@ -267,35 +267,35 @@ export default function CreditsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Usage Progress */}
-        <Card className="bg-[#111111] border-[#1f2937] lg:col-span-1">
+        <Card className="bg-[#111] border-zinc-800 rounded-none shadow-sm lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-white text-lg">Monthly Limit</CardTitle>
-            <CardDescription className="text-gray-400">Included tokens in your plan</CardDescription>
+            <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Monthly Limit</CardTitle>
+            <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Included tokens in your plan</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Used {formatTokensShort(usedThisMonth)}</span>
-                <span className="text-white font-medium">{percentUsed.toFixed(1)}%</span>
+            <div className="space-y-3">
+              <div className="flex justify-between font-mono text-[11px] uppercase tracking-widest">
+                <span className="text-zinc-500">Used {formatTokensShort(usedThisMonth)}</span>
+                <span className="text-white font-bold">{percentUsed.toFixed(1)}%</span>
               </div>
-              <div className="h-2 w-full bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-[#0a0a0a] border border-zinc-800 rounded-none overflow-hidden relative">
                 <div 
-                  className="h-full bg-[#10b981] transition-all duration-500" 
+                  className="h-full bg-orange-500 transition-all duration-500 absolute top-0 left-0" 
                   style={{ width: `${Math.min(100, percentUsed)}%` }}
                 />
               </div>
-              <p className="text-[10px] text-gray-500 text-right">Limit: {formatTokensShort(tokensLimit)} tokens</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 text-right">Limit: {formatTokensShort(tokensLimit)} tokens</p>
             </div>
 
-            <div className="pt-4 border-t border-[#1f2937]">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Upgrade Subscription</h4>
+            <div className="pt-4 border-t border-zinc-800">
+              <h4 className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest mb-3">Upgrade Subscription</h4>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg border border-[#1f2937]">
+                <div className="flex items-center justify-between p-3 bg-[#0a0a0a] rounded-none border border-zinc-800">
                   <div>
-                    <p className="text-sm font-medium text-white">Studio Plan</p>
-                    <p className="text-xs text-gray-500">1M Tokens + Safety Gates</p>
+                    <p className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">Studio Plan</p>
+                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mt-1">1M Tokens + Safety Gates</p>
                   </div>
-                  <Button size="sm" className="bg-[#10b981] hover:bg-[#059669] text-white">
+                  <Button size="sm" className="bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 rounded-none font-mono text-[10px] uppercase tracking-widest">
                     {currency === 'INR' ? '₹1299' : '$14.99'}
                   </Button>
                 </div>
@@ -305,40 +305,42 @@ export default function CreditsPage() {
         </Card>
 
         {/* Usage Chart */}
-        <Card className="bg-[#111111] border-[#1f2937] lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="bg-[#111] border-zinc-800 rounded-none shadow-sm lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800/50 pb-4 mb-4">
             <div>
-              <CardTitle className="text-white text-lg">Token Burn Rate</CardTitle>
-              <CardDescription className="text-gray-400">Daily consumption trends</CardDescription>
+              <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Token Burn Rate</CardTitle>
+              <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Daily consumption trends</CardDescription>
             </div>
-            <TrendingUp className="w-5 h-5 text-[#10b981]" />
+            <TrendingUp className="w-5 h-5 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={daily}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                   <XAxis 
                     dataKey="date" 
                     tickFormatter={formatDateLabel} 
-                    stroke="#4b5563" 
-                    fontSize={12}
+                    stroke="#71717a" 
+                    fontSize={10}
+                    fontFamily="monospace"
                     tickLine={false}
                     axisLine={false}
                   />
                   <YAxis 
-                    stroke="#4b5563" 
-                    fontSize={12}
+                    stroke="#71717a" 
+                    fontSize={10}
+                    fontFamily="monospace"
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(v) => formatTokensShort(v)}
                   />
                   <RechartsTooltip 
-                    contentStyle={{ backgroundColor: '#111111', borderColor: '#1f2937', color: '#fff' }}
-                    itemStyle={{ color: '#10b981' }}
+                    contentStyle={{ backgroundColor: '#111', borderColor: '#27272a', color: '#fff', borderRadius: '0px', fontFamily: 'monospace', fontSize: '12px' }}
+                    itemStyle={{ color: '#f97316' }}
                     labelFormatter={(label) => formatDateLabel(String(label))}
                   />
-                  <Bar dataKey="tokens" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar dataKey="tokens" fill="#f97316" radius={[0, 0, 0, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

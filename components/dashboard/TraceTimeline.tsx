@@ -83,13 +83,13 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
 
   if (loading) {
     return <div className="animate-pulse space-y-4">
-      <div className="h-10 bg-[#111111] rounded"></div>
-      <div className="h-64 bg-[#111111] rounded"></div>
+      <div className="h-10 bg-[#111] border border-zinc-800 rounded-none"></div>
+      <div className="h-64 bg-[#111] border border-zinc-800 rounded-none"></div>
     </div>;
   }
 
   if (tasks.length === 0) {
-    return <div className="p-8 text-center border border-[#1f2937] rounded-md text-gray-400 bg-[#0a0a0a]">
+    return <div className="p-8 text-center border border-zinc-800 rounded-none text-zinc-500 bg-[#0a0a0a] font-mono text-[11px] uppercase tracking-widest">
       No task runs found for this agent.
     </div>;
   }
@@ -97,22 +97,22 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
   return (
     <div className="flex flex-col md:flex-row gap-4 h-[600px]">
       {/* Sidebar: Task List */}
-      <div className="w-full md:w-1/3 flex flex-col border border-[#1f2937] rounded-md bg-[#0a0a0a] overflow-hidden">
-        <div className="p-3 border-b border-[#1f2937] bg-[#111111] font-medium text-white flex justify-between items-center">
+      <div className="w-full md:w-1/3 flex flex-col border border-zinc-800 rounded-none bg-[#0a0a0a] overflow-hidden">
+        <div className="p-3 border-b border-zinc-800 bg-[#111] font-mono text-[11px] uppercase tracking-widest font-bold text-white flex justify-between items-center">
           Recent Runs
-          {plan === "free" && <Badge variant="outline" className="text-xs">Limit 5</Badge>}
+          {plan === "free" && <Badge variant="outline" className="text-[9px] uppercase tracking-widest rounded-none border-zinc-700 bg-[#0a0a0a] text-zinc-400">Limit 5</Badge>}
         </div>
         <div className="flex-1 overflow-y-auto">
           {tasks.map(t => (
             <div 
               key={t.id} 
               onClick={() => loadTrace(t.id)}
-              className={`p-3 border-b border-[#1f2937] cursor-pointer hover:bg-[#1a1a1a] transition-colors ${selectedTask?.id === t.id ? "bg-[#1a1a1a] border-l-2 border-l-[#10b981]" : ""}`}
+              className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-[#111] transition-all relative ${selectedTask?.id === t.id ? "bg-[#111] before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-orange-500" : ""}`}
             >
-              <div className="font-medium text-sm text-gray-200 truncate">{t.task_description || t.title || "Unnamed Task"}</div>
-              <div className="text-xs text-gray-500 mt-1 flex justify-between">
+              <div className="font-mono font-bold text-[11px] uppercase tracking-widest text-white truncate">{t.task_description || t.title || "Unnamed Task"}</div>
+              <div className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 mt-2 flex justify-between">
                 <span>{new Date(t.created_at).toLocaleTimeString()}</span>
-                <span className={t.status === 'error' || t.status === 'failed' ? 'text-red-400' : 'text-green-400'}>
+                <span className={t.status === 'error' || t.status === 'failed' ? 'text-red-500' : 'text-orange-500'}>
                   {t.status}
                 </span>
               </div>
@@ -122,52 +122,52 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
       </div>
 
       {/* Main View: Trace Waterfall */}
-      <div className="w-full md:w-2/3 border border-[#1f2937] rounded-md bg-[#0a0a0a] flex flex-col">
+      <div className="w-full md:w-2/3 border border-zinc-800 rounded-none bg-[#0a0a0a] flex flex-col">
         {!selectedTask ? (
-          <div className="flex items-center justify-center flex-1 text-gray-500 text-sm">
+          <div className="flex items-center justify-center flex-1 text-zinc-500 text-[11px] font-mono uppercase tracking-widest">
             Select a run to view its trace
           </div>
         ) : (
           <>
-            <div className="p-4 border-b border-[#1f2937] bg-[#111111] flex justify-between items-start">
+            <div className="p-4 border-b border-zinc-800 bg-[#111] flex justify-between items-start">
               <div>
-                <h3 className="text-white font-medium">{selectedTask.task_description || "Task Trace"}</h3>
-                <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                <h3 className="text-white font-mono font-bold text-[12px] uppercase tracking-widest">{selectedTask.task_description || "Task Trace"}</h3>
+                <div className="flex items-center gap-4 mt-2 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                   <span>ID: {selectedTask.id.slice(0, 8)}...</span>
-                  <Badge variant="outline" className={selectedTask.status === "failed" ? "border-red-500 text-red-400" : "border-green-500 text-green-400"}>
+                  <Badge variant="outline" className={selectedTask.status === "failed" ? "border-red-500 text-red-500 rounded-none text-[9px] uppercase tracking-widest" : "border-orange-500 text-orange-500 rounded-none text-[9px] uppercase tracking-widest"}>
                     {selectedTask.status}
                   </Badge>
                 </div>
               </div>
               {plan === "studio" ? (
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={handleReplay} disabled={replayLoading} className="bg-transparent border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
-                    {replayLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <GitFork className="w-4 h-4 mr-2" />}
+                  <Button variant="outline" size="sm" onClick={handleReplay} disabled={replayLoading} className="rounded-none font-mono text-[10px] uppercase tracking-widest border-purple-500/50 text-purple-500 bg-purple-500/10 hover:bg-purple-500 hover:text-white transition-all">
+                    {replayLoading ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <GitFork className="w-3 h-3 mr-2" />}
                     Fork / Replay
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleDownload} className="bg-transparent border-[#2d3748] hover:bg-[#1a1a1a]">
-                    <Download className="w-4 h-4 mr-2" /> Export JSON
+                  <Button variant="outline" size="sm" onClick={handleDownload} className="rounded-none font-mono text-[10px] uppercase tracking-widest bg-transparent border-zinc-800 hover:bg-zinc-800 text-white transition-all">
+                    <Download className="w-3 h-3 mr-2" /> Export JSON
                   </Button>
                 </div>
               ) : (
-                <div className="text-xs text-gray-500" title="Requires Studio plan">Export disabled</div>
+                <div className="text-[9px] font-mono uppercase tracking-widest text-zinc-600" title="Requires Studio plan">Export disabled</div>
               )}
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto">
+            <div className="flex-1 p-4 overflow-y-auto bg-[#0a0a0a]">
               {/* Dummy Waterfall visualization */}
-              <div className="space-y-3 relative">
+              <div className="space-y-4 relative">
                 {traceData?.tools.map((tool, idx) => {
                   const width = Math.max(10, Math.random() * 80); // Mock duration scaling
-                  let colorClass = "bg-[#10b981]"; // read
-                  let icon = <Check className="w-3 h-3 text-white" />;
+                  let colorClass = "bg-orange-500"; // read
+                  let icon = <Check className="w-3 h-3 text-black" />;
                   
                   if (tool.classification === "side_effect") {
                     colorClass = "bg-yellow-500";
-                    icon = <PlayCircle className="w-3 h-3 text-white" />;
+                    icon = <PlayCircle className="w-3 h-3 text-black" />;
                   } else if (tool.classification === "irreversible") {
                     colorClass = "bg-red-500";
-                    icon = <AlertTriangle className="w-3 h-3 text-white" />;
+                    icon = <AlertTriangle className="w-3 h-3 text-black" />;
                   }
 
                   if (tool.status === "failed") {
@@ -177,11 +177,11 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
 
                   return (
                     <div key={idx} className="relative group">
-                      <div className="flex items-center text-xs mb-1 text-gray-400 justify-between">
-                        <span className="font-mono">{tool.tool_name}</span>
+                      <div className="flex items-center text-[10px] uppercase font-mono tracking-widest mb-1 text-zinc-500 justify-between">
+                        <span className="text-zinc-300">{tool.tool_name}</span>
                         <span>{(Math.random() * 2).toFixed(2)}s</span>
                       </div>
-                      <div className="bg-[#1f2937] rounded-sm h-6 w-full relative overflow-hidden group-hover:bg-[#2d3748] transition-colors cursor-pointer">
+                      <div className="bg-[#111] border border-zinc-800 rounded-none h-6 w-full relative overflow-hidden group-hover:border-zinc-600 transition-colors cursor-pointer">
                         <div 
                           className={`absolute left-0 top-0 h-full ${colorClass} flex items-center justify-end px-2`}
                           style={{ width: `${width}%` }}
@@ -194,22 +194,22 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
                 })}
                 
                 {(traceData?.reasoning?.length ?? 0) > 0 && plan === "studio" && (
-                  <div className="mt-8 border-t border-[#1f2937] pt-4">
-                    <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-purple-400" /> Reasoning Chain Capture
+                  <div className="mt-8 border-t border-zinc-800 pt-6">
+                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-purple-500 mb-4 flex items-center gap-2">
+                      <Bot className="w-4 h-4 text-purple-500" /> Reasoning Chain Capture
                     </h4>
                     <div className="space-y-4">
                       {traceData?.reasoning?.map((step, idx) => (
-                        <div key={`reason-${idx}`} className="bg-[#111111] border border-purple-500/30 rounded-md p-3 text-sm">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium text-purple-400 font-mono">Step {step.step_index}</span>
-                            <span className="text-xs text-gray-500">{step.latency_ms}ms · {step.model}</span>
+                         <div key={`reason-${idx}`} className="bg-[#111] border border-purple-500/30 rounded-none p-4 text-[11px] font-mono tracking-wider">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="font-bold text-purple-400 uppercase tracking-widest">Step {step.step_index}</span>
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-widest">{step.latency_ms}ms · {step.model}</span>
                           </div>
-                          <div className="text-gray-300 bg-[#0a0a0a] p-2 rounded text-xs mb-2 break-words">
+                          <div className="text-zinc-300 bg-[#050505] border border-zinc-800 p-3 rounded-none text-[10px] uppercase tracking-wider mb-3 break-words leading-relaxed">
                             {step.prompt_summary}
                           </div>
-                          <div className="text-gray-400">
-                            Decision: <span className="text-white">{step.decision}</span>
+                          <div className="text-zinc-500 uppercase tracking-widest">
+                            Decision: <span className="text-white font-bold">{step.decision}</span>
                           </div>
                         </div>
                       ))}
@@ -218,7 +218,7 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
                 )}
                 
                 {traceData?.tools.length === 0 && traceData?.reasoning?.length === 0 && (
-                  <div className="text-sm text-gray-500 text-center py-8">
+                  <div className="text-[11px] font-mono uppercase tracking-widest text-zinc-600 text-center py-8">
                     No run traces available.
                   </div>
                 )}

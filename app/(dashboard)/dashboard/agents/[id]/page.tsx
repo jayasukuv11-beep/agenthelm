@@ -113,7 +113,7 @@ function logMatchesFilter(log: AgentLogRow, filter: LogFilter) {
 }
 
 function lineColorClass(log: AgentLogRow) {
-  if (log.type === "output") return "text-green-400";
+  if (log.type === "output") return "text-orange-500";
   if (log.type === "tokens") return "text-blue-400";
   switch (log.level) {
     case "error":
@@ -121,7 +121,7 @@ function lineColorClass(log: AgentLogRow) {
     case "warning":
       return "text-yellow-400";
     case "success":
-      return "text-green-400";
+      return "text-orange-500";
     case "info":
     default:
       return "text-gray-300";
@@ -133,20 +133,20 @@ function statusBadge(agent: AgentRow) {
   const base = "border-none";
   if (status === "running") {
     return (
-      <Badge className={cn(base, "bg-green-500/20 text-green-400")}>
+      <Badge className={cn(base, "bg-orange-500/10 text-orange-500 font-mono border border-orange-500/20 rounded-none uppercase text-[10px]")}>
         <span className="mr-2 inline-flex items-center">
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-50"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400"></span>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-none bg-orange-500 opacity-50"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-none bg-orange-500"></span>
           </span>
         </span>
         Running
       </Badge>
     );
   }
-  if (status === "idle") return <Badge className={cn(base, "bg-yellow-500/20 text-yellow-400")}>Idle</Badge>;
-  if (status === "stopped") return <Badge className={cn(base, "bg-red-500/20 text-red-400")}>Stopped</Badge>;
-  return <Badge className={cn(base, "bg-red-500/20 text-red-400")}>Error</Badge>;
+  if (status === "idle") return <Badge className={cn(base, "bg-yellow-500/10 text-yellow-400 font-mono border border-yellow-500/20 rounded-none uppercase text-[10px]")}>Idle</Badge>;
+  if (status === "stopped") return <Badge className={cn(base, "bg-red-500/10 text-red-400 font-mono border border-red-500/20 rounded-none uppercase text-[10px]")}>Stopped</Badge>;
+  return <Badge className={cn(base, "bg-red-500/10 text-red-400 font-mono border border-red-500/20 rounded-none uppercase text-[10px]")}>Error</Badge>;
 }
 
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
@@ -189,7 +189,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   const [healthLogs, setHealthLogs] = useState<any[]>([]);
   const [healthToolExecs, setHealthToolExecs] = useState<any[]>([]);
   const [healthInterventions, setHealthInterventions] = useState<any[]>([]);
-  const [errorRate, setErrorRate] = useState({ pct: 0, color: "text-green-400" });
+  const [errorRate, setErrorRate] = useState({ pct: 0, color: "text-orange-500" });
   const [lastActiveLabel, setLastActiveLabel] = useState("—");
   const [tokensPerHour, setTokensPerHour] = useState<{ hour: number; tokens: number }[]>(
     Array.from({ length: 24 }).map((_, i) => ({ hour: i, tokens: 0 }))
@@ -363,7 +363,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
     if (testMode) {
       setTokensToday(4321);
       setTotalLogs(123);
-      setErrorRate({ pct: 12.2, color: "text-yellow-400" });
+      setErrorRate({ pct: 12, color: "text-orange-500" });
       setLastActiveLabel("Just now");
       setTokensPerHour(
         Array.from({ length: 24 }).map((_, hour) => ({
@@ -420,8 +420,8 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
     const errors = errorCount ?? 0;
     setTotalLogs(total);
 
-    const pct = total > 0 ? (errors / total) * 100 : 0;
-    const color = pct < 10 ? "text-green-400" : pct < 30 ? "text-yellow-400" : "text-red-400";
+    const pct = total > 0 ? Math.round((errors / total) * 100) : 0;
+    const color = pct < 10 ? "text-orange-500" : pct < 30 ? "text-yellow-400" : "text-red-400";
     setErrorRate({ pct, color });
 
     const lastActiveTs = lastLog?.created_at ?? agent?.last_ping ?? null;
@@ -633,21 +633,21 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="bg-[#111111] border-[#1f2937]">
-        <CardContent className="p-6">
+      <Card className="bg-[#111] border-zinc-800 rounded-none relative overflow-hidden">
+        <CardContent className="p-6 relative z-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             {/* Left */}
             <div className="space-y-3">
               <button
                 onClick={() => router.push("/dashboard")}
-                className="text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-[12px] font-mono uppercase tracking-widest text-zinc-500 hover:text-white transition-colors flex items-center gap-2"
               >
-                ← Back to /dashboard
+                ← Back
               </button>
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-3xl font-bold text-white tracking-tight">{agent.name}</h1>
+                  <h1 className="text-3xl font-black font-mono uppercase tracking-tight text-white">{agent.name}</h1>
                   {statusBadge(agent)}
                 </div>
 
@@ -663,37 +663,37 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:flex md:flex-wrap md:justify-end">
               <Button
                 variant="outline"
-                className="bg-transparent border-[#10b981]/40 text-[#10b981] hover:bg-[#10b981]/10"
+                className="bg-transparent border-orange-500/30 text-orange-500 hover:bg-orange-500/10 font-mono text-[12px] uppercase rounded-none"
                 onClick={() => sendCommand("start")}
                 disabled={commandLoading !== null}
               >
-                {commandLoading === "start" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "▶"}
+                {commandLoading === "start" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "▶ "}
                 Run Now
               </Button>
 
               <Button
                 variant="outline"
-                className="bg-transparent border-red-500/40 text-red-400 hover:bg-red-500/10"
+                className="bg-transparent border-red-500/30 text-red-500 hover:bg-red-500/10 font-mono text-[12px] uppercase rounded-none"
                 onClick={() => sendCommand("stop")}
                 disabled={commandLoading !== null}
               >
-                {commandLoading === "stop" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "⏹"}
+                {commandLoading === "stop" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "⏹ "}
                 Stop
               </Button>
 
               <Button
                 variant="outline"
-                className="bg-transparent border-[#2d3748] text-gray-200 hover:bg-[#1a1a1a]"
+                className="bg-transparent border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 font-mono text-[12px] uppercase rounded-none"
                 onClick={() => sendCommand("restart")}
                 disabled={commandLoading !== null}
               >
-                {commandLoading === "restart" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "🔄"}
+                {commandLoading === "restart" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "🔄 "}
                 Restart
               </Button>
 
               <Button
                 variant="ghost"
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                className="text-red-500 hover:text-red-400 hover:bg-red-500/10 font-mono text-[12px] uppercase rounded-none"
                 onClick={() => setDeleteOpen(true)}
               >
                 🗑 Delete
@@ -709,24 +709,24 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
         onValueChange={(val) => router.push(`/dashboard/agents/${agentId}?tab=${val}`, { scroll: false })}
         className="w-full"
       >
-        <div className="overflow-x-auto">
-          <TabsList className="bg-[#0a0a0a] border border-[#1f2937]">
-            <TabsTrigger value="logs" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+        <div className="overflow-x-auto border-b border-zinc-800 pb-px mb-6">
+          <TabsList className="bg-transparent h-auto p-0 flex gap-6 w-full justify-start rounded-none">
+            <TabsTrigger value="logs" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Logs
             </TabsTrigger>
-            <TabsTrigger value="traces" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+            <TabsTrigger value="traces" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Traces
             </TabsTrigger>
-            <TabsTrigger value="chat" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+            <TabsTrigger value="chat" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Chat
             </TabsTrigger>
-            <TabsTrigger value="stats" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+            <TabsTrigger value="stats" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Stats
             </TabsTrigger>
-            <TabsTrigger value="evals" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+            <TabsTrigger value="evals" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Evals
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-[#111111] data-[state=active]:text-white">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Settings
             </TabsTrigger>
           </TabsList>
@@ -755,8 +755,8 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                       variant={active ? "default" : "outline"}
                       className={
                         active
-                          ? "bg-[#10b981] hover:bg-[#059669] text-white"
-                          : "bg-transparent border-[#2d3748] text-gray-200 hover:bg-[#1a1a1a]"
+                          ? "bg-orange-500 hover:bg-orange-600 text-white font-mono text-[12px] uppercase tracking-wider rounded-none"
+                          : "bg-transparent border-zinc-800 text-zinc-500 hover:bg-[#111] hover:text-white font-mono text-[12px] uppercase tracking-wider rounded-none"
                       }
                       onClick={() => setLogsFilter(key)}
                     >
@@ -771,13 +771,13 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   placeholder="Filter logs..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-[#111111] border-[#1f2937] text-white placeholder:text-gray-500 sm:w-64"
+                  className="bg-[#111] border-zinc-800 text-white placeholder:text-zinc-500 sm:w-64 font-mono text-[13px] rounded-none focus-visible:ring-orange-500/50"
                 />
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="bg-transparent border-[#2d3748] text-gray-200 hover:bg-[#1a1a1a]"
+                    className="bg-transparent border-zinc-800 text-zinc-500 hover:bg-[#111] hover:text-white font-mono text-[12px] uppercase tracking-wider rounded-none"
                     onClick={() => setClearAfterIso(new Date().toISOString())}
                   >
                     Clear
@@ -785,7 +785,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   <Button
                     size="sm"
                     variant="outline"
-                    className="bg-transparent border-[#2d3748] text-gray-200 hover:bg-[#1a1a1a]"
+                    className="bg-transparent border-zinc-800 text-zinc-500 hover:bg-[#111] hover:text-white font-mono text-[12px] uppercase tracking-wider rounded-none"
                     onClick={() => {
                       const lines = displayedLogs.map((l) => {
                         const lvl = String(l.level ?? "info").toUpperCase();
@@ -924,11 +924,11 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
         {/* Stats tab */}
         <TabsContent value="stats">
-          <div className="rounded-lg border border-[#1f2937] bg-[#0a0a0a] p-6 space-y-6">
+          <div className="rounded-none border border-zinc-800 bg-[#0a0a0a] p-6 space-y-6">
             {statsLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-24 rounded-lg border border-[#1f2937] bg-[#111111]" />
+                  <div key={i} className="h-24 rounded-none border border-zinc-800 bg-[#111]" />
                 ))}
               </div>
             ) : (
@@ -940,44 +940,49 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   injectionEvents={healthInterventions}
                 />
                 
-                <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4">
-                  <div className="text-sm text-gray-400">Tokens Today</div>
-                  <div className="mt-2 text-2xl font-semibold text-white">{tokensToday.toLocaleString()}</div>
+                <div className="rounded-none border border-zinc-800 bg-[#111] p-4">
+                  <div className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">Tokens Today</div>
+                  <div className="mt-2 text-2xl font-black font-mono text-white">{tokensToday.toLocaleString()}</div>
                 </div>
-                <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4">
-                  <div className="text-sm text-gray-400">Total Logs</div>
-                  <div className="mt-2 text-2xl font-semibold text-white">{totalLogs.toLocaleString()}</div>
+                <div className="rounded-none border border-zinc-800 bg-[#111] p-4">
+                  <div className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">Total Logs</div>
+                  <div className="mt-2 text-2xl font-black font-mono text-white">{totalLogs.toLocaleString()}</div>
                 </div>
-                <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4">
-                  <div className="text-sm text-gray-400">Error Rate</div>
-                  <div className={cn("mt-2 text-2xl font-semibold", errorRate.color)}>
-                    {errorRate.pct.toFixed(1)}%
+                <div className="bg-[#111] p-4 border border-zinc-800 rounded-none hover:border-zinc-700 transition-colors group">
+                  <div className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest flex justify-between items-center">
+                    Error Rate
+                    <ShieldAlert className="w-4 h-4 text-zinc-600 group-hover:text-zinc-500 transition-colors" />
+                  </div>
+                  <div className={cn("mt-2 text-2xl font-black font-mono", errorRate.color)}>
+                    {errorRate.pct}%
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4">
-                  <div className="text-sm text-gray-400">Last Active</div>
-                  <div className="mt-2 text-2xl font-semibold text-white">{lastActiveLabel}</div>
+                <div className="rounded-none border border-zinc-800 bg-[#111] p-4">
+                  <div className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">Last Active</div>
+                  <div className="mt-2 text-2xl font-black font-mono text-white">{lastActiveLabel}</div>
                 </div>
               </div>
             )}
 
-            <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4">
-              <div className="text-sm font-medium text-white mb-4">Tokens per hour today</div>
+            <div className="rounded-none border border-zinc-800 bg-[#111] p-4">
+              <div className="text-[13px] font-mono uppercase tracking-wider font-bold text-white mb-4">Tokens per hour today</div>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={tokensPerHour}>
-                    <CartesianGrid stroke="#1f2937" vertical={false} />
+                    <CartesianGrid stroke="#27272a" vertical={false} />
                     <XAxis
                       dataKey="hour"
-                      stroke="#9ca3af"
+                      stroke="#71717a"
                       tickFormatter={(h) => String(h).padStart(2, "0")}
+                      style={{ fontSize: 12, fontFamily: 'monospace' }}
                     />
-                    <YAxis stroke="#9ca3af" />
+                    <YAxis stroke="#71717a" style={{ fontSize: 12, fontFamily: 'monospace' }} />
                     <Tooltip
-                      contentStyle={{ background: "#0a0a0a", border: "1px solid #1f2937", color: "#fff" }}
-                      labelStyle={{ color: "#9ca3af" }}
+                      contentStyle={{ background: "#0a0a0a", border: "1px solid #27272a", color: "#fff", fontFamily: 'monospace', fontSize: 12 }}
+                      labelStyle={{ color: "#71717a" }}
+                      cursor={{fill: '#27272a'}}
                     />
-                    <Bar dataKey="tokens" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="tokens" fill="#f97316" radius={[0, 0, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -986,11 +991,11 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
             
             {/* Phase 4: SLA / Latency Metrics */}
             {(plan === "indie" || plan === "studio") && (
-              <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4 space-y-3">
-                <div className="text-sm font-medium text-white flex items-center gap-2">
+              <div className="rounded-none border border-zinc-800 bg-[#111] p-4 space-y-3">
+                <div className="text-[13px] font-mono uppercase tracking-wider font-bold text-white flex items-center gap-2">
                   ⏱️ SLA / Latency Contracts
                   {plan !== "studio" && (
-                    <Badge variant="outline" className="text-xs border-gray-600 text-gray-500 ml-2">Basic</Badge>
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-widest border-zinc-700 text-zinc-500 ml-2 rounded-none">Basic</Badge>
                   )}
                 </div>
                 <SLAMetrics agentId={agentId} plan={plan} />
@@ -1001,25 +1006,25 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
         {/* Evals tab */}
         <TabsContent value="evals">
-          <div className="rounded-lg border border-[#1f2937] bg-[#0a0a0a] p-6 space-y-6">
+          <div className="rounded-none border border-zinc-800 bg-[#0a0a0a] p-6 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-white">Evaluation Runner</h3>
-                <p className="text-sm text-gray-400">Golden test results and semantic scoring.</p>
+                <h3 className="text-[13px] font-mono tracking-wider font-bold text-white uppercase">Evaluation Runner</h3>
+                <p className="text-sm font-mono text-zinc-500 mt-1">Golden test results and semantic scoring.</p>
               </div>
-              <Badge className="bg-[#10b981]/20 text-[#10b981] border-none">Studio Required</Badge>
+              <Badge className="bg-orange-500/10 text-orange-500 border border-orange-500/30 font-mono rounded-none uppercase text-[10px] tracking-widest">Studio Required</Badge>
             </div>
 
             <div className="space-y-4">
               {evalResults.length === 0 ? (
-                <div className="text-center py-12 rounded-lg border border-dashed border-[#1f2937]">
-                  <div className="text-gray-500 text-sm">No evaluation runs yet.</div>
-                  <div className="mt-2 text-xs text-gray-600">Use dock.run_evals() in your SDK to trigger tests.</div>
+                <div className="text-center py-12 rounded-none border border-dashed border-zinc-800 bg-[#111]">
+                  <div className="text-zinc-500 font-mono text-[13px] uppercase tracking-wider mb-2">No evaluation runs yet.</div>
+                  <div className="text-xs text-zinc-600 font-mono">Use <code className="text-orange-500">dock.run_evals()</code> in your SDK to trigger tests.</div>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-md border border-[#1f2937]">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-[#111111] text-gray-400 font-medium">
+                <div className="overflow-hidden rounded-none border border-zinc-800">
+                  <table className="w-full text-[13px] font-mono text-left">
+                    <thead className="bg-[#111] text-zinc-500 uppercase tracking-widest">
                       <tr>
                         <th className="px-4 py-3">Scenario</th>
                         <th className="px-4 py-3">Result</th>
@@ -1029,15 +1034,15 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                         <th className="px-4 py-3 text-right">Time</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#1f2937] text-gray-300">
+                    <tbody className="divide-y divide-zinc-800 text-zinc-300">
                       {evalResults.map((res: any) => (
-                        <tr key={res.id} className="hover:bg-[#111111]/50">
-                          <td className="px-4 py-4 font-medium text-white">{res.agent_eval_sets?.name}</td>
+                        <tr key={res.id} className="hover:bg-[#111] transition-colors">
+                          <td className="px-4 py-4 font-bold text-white">{res.agent_eval_sets?.name}</td>
                           <td className="px-4 py-4">
                             {res.passed ? (
-                              <Badge className="bg-green-500/20 text-green-400 border-none">PASS</Badge>
+                              <Badge className="bg-orange-500/10 text-orange-500 border border-orange-500/30 rounded-none text-[10px]">PASS</Badge>
                             ) : (
-                              <Badge className="bg-red-500/20 text-red-400 border-none">FAIL</Badge>
+                              <Badge className="bg-red-500/10 text-red-400 border border-red-500/30 rounded-none text-[10px]">FAIL</Badge>
                             )}
                           </td>
                           <td className="px-4 py-4">{res.tool_matches ? "✅ Tools" : "❌ Tools"}</td>
@@ -1045,13 +1050,13 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                           <td className="px-4 py-4">
                             <div className="flex flex-wrap gap-1">
                               {res.semantic_scores && Object.entries(res.semantic_scores).map(([k, v]: any) => (
-                                <span key={k} className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">
+                                <span key={k} className="text-[10px] bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded-none border border-orange-500/20">
                                   {k}: {v}
                                 </span>
                               ))}
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-right text-xs text-gray-500">{formatAgo(res.created_at)}</td>
+                          <td className="px-4 py-4 text-right text-xs text-zinc-500">{formatAgo(res.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1064,15 +1069,15 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
         {/* Settings tab */}
         <TabsContent value="settings">
-          <div className="rounded-lg border border-[#1f2937] bg-[#0a0a0a] p-6 space-y-6">
-            <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-4 space-y-4">
+          <div className="rounded-none border border-zinc-800 bg-[#0a0a0a] p-6 space-y-6">
+            <div className="rounded-none border border-zinc-800 bg-[#111] p-4 space-y-4">
               <div>
-                <div className="text-sm text-gray-400 mb-2">Agent name</div>
+                <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest mb-2 font-bold">Agent name</div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     value={settingsName}
                     onChange={(e) => setSettingsName(e.target.value)}
-                    className="bg-[#0a0a0a] border-[#1f2937] text-white"
+                    className="bg-[#0a0a0a] border-zinc-800 text-white font-mono rounded-none focus-visible:ring-orange-500/50"
                   />
                   <Button
                     onClick={async () => {
@@ -1083,7 +1088,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                         setSettingsSaving(false);
                       }
                     }}
-                    className="bg-[#10b981] hover:bg-[#059669] text-white"
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold rounded-none uppercase"
                     disabled={settingsSaving}
                   >
                     {settingsSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -1093,11 +1098,11 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
               </div>
 
               <div>
-                <div className="text-sm text-gray-400 mb-2">Agent type</div>
+                <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest mb-2 font-bold">Agent type</div>
                 <select
                   value={settingsType}
                   onChange={(e) => setSettingsType(e.target.value as AgentType)}
-                  className="h-10 w-full rounded-md border border-[#1f2937] bg-[#0a0a0a] px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#10b981]"
+                  className="h-10 w-full rounded-none border border-zinc-800 bg-[#0a0a0a] px-3 font-mono text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-orange-500/50 uppercase"
                 >
                   <option value="python">python</option>
                   <option value="node">node</option>
@@ -1106,57 +1111,56 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
               </div>
             </div>
 
-            <div className="rounded-lg border border-[#1f2937] bg-[#111111] p-6 space-y-6">
+            <div className="rounded-none border border-zinc-800 bg-[#111] p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-white">Scoped Tool Permissions</h3>
-                  <p className="text-sm text-gray-400 mb-4">Prevent unauthorized tool execution in production.</p>
+                  <h3 className="text-[13px] font-mono font-bold tracking-wider text-white uppercase">Scoped Tool Permissions</h3>
+                  <p className="text-sm text-zinc-500 mt-1 font-mono">Prevent unauthorized tool execution in production.</p>
                 </div>
-                {plan !== 'studio' && <Badge variant="outline" className="text-gray-500 border-gray-700">Studio Pro Only</Badge>}
+                {plan !== 'studio' && <Badge variant="outline" className="text-orange-500 border-orange-500/30 bg-orange-500/10 font-mono text-[10px] uppercase rounded-none tracking-widest px-2 py-0.5">Studio Pro Only</Badge>}
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-md bg-[#0a0a0a] border border-[#1f2937]">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium text-white">Strict Block Mode</div>
-                    <div className="text-xs text-gray-400">Blocked tools will throw a RuntimeError immediately.</div>
+                <div className="flex items-center justify-between p-4 rounded-none bg-[#0a0a0a] border border-zinc-800 group hover:border-zinc-700 transition-colors">
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold font-mono text-white uppercase tracking-wider">Strict Block Mode</div>
+                    <div className="text-xs text-zinc-500 font-mono">Blocked tools will throw a RuntimeError immediately.</div>
                   </div>
                   <input 
                     type="checkbox" 
                     checked={blockMode} 
                     onChange={(e) => setBlockMode(e.target.checked)}
-                    className="h-4 w-4 rounded border-[#10b981] bg-[#111111] text-[#10b981] focus:ring-offset-[#111111]"
+                    className="h-4 w-4 rounded-none border-zinc-700 bg-[#111] text-orange-500 focus:ring-offset-[#111] focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <div className="text-sm text-gray-400 mb-2">Allowed Tools (comma separated)</div>
+                  <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest mb-2 font-bold">Allowed Tools (comma separated)</div>
                   <Input
                     placeholder="e.g. search_web, send_email, write_file"
                     value={allowedTools.join(", ")}
                     onChange={(e) => setAllowedTools(e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
-                    className="bg-[#0a0a0a] border-[#1f2937] text-white"
+                    className="bg-[#0a0a0a] border-zinc-800 text-white font-mono rounded-none focus-visible:ring-orange-500/50"
                   />
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-[11px] font-mono text-zinc-500 uppercase">
                     If empty, all tools are allowed for backward compatibility.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4">
-              <div className="text-white font-medium">Danger Zone</div>
-              <div className="text-sm text-gray-400 mt-1">
+            <div className="rounded-none border border-red-500/30 bg-[#111] p-6 relative overflow-hidden group hover:border-red-500/50 transition-colors">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl pointer-events-none group-hover:bg-red-500/10 transition-colors" />
+              <div className="text-[13px] text-red-500 font-bold font-mono tracking-wider uppercase mb-1">Danger Zone</div>
+              <div className="text-sm font-mono text-zinc-500 mb-6">
                 Deleting an agent removes it and all its logs permanently.
               </div>
-              <div className="mt-4">
-                <Button
-                  className="bg-red-500 hover:bg-red-600 text-white"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  Delete Agent
-                </Button>
-              </div>
+              <Button
+                className="bg-transparent border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white font-mono font-bold rounded-none uppercase transition-all"
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete Agent
+              </Button>
             </div>
           </div>
         </TabsContent>
@@ -1164,24 +1168,24 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
       {/* Delete confirmation */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="bg-[#111111] border-[#1f2937] text-white">
+        <DialogContent className="bg-[#111] border-zinc-800 text-white rounded-none">
           <DialogHeader>
-            <DialogTitle>Delete {agent.name}?</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="font-mono tracking-widest uppercase">Delete {agent.name}?</DialogTitle>
+            <DialogDescription className="text-zinc-500 font-mono">
               This will permanently delete the agent and all its logs.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button
               variant="outline"
-              className="bg-transparent border-[#2d3748] text-gray-200 hover:bg-[#1a1a1a]"
+              className="bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-none font-mono uppercase text-[12px]"
               onClick={() => setDeleteOpen(false)}
               disabled={deleteLoading}
             >
               Cancel
             </Button>
             <Button
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-red-500 hover:bg-red-600 text-white rounded-none font-mono font-bold uppercase text-[12px]"
               onClick={confirmDelete}
               disabled={deleteLoading}
             >

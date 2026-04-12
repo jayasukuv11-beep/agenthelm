@@ -145,31 +145,31 @@ export function ChatInterface({
   };
 
   return (
-    <div className="rounded-lg border border-[#1f2937] bg-[#0a0a0a] overflow-hidden">
+    <div className="rounded-none border border-zinc-800 bg-[#0a0a0a] overflow-hidden">
       <div className="h-[calc(100vh-280px)] min-h-[520px] flex flex-col">
         {/* Header bar */}
-        <div className="bg-[#111111] border-b border-[#1f2937] px-4 py-3 flex items-center justify-between">
+        <div className="bg-[#111] border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-lg">🤖</span>
-            <span className="font-semibold text-white truncate">{agentName}</span>
+            <span className="text-[16px]">🤖</span>
+            <span className="font-mono text-[12px] font-bold uppercase tracking-widest text-white truncate">{agentName}</span>
           </div>
 
           <div className="flex items-center gap-2">
             {isOnline ? (
               <>
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-50"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400"></span>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-none bg-orange-500 opacity-50"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-none bg-orange-500"></span>
                 </span>
-                <span className="text-sm text-green-400">Online</span>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-orange-500 font-bold">Online</span>
               </>
             ) : (
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-gray-500" />
-                  <span className="text-sm text-gray-400">Offline — AI will respond</span>
+                  <span className="inline-flex h-2 w-2 rounded-none bg-zinc-600" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Offline — AI will respond</span>
                 </div>
-                <div className="text-[11px] text-gray-500">
+                <div className="text-[9px] font-mono uppercase tracking-widest text-zinc-600">
                   Agent will receive messages when restarted
                 </div>
               </div>
@@ -180,19 +180,19 @@ export function ChatInterface({
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-4 bg-[#0a0a0a] space-y-3"
+          className="flex-1 overflow-y-auto px-4 py-4 bg-[#0a0a0a] space-y-4"
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6">
               <div className="text-4xl mb-3">🤖</div>
-              <div className="text-gray-400 font-medium">No messages yet</div>
-              <div className="text-gray-500 text-sm mt-1">Send a command to your agent</div>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <div className="text-zinc-400 font-mono text-[12px] uppercase tracking-widest font-bold">No messages yet</div>
+              <div className="text-zinc-600 font-mono text-[10px] uppercase tracking-widest mt-2">Send a command to your agent</div>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
                 {SUGGESTED.map((s) => (
                   <button
                     key={s}
                     onClick={() => setInput(s)}
-                    className="rounded-full bg-[#1f2937] text-[#9ca3af] px-3 py-1 text-xs hover:bg-gray-700 transition-colors"
+                    className="rounded-none border border-zinc-800 bg-[#111] text-zinc-400 px-3 py-1 font-mono text-[10px] uppercase tracking-widest hover:bg-zinc-800 hover:text-white transition-colors"
                   >
                     {s}
                   </button>
@@ -207,21 +207,21 @@ export function ChatInterface({
                   <div key={m.id} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
                     <div className={cn("max-w-[75%]")}>
                       {!isUser ? (
-                        <div className="text-xs text-gray-500 mb-1">
+                        <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">
                           {m.source === "telegram" ? "🤖 Agent via Telegram" : "🤖 Agent"}
                         </div>
                       ) : null}
                       <div
                         className={cn(
-                          "px-4 py-2 text-sm leading-relaxed",
+                          "px-4 py-3 text-[12px] font-mono leading-relaxed rounded-none border border-zinc-800",
                           isUser
-                            ? "bg-[#10b981] text-white rounded-[18px_18px_4px_18px]"
-                            : "bg-[#1f2937] text-[#f9fafb] rounded-[18px_18px_18px_4px]"
+                            ? "bg-orange-500/10 text-orange-500 border-orange-500/30"
+                            : "bg-[#111] text-zinc-300"
                         )}
                       >
                         {m.content}
                       </div>
-                      <div className={cn("mt-1 text-xs text-gray-500", isUser ? "text-right" : "text-left")}>
+                      <div className={cn("mt-2 text-[9px] font-mono uppercase tracking-widest text-zinc-600", isUser ? "text-right" : "text-left")}>
                         {formatTime(m.created_at)}
                       </div>
                     </div>
@@ -232,12 +232,12 @@ export function ChatInterface({
               {awaitingReply ? (
                 <div className="flex justify-start">
                   <div className="max-w-[75%]">
-                    <div className="text-xs text-gray-500 mb-1">🤖 Agent</div>
-                    <div className="bg-[#1f2937] text-[#f9fafb] rounded-[18px_18px_18px_4px] px-4 py-2">
-                      <span className="inline-flex gap-1 items-center text-gray-400">
-                        <span className="h-2 w-2 rounded-full bg-gray-400 animate-pulse" />
-                        <span className="h-2 w-2 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms]" />
-                        <span className="h-2 w-2 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms]" />
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">🤖 Agent</div>
+                    <div className="bg-[#111] border border-zinc-800 text-zinc-500 rounded-none px-4 py-3">
+                      <span className="inline-flex gap-2 items-center">
+                        <span className="h-1.5 w-1.5 rounded-none bg-orange-500 animate-pulse" />
+                        <span className="h-1.5 w-1.5 rounded-none bg-orange-500 animate-pulse [animation-delay:150ms]" />
+                        <span className="h-1.5 w-1.5 rounded-none bg-orange-500 animate-pulse [animation-delay:300ms]" />
                       </span>
                     </div>
                   </div>
@@ -251,17 +251,17 @@ export function ChatInterface({
 
         {/* Suggested commands bar (only when empty) */}
         {messages.length === 0 ? (
-          <div className="border-t border-[#1f2937] bg-[#0a0a0a] px-4 py-2">
-            <div className="text-xs text-gray-500">Try a suggested command above.</div>
+          <div className="border-t border-zinc-800 bg-[#0a0a0a] px-4 py-2">
+            <div className="text-[9px] font-mono uppercase tracking-widest text-zinc-600">Try a suggested command above.</div>
           </div>
         ) : null}
 
         {/* Input bar */}
-        <div className="bg-[#111111] border-t border-[#1f2937] px-4 py-3 flex gap-2 items-end">
+        <div className="bg-[#111] border-t border-zinc-800 px-4 py-3 flex gap-2 items-end">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Send a command to your agent..."
+            placeholder="SEND A COMMAND TO YOUR AGENT..."
             disabled={sending}
             rows={1}
             onKeyDown={(e) => {
@@ -270,19 +270,19 @@ export function ChatInterface({
                 sendMessage();
               }
             }}
-            className="flex-1 resize-none bg-[#1f2937] text-white border border-[#374151] rounded-xl px-4 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:border-green-500 disabled:opacity-50"
+            className="flex-1 resize-none bg-[#050505] text-white border border-zinc-800 rounded-none px-4 py-3 text-[12px] font-mono uppercase tracking-widest placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 disabled:opacity-50 transition-all min-h-[46px]"
           />
 
           <button
             onClick={sendMessage}
             disabled={sending || input.trim() === ""}
             className={cn(
-              "rounded-xl px-4 py-2 text-sm font-medium flex items-center justify-center",
-              "bg-[#10b981] text-white hover:bg-[#059669]",
-              (sending || input.trim() === "") && "opacity-50 cursor-not-allowed hover:bg-[#10b981]"
+              "rounded-none px-4 py-3 h-[46px] text-sm font-bold flex items-center justify-center transition-all border border-orange-500",
+              "bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white",
+              (sending || input.trim() === "") && "opacity-50 cursor-not-allowed border-zinc-800 bg-transparent text-zinc-600 hover:bg-transparent hover:text-zinc-600"
             )}
           >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base">→</span>}
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold">→</span>}
           </button>
         </div>
       </div>

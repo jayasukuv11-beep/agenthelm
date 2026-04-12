@@ -55,8 +55,8 @@ export default function SwarmsPage() {
 
   if (loading) {
     return <div className="space-y-6 animate-pulse">
-      <div className="h-20 bg-[#111111] rounded-md border border-[#1f2937]"></div>
-      <div className="h-64 bg-[#111111] rounded-md border border-[#1f2937]"></div>
+      <div className="h-20 bg-[#111] rounded-none border border-zinc-800"></div>
+      <div className="h-64 bg-[#111] rounded-none border border-zinc-800"></div>
     </div>;
   }
 
@@ -65,33 +65,33 @@ export default function SwarmsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-[#10b981]/10 rounded-lg">
-          <Network className="w-6 h-6 text-[#10b981]" />
+        <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-none">
+          <Network className="w-6 h-6 text-orange-500" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Multi-Agent Coordination</h1>
-          <p className="text-sm text-gray-400">Monitor handoffs, swarms, and agent-to-agent communication in real time.</p>
+          <h1 className="text-[20px] font-mono font-black tracking-widest text-white uppercase">Multi-Agent Coordination</h1>
+          <p className="text-[12px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Monitor handoffs, swarms, and agent-to-agent communication in real time.</p>
         </div>
       </div>
 
       {!isStudio ? (
-        <Card className="border-[#1f2937] bg-gradient-to-b from-[#111111] to-[#0a0a0a] relative overflow-hidden">
+        <Card className="border-zinc-800 bg-[#111] relative overflow-hidden rounded-none shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Lock className="w-5 h-5 text-purple-400" />
+            <CardTitle className="text-[14px] font-mono font-bold uppercase flex items-center gap-2 tracking-widest text-white">
+              <Lock className="w-4 h-4 text-orange-400" />
               Studio Feature
             </CardTitle>
-            <CardDescription className="text-base text-gray-400 max-w-2xl">
+            <CardDescription className="text-[12px] font-mono uppercase text-zinc-500 max-w-2xl tracking-wider pt-2 leading-relaxed">
               Unlock the Multi-Agent Coordination view to trace exact handoff lineages, debug infinite delegation loops, and monitor peer-to-peer swarming telemetry.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-4">
             <UpgradeButton plan={profile?.plan} label="Upgrade to Studio" className="w-[200px]" />
             <div className="mt-8 opacity-20 relative pointer-events-none filter blur-[2px] transition-all">
-               <div className="flex items-center gap-8 justify-center py-12 border border-[#1f2937] rounded bg-background/50">
-                <Bot className="w-16 h-16" />
-                <ArrowRight className="w-8 h-8" />
-                <Bot className="w-16 h-16" />
+               <div className="flex items-center gap-8 justify-center py-12 border border-zinc-800 rounded-none bg-[#0a0a0a]">
+                <Bot className="w-16 h-16 text-zinc-500" />
+                <ArrowRight className="w-8 h-8 text-zinc-600" />
+                <Bot className="w-16 h-16 text-orange-500/50" />
               </div>
             </div>
           </CardContent>
@@ -100,39 +100,39 @@ export default function SwarmsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Main List */}
-          <Card className="lg:col-span-2 border-[#1f2937] bg-[#111111]">
+          <Card className="lg:col-span-2 border-zinc-800 bg-[#111] rounded-none shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#10b981]" /> Recent Handoffs
+              <CardTitle className="text-[13px] font-mono font-bold uppercase tracking-widest text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-orange-500" /> Recent Handoffs
               </CardTitle>
             </CardHeader>
             <CardContent>
               {handoffs.length === 0 ? (
-                <div className="text-center py-12 text-sm text-gray-500 border border-[#1f2937] border-dashed rounded-md">
+                <div className="text-center py-12 text-[12px] font-mono text-zinc-500 uppercase tracking-wider border border-zinc-800 border-dashed rounded-none bg-[#0a0a0a]">
                   No swarms or agent handoffs recorded yet.
                 </div>
               ) : (
                 <div className="space-y-4">
                   {handoffs.map((handoff) => (
-                    <div key={handoff.id} className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-[#1f2937] rounded-md group hover:border-gray-700 transition">
+                    <div key={handoff.id} className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-zinc-800 rounded-none group hover:border-zinc-700 transition">
                       <div className="flex items-center gap-4">
-                        <div className="text-sm font-medium flex items-center gap-2 text-gray-300">
-                          <Bot className="w-4 h-4 text-gray-500" />
+                        <div className="text-[12px] font-mono font-bold tracking-wider uppercase flex items-center gap-2 text-zinc-400">
+                          <Bot className="w-4 h-4 text-zinc-500" />
                           {handoff.from_agent?.name || "Unknown"}
                         </div>
-                        <ArrowRight className="w-4 h-4 text-gray-600" />
-                        <div className="text-sm font-medium flex items-center gap-2 text-[#10b981]">
-                          <Bot className="w-4 h-4 text-[#10b981]" />
+                        <ArrowRight className="w-4 h-4 text-zinc-600" />
+                        <div className="text-[12px] font-mono font-bold tracking-wider uppercase flex items-center gap-2 text-orange-500">
+                          <Bot className="w-4 h-4 text-orange-500" />
                           {handoff.to_agent?.name || handoff.to_agent_id?.slice(0,8)}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="text-gray-500 font-mono">
+                      <div className="flex items-center gap-4 text-xs font-mono">
+                        <span className="text-zinc-500">
                           {handoff.latency_ms ? `${handoff.latency_ms}ms` : '—'}
                         </span>
                         <Badge variant="outline" className={
-                          handoff.status === "completed" ? "border-green-500 text-green-400" :
-                          handoff.status === "failed" ? "border-red-500 text-red-400" : "border-yellow-500 text-yellow-400"
+                          handoff.status === "completed" ? "border-green-500/30 text-green-400 bg-green-500/10 rounded-none uppercase text-[10px]" :
+                          handoff.status === "failed" ? "border-red-500/30 text-red-500 bg-red-500/10 rounded-none uppercase text-[10px]" : "border-yellow-500/30 text-yellow-500 bg-yellow-500/10 rounded-none uppercase text-[10px]"
                         }>
                           {handoff.status}
                         </Badge>
@@ -145,13 +145,13 @@ export default function SwarmsPage() {
           </Card>
 
           {/* Side Info */}
-          <Card className="border-[#1f2937] bg-[#111111] h-fit">
+          <Card className="border-zinc-800 bg-[#111] rounded-none shadow-sm h-fit">
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Integration Guide</CardTitle>
+              <CardTitle className="text-[13px] font-mono font-bold tracking-widest uppercase text-white">Integration Guide</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-gray-400">
-              <p>To enable handoff tracking, use the <code>dock.swarms.handoff()</code> method in your agent code.</p>
-              <div className="bg-[#0a0a0a] border border-[#1f2937] p-3 rounded font-mono text-xs overflow-x-auto text-green-400">
+            <CardContent className="space-y-4 font-mono text-[11px] text-zinc-500 uppercase tracking-wider leading-relaxed">
+              <p>To enable handoff tracking, use the <code className="text-orange-500">dock.swarms.handoff()</code> method in your agent code.</p>
+              <div className="bg-[#0a0a0a] border border-zinc-800 p-4 rounded-none font-mono text-[12px] overflow-x-auto text-orange-400 lowercase tracking-normal">
                 dock.swarms.handoff(<br/>
                 &nbsp;&nbsp;"research_agent_id",<br/>
                 &nbsp;&nbsp;&#123; query: "..." &#125;<br/>

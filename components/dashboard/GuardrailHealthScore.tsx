@@ -35,68 +35,68 @@ export function GuardrailHealthScore({ plan, totalLogs, totalToolExecutions, inj
   }, [totalLogs, totalToolExecutions, injectionEvents]);
 
   return (
-    <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-      <CardHeader className="pb-2">
+    <Card className="col-span-1 md:col-span-2 lg:col-span-3 bg-[#111] border-zinc-800 rounded-none shadow-sm">
+      <CardHeader className="pb-4 border-b border-zinc-800/50 mb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+          <CardTitle className="text-[12px] font-mono uppercase tracking-widest font-bold flex items-center gap-2 text-white">
+            <ShieldCheck className="w-4 h-4 text-orange-500" />
             Guardrail Health
           </CardTitle>
-          <span className="text-2xl font-bold">{metrics.score}%</span>
+          <span className="text-[20px] font-mono font-black text-white">{metrics.score}%</span>
         </div>
-        <CardDescription>Live health score based on recent guardrail activations</CardDescription>
+        <CardDescription className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Live health score based on recent guardrail activations</CardDescription>
       </CardHeader>
       
-      <CardContent className="space-y-4 relative overflow-hidden">
+      <CardContent className="space-y-6 relative overflow-hidden">
         <Progress 
           value={metrics.score} 
-          className="h-2" 
-          indicatorColor={metrics.score > 80 ? "bg-emerald-500" : metrics.score > 50 ? "bg-amber-500" : "bg-red-500"}
+          className="h-2 rounded-none bg-zinc-800" 
+          indicatorColor={metrics.score > 80 ? "bg-orange-500" : metrics.score > 50 ? "bg-yellow-500" : "bg-red-500"}
         />
 
         {!isPremium && (
-          <div className="absolute inset-0 top-12 z-10 backdrop-blur-[2px] bg-background/50 flex flex-col items-center justify-center pt-4">
-            <Lock className="w-5 h-5 text-muted-foreground mb-2" />
-            <p className="text-sm font-medium">Detailed Breakdown Available on Indie+</p>
-            <UpgradeButton plan={plan as any} label="Upgrade" className="mt-2 text-xs h-8" />
+          <div className="absolute inset-0 top-12 z-10 backdrop-blur-[2px] bg-[#050505]/70 flex flex-col items-center justify-center pt-4">
+            <Lock className="w-5 h-5 text-zinc-500 mb-2" />
+            <p className="text-[11px] font-mono uppercase tracking-widest text-white font-bold">Detailed Breakdown Available on Indie+</p>
+            <UpgradeButton plan={plan as any} label="Upgrade" className="mt-3 text-[10px] h-8 rounded-none uppercase tracking-widest font-mono" />
           </div>
         )}
 
         <div className={!isPremium ? "opacity-20 select-none pointer-events-none" : ""}>
-          <div className="grid grid-cols-2 gap-4 text-xs mt-4">
-            <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4 text-[10px] font-mono uppercase tracking-widest mt-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground"><RefreshCcw className="w-3 h-3"/> Side-effect retries</span>
-                <span className="font-mono">{metrics.sideEffectRetries}</span>
+                <span className="flex items-center gap-2 text-zinc-500"><RefreshCcw className="w-3 h-3 text-zinc-400"/> Side-effect retries</span>
+                <span className="font-mono text-zinc-300 font-bold">{metrics.sideEffectRetries}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground"><Hand className="w-3 h-3"/> Irreversible rejects</span>
-                <span className="font-mono">{metrics.irreversibleRejects}</span>
+                <span className="flex items-center gap-2 text-zinc-500"><Hand className="w-3 h-3 text-zinc-400"/> Irreversible rejects</span>
+                <span className="font-mono text-zinc-300 font-bold">{metrics.irreversibleRejects}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground"><Siren className="w-3 h-3"/> Loop detections</span>
-                <span className="font-mono">{metrics.loops}</span>
+                <span className="flex items-center gap-2 text-zinc-500"><Siren className="w-3 h-3 text-zinc-400"/> Loop detections</span>
+                <span className="font-mono text-zinc-300 font-bold">{metrics.loops}</span>
               </div>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <ShieldAlert className="w-3 h-3"/> Injection blocks
+                <span className="flex items-center gap-2 text-zinc-500">
+                  <ShieldAlert className="w-3 h-3 text-zinc-400"/> Injection blocks
                 </span>
-                <span className="font-mono flex items-center gap-1">
+                <span className="font-mono flex items-center gap-1 text-zinc-300 font-bold">
                   {metrics.injectionBlocks} 
                   {metrics.injectionBlocks > 0 && <ArrowUp className="w-3 h-3 text-red-500" />}
                 </span>
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Zap className="w-3 h-3"/> Hard limit kills
+                <span className="flex items-center gap-2 text-zinc-500">
+                  <Zap className="w-3 h-3 text-zinc-400"/> Hard limit kills
                 </span>
-                <span className="font-mono flex items-center gap-1">
+                <span className="font-mono flex items-center gap-1 text-zinc-300 font-bold">
                   {metrics.hardLimits}
-                  {metrics.hardLimits === 0 && <span className="text-emerald-500">✅</span>}
+                  {metrics.hardLimits === 0 && <span className="text-orange-500">✅</span>}
                 </span>
               </div>
             </div>
