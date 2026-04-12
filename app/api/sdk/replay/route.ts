@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { validateConnectKey } from "@/lib/sdk-auth";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/sdk/replay?task_id=xxx
  * 

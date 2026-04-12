@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 // The trace route joins tasks, tool executions, and checkpoints
 // for the visual Timeline view and Studio export.
 
