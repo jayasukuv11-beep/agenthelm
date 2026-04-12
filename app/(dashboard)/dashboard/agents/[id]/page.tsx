@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
 import { TraceTimeline } from "@/components/dashboard/TraceTimeline";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
