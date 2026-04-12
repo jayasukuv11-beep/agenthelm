@@ -174,51 +174,51 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return <div className="animate-pulse space-y-8">
-      <div className="h-24 bg-[#111111] border border-[#1f2937] rounded-lg"></div>
-      <div className="h-64 bg-[#111111] border border-[#1f2937] rounded-lg"></div>
+    return <div className="animate-pulse space-y-8 max-w-6xl mx-auto">
+      <div className="h-24 bg-[#111] border border-zinc-800"></div>
+      <div className="h-64 bg-[#111] border border-zinc-800"></div>
     </div>;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Overview</h1>
-          <p className="text-gray-400 mt-1">Monitor the pulse of your AI fleet.</p>
+          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight font-mono uppercase">Overview</h1>
+          <p className="text-zinc-500 mt-1 font-mono text-sm">Monitor the pulse of your AI fleet.</p>
         </div>
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="bg-[#10b981] hover:bg-[#059669] text-white">
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold rounded-none shadow-[0_0_20px_-5px_rgba(255,87,34,0.4)]">
               <Plus className="w-4 h-4 mr-2" />
-              Connect Agent
+              CONNECT AGENT
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#111111] border-[#1f2937] text-white sm:max-w-md">
+          <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-md rounded-none">
             <DialogHeader>
-              <DialogTitle>Connect a new agent</DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogTitle className="font-mono uppercase tracking-widest text-lg">Connect a new agent</DialogTitle>
+              <DialogDescription className="text-zinc-500 font-mono text-sm">
                 Install the SDK and use this key to authenticate your agent.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                 <p className="text-sm font-medium text-gray-300">1. Install SDK</p>
-                 <div className="bg-black/50 p-3 rounded-md border border-[#1f2937] flex items-center justify-between">
-                    <code className="text-sm font-mono text-gray-300">pip install agenthelm-sdk</code>
+                 <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">1. Install SDK</p>
+                 <div className="bg-black/50 p-3 border border-zinc-800 flex items-center justify-between">
+                    <code className="text-[13px] font-mono text-zinc-300">pip install agenthelm-sdk</code>
                  </div>
               </div>
               <div className="space-y-2">
-                 <p className="text-sm font-medium text-gray-300">2. Authenticate with your key</p>
+                 <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">2. Authenticate with your key</p>
                  <div className="flex space-x-2">
                     <Input 
                       value={connectKey || "Loading..."} 
                       readOnly 
-                      className="bg-[#1a1a1a] border-[#2d3748] font-mono text-[#10b981]" 
+                      className="bg-[#0a0a0a] border-zinc-800 font-mono text-orange-500 rounded-none focus-visible:ring-orange-500/50 text-[13px]" 
                     />
-                    <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0 border-[#2d3748] bg-[#1a1a1a] hover:bg-[#2d3748] hover:text-white">
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0 border-zinc-800 bg-[#0a0a0a] hover:bg-zinc-800 hover:text-white rounded-none">
+                      {copied ? <Check className="h-4 w-4 text-orange-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
                  </div>
               </div>
@@ -236,21 +236,23 @@ export default function DashboardPage() {
       />
 
       <div>
-        <h2 className="text-xl font-semibold text-white mb-4">Your Agents</h2>
+        <h2 className="text-[11px] font-mono font-bold text-zinc-500 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
+          <span className="w-2 h-2 bg-zinc-700 block"></span> YOUR AGENTS
+        </h2>
         
         {agents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-[#111111] border border-[#1f2937] border-dashed rounded-lg text-center">
-            <div className="w-16 h-16 bg-[#1a1a1a] rounded-full flex items-center justify-center mb-4">
-              <Inbox className="w-8 h-8 text-gray-500" />
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-[#111] border border-zinc-800 border-dashed text-center">
+            <div className="w-16 h-16 bg-[#0a0a0a] border border-zinc-800 flex items-center justify-center mb-4 text-zinc-600">
+              <Inbox className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">No agents connected</h3>
-            <p className="text-gray-400 max-w-sm mb-6">
+            <h3 className="text-base font-mono font-bold text-white mb-2 uppercase tracking-wide">No agents connected</h3>
+            <p className="text-zinc-500 font-mono text-sm max-w-sm mb-6 leading-relaxed">
               You haven't connected any agents yet. Install the SDK and connect your first agent to see it here.
             </p>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" className="border-[#10b981] text-[#10b981] hover:bg-[#10b981]/10 bg-transparent">
-                  Get Connection Key
+                <Button variant="outline" className="border-orange-500/30 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400 bg-transparent rounded-none font-mono text-[12px] uppercase">
+                  GET CONNECTION KEY
                 </Button>
               </DialogTrigger>
               {/* Inherits dialog content from above via modal portal in practice, 

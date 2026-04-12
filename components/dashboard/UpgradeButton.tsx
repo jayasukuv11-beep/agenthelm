@@ -88,7 +88,7 @@ export function UpgradeButton({
       <button
         onClick={handleUpgrade}
         disabled={loading}
-        className={`w-full py-2 px-4 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`w-full py-3 px-4 rounded-none font-mono uppercase tracking-widest text-[12px] font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">

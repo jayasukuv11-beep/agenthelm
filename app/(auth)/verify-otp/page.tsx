@@ -144,16 +144,16 @@ function VerifyOTPContent() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#09090b] px-4">
-      <Card className="w-full max-w-md bg-[#111111] border-[#1f2937]">
-        <CardHeader className="space-y-1 text-center">
+    <div className="flex items-center justify-center min-h-screen bg-[#050505] px-4 font-mono">
+      <Card className="w-full max-w-md bg-[#111] border-zinc-800 rounded-none shadow-xl">
+        <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
           <div className="flex justify-center mb-4">
-            <span className="text-4xl font-bold text-[#10b981]">⚡</span>
+            <span className="text-4xl font-bold text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">⚡</span>
           </div>
-          <CardTitle className="text-2xl tracking-tight text-white mb-2">
+          <CardTitle className="text-[20px] font-black text-white uppercase tracking-widest mb-2">
             Verify your email
           </CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardDescription className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
             We sent a 6-digit code or magic link to {email || "your email"}
           </CardDescription>
         </CardHeader>
@@ -172,27 +172,27 @@ function VerifyOTPContent() {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
                   disabled={loading}
-                  className="w-12 h-14 text-center text-xl font-bold bg-[#1a1a1a] border border-[#2d3748] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#10b981] disabled:opacity-50"
+                  className="w-12 h-14 text-center text-[20px] font-bold bg-[#0a0a0a] border border-zinc-800 rounded-none text-white focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 font-mono disabled:opacity-50 transition-all"
                 />
               ))}
             </div>
-            <div className="text-center text-sm text-gray-400 mt-2">
+            <div className="text-center text-[10px] uppercase tracking-widest text-zinc-600 mt-4 leading-relaxed font-bold">
               Got a magic link? Just click the link in your email to sign in directly!
             </div>
             
-            {error && <p className="text-red-400 text-sm text-center font-medium">{error}</p>}
+            {error && <p className="text-[11px] uppercase tracking-widest text-red-500 text-center font-bold bg-red-500/10 p-2 border border-red-500/30">{error}</p>}
             
-            <div className="flex justify-center">
-              {loading && <Loader2 className="h-6 w-6 text-[#10b981] animate-spin" />}
+            <div className="flex justify-center h-6">
+              {loading && <Loader2 className="h-6 w-6 text-orange-500 animate-spin" />}
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center border-t border-[#1f2937] pt-6 gap-2">
-          <span className="text-sm text-gray-400">Didn't get the code?</span>
+        <CardFooter className="flex justify-center border-t border-zinc-800 pt-6 pb-6 gap-2">
+          <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold">Didn't get the code?</span>
           <button
             onClick={handleResend}
             disabled={resendCooldown > 0 || loading}
-            className="text-sm text-[#10b981] hover:text-[#059669] disabled:text-gray-600 disabled:cursor-not-allowed font-medium"
+            className="text-[11px] uppercase tracking-widest text-orange-500 hover:text-orange-400 disabled:text-zinc-600 disabled:cursor-not-allowed font-bold"
           >
             {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
           </button>
@@ -205,8 +205,8 @@ function VerifyOTPContent() {
 export default function VerifyOtpPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <div className="text-gray-400 text-sm">Loading...</div>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center font-mono">
+        <div className="text-zinc-500 text-[11px] uppercase tracking-widest font-bold">Loading...</div>
       </div>
     }>
       <VerifyOTPContent />

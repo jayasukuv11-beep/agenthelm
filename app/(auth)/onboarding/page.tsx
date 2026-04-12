@@ -137,34 +137,36 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#09090b] px-4">
-      <Card className="w-full max-w-md bg-[#111111] border-[#1f2937]">
+    <div className="flex items-center justify-center min-h-screen bg-[#050505] px-4 font-mono">
+      <Card className="w-full max-w-md bg-[#111] border-zinc-800 rounded-none shadow-xl">
         {step === 1 && (
           <>
-            <CardHeader className="space-y-1 text-center">
+            <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
               <div className="flex justify-center mb-4">
-                <span className="text-4xl font-bold text-[#10b981]">⚡</span>
+                <span className="text-4xl font-bold text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">⚡</span>
               </div>
-              <CardTitle className="text-2xl tracking-tight text-white mb-2">
+              <CardTitle className="text-[20px] font-black text-white uppercase tracking-widest mb-2">
                 What should we call you?
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Input
-                  placeholder="Your full name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="bg-[#1a1a1a] border-[#2d3748] text-white focus:border-[#10b981] text-lg py-6"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleStep1();
-                  }}
-                />
-                {error && <p className="text-red-400 text-sm">{error}</p>}
+                <div className="space-y-3">
+                  <Input
+                    placeholder="YOUR FULL NAME"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="bg-[#0a0a0a] border-zinc-800 text-white focus-visible:ring-1 focus-visible:ring-orange-500 focus-visible:border-orange-500 text-[14px] font-mono font-bold uppercase tracking-widest py-6 rounded-none h-14 px-4 transition-all"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleStep1();
+                    }}
+                  />
+                </div>
+                {error && <p className="text-[11px] uppercase tracking-widest text-red-500 bg-red-500/10 p-2 border border-red-500/30 font-bold">{error}</p>}
                 <Button
                   onClick={handleStep1}
-                  className="w-full bg-[#10b981] hover:bg-[#059669] text-white font-semibold py-6 text-lg mt-4"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
                 >
                   Continue
                 </Button>
@@ -175,11 +177,11 @@ export default function OnboardingPage() {
 
         {step === 2 && (
           <>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl tracking-tight text-white mb-2 text-center">
+            <CardHeader className="space-y-1 border-b border-zinc-800/50 pb-6 mb-4">
+              <CardTitle className="text-[18px] font-black text-white uppercase tracking-widest mb-2 text-center">
                 What kind of agents do you run?
               </CardTitle>
-              <CardDescription className="text-center text-gray-400">
+              <CardDescription className="text-center text-[11px] font-mono uppercase tracking-wider text-zinc-500">
                 Select all that apply
               </CardDescription>
             </CardHeader>
@@ -189,28 +191,28 @@ export default function OnboardingPage() {
                   <div
                     key={type}
                     onClick={() => toggleType(type)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors flex items-center justify-between
+                    className={`p-4 border rounded-none cursor-pointer transition-all flex items-center justify-between
                       ${selectedTypes.includes(type) 
-                        ? 'border-[#10b981] bg-[#10b981]/10' 
-                        : 'border-[#2d3748] bg-[#1a1a1a] hover:border-gray-500'
+                        ? 'border-orange-500 bg-orange-500/10' 
+                        : 'border-zinc-800 bg-[#0a0a0a] hover:border-zinc-600'
                       }`}
                   >
-                    <span className="text-white font-medium">{type}</span>
-                    <div className={`w-5 h-5 rounded-sm border flex items-center justify-center
+                    <span className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">{type}</span>
+                    <div className={`w-5 h-5 rounded-none border flex items-center justify-center transition-all
                       ${selectedTypes.includes(type) 
-                        ? 'border-[#10b981] bg-[#10b981]' 
-                        : 'border-gray-500 bg-transparent'
+                        ? 'border-orange-500 bg-orange-500' 
+                        : 'border-zinc-600 bg-transparent'
                       }`}
                     >
-                      {selectedTypes.includes(type) && <Check className="w-3 h-3 text-black" />}
+                      {selectedTypes.includes(type) && <Check className="w-3 h-3 text-black font-bold" />}
                     </div>
                   </div>
                 ))}
-                {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
+                {error && <p className="text-[11px] uppercase tracking-widest text-red-500 bg-red-500/10 p-2 border border-red-500/30 mt-4 font-bold">{error}</p>}
                 <Button
                   onClick={handleStep2}
                   disabled={loading}
-                  className="w-full bg-[#10b981] hover:bg-[#059669] text-white font-semibold py-6 text-lg mt-6"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Continue
@@ -222,42 +224,45 @@ export default function OnboardingPage() {
 
         {step === 3 && (
           <>
-             <CardHeader className="space-y-1 text-center">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 bg-[#10b981]/20 rounded-full flex items-center justify-center">
-                  <span className="text-4xl text-[#10b981]">🎉</span>
+             <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
+              <div className="flex justify-center mb-6">
+                <div className="w-16 h-16 bg-orange-500/10 border border-orange-500/30 rounded-none flex items-center justify-center">
+                  <span className="text-3xl text-orange-500 pt-1">🎉</span>
                 </div>
               </div>
-              <CardTitle className="text-2xl tracking-tight text-white mb-2">
+              <CardTitle className="text-[18px] font-black text-white uppercase tracking-widest mb-2">
                 Your connect key is ready!
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
                 Use this key to connect any agent to AgentHelm.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border border-[#2d3748] rounded-md overflow-hidden">
-                <span className="font-mono text-[#10b981] font-bold text-lg">{connectKey || "Loading..."}</span>
-                <Button variant="ghost" size="sm" onClick={handleCopy} className="text-gray-400 hover:text-white border border-[#2d3748] hover:bg-[#2d3748]">
-                  {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+            <CardContent className="space-y-8">
+              <div className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-orange-500/30 rounded-none overflow-hidden relative">
+                <span className="font-mono text-orange-500 font-bold text-[13px]">{connectKey || "Loading..."}</span>
+                <Button variant="ghost" size="sm" onClick={handleCopy} className="text-orange-500 hover:text-orange-400 border border-orange-500 hover:bg-orange-500/10 rounded-none font-mono text-[10px] uppercase tracking-widest ml-4 transition-all">
+                  {copied ? <Check className="w-3 h-3 mr-2" /> : <Copy className="w-3 h-3 mr-2" />}
                   {copied ? "Copied" : "Copy"}
                 </Button>
               </div>
 
-              <div className="bg-black/50 p-4 rounded-md border border-[#1f2937]">
-                <pre className="text-sm font-mono text-gray-300 overflow-x-auto">
-<code className="text-blue-400">pip install</code> agenthelm-sdk{"\n\n"}
-<code className="text-purple-400">import</code> agenthelm{"\n"}
-dock = agenthelm.connect(<span className="text-yellow-300">"{connectKey || "YOUR_KEY"}"</span>)
-                </pre>
+              <div className="space-y-2">
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Quick Start</p>
+                <div className="bg-[#050505] p-4 rounded-none border border-zinc-800">
+                  <pre className="text-[12px] font-mono text-zinc-300 overflow-x-auto leading-relaxed">
+  <code className="text-orange-400">pip install</code> agenthelm-sdk{"\n\n"}
+  <code className="text-purple-400">import</code> agenthelm{"\n"}
+  dock = agenthelm.connect(<span className="text-yellow-500">"{connectKey || "YOUR_KEY"}"</span>)
+                  </pre>
+                </div>
               </div>
 
-              {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+              {error && <p className="text-[11px] uppercase tracking-widest text-red-500 bg-red-500/10 p-2 border border-red-500/30 font-bold">{error}</p>}
 
               <Button
                 onClick={handleComplete}
                 disabled={loading}
-                className="w-full bg-[#10b981] hover:bg-[#059669] text-white font-semibold py-6 text-lg"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest transition-all"
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Open Dashboard

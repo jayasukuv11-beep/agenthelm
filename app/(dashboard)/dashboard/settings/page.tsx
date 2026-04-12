@@ -275,17 +275,17 @@ export default function SettingsPage() {
     return (
       <div className="max-w-[800px] mx-auto space-y-6 animate-pulse">
         <div className="space-y-2 mb-8">
-           <div className="h-8 bg-gray-800 rounded w-1/4" />
-           <div className="h-4 bg-gray-800 rounded w-1/2" />
+           <div className="h-8 bg-zinc-800 rounded-none w-1/4" />
+           <div className="h-4 bg-zinc-800 rounded-none w-1/2" />
         </div>
         {[1, 2, 3].map(i => (
-          <Card key={i} className="bg-[#111111] border-[#1f2937]">
-            <CardHeader className="border-b border-[#1f2937]">
-              <div className="h-6 bg-gray-800 rounded w-1/3 mb-2" />
-              <div className="h-4 bg-gray-800 rounded w-1/2" />
+          <Card key={i} className="bg-[#111] border-zinc-800 rounded-none">
+            <CardHeader className="border-b border-zinc-800">
+              <div className="h-6 bg-zinc-800 rounded-none w-1/3 mb-2" />
+              <div className="h-4 bg-zinc-800 rounded-none w-1/2" />
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="h-20 bg-gray-800/50 rounded" />
+              <div className="h-20 bg-zinc-800/50 rounded-none" />
             </CardContent>
           </Card>
         ))}
@@ -298,34 +298,34 @@ export default function SettingsPage() {
   return (
     <div className="max-w-[800px] mx-auto space-y-6 pb-24">
       <div className="space-y-1 mb-8">
-        <h1 className="text-3xl font-bold text-white tracking-tight">Settings</h1>
-        <p className="text-gray-400">Manage your account and integrations</p>
+        <h1 className="text-[20px] font-mono font-black text-white uppercase tracking-widest">Settings</h1>
+        <p className="text-[12px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Manage your account and integrations</p>
       </div>
 
       {/* Section 1: Connect Key */}
-      <Card className="bg-[#111111] border-[#1f2937] rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-[#1f2937] pb-4">
-          <CardTitle className="text-lg">Connect Key</CardTitle>
-          <CardDescription>Use this key to connect your agents to AgentHelm</CardDescription>
+      <Card className="bg-[#111] border-zinc-800 rounded-none overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-zinc-800 pb-4">
+          <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Connect Key</CardTitle>
+          <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Use this key to connect your agents to AgentHelm</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
-          <div className="bg-black border border-[#1f2937] rounded-lg p-4 font-mono text-sm text-[#10b981] break-all tracking-wider">
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-4 font-mono text-[13px] text-orange-500 break-all tracking-wider">
             {profile.connect_key}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleCopyKey} className="border-[#1f2937] hover:bg-gray-800 text-sm">
+            <Button variant="outline" onClick={handleCopyKey} className="border-zinc-800 rounded-none bg-[#111] text-zinc-300 font-mono text-[11px] uppercase tracking-wider hover:bg-zinc-800 hover:text-white">
               {keyCopied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
               {keyCopied ? "Copied!" : "Copy Key"}
             </Button>
-            <Button variant="outline" onClick={() => setShowRegenModal(true)} className="border-[#1f2937] hover:bg-red-950/20 text-red-400 hover:text-red-400 text-sm hover:border-red-900">
+            <Button variant="outline" onClick={() => setShowRegenModal(true)} className="border-zinc-800 rounded-none bg-[#111] font-mono text-[11px] uppercase tracking-wider hover:bg-red-950/20 text-red-500 hover:text-red-400 hover:border-red-900/50">
               <RefreshCcw className="w-4 h-4 mr-2" />
               Regenerate Key
             </Button>
           </div>
 
-          <div className="pt-4 border-t border-[#1f2937]">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Quick Install</p>
-            <div className="bg-[#050505] rounded-lg border border-[#1f2937] p-4 relative group">
+          <div className="pt-4 border-t border-zinc-800">
+            <p className="text-[11px] font-mono font-bold text-white uppercase tracking-widest mb-3">Quick Install</p>
+            <div className="bg-[#0a0a0a] rounded-none border border-zinc-800 p-4 relative group">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -333,13 +333,13 @@ export default function SettingsPage() {
                   navigator.clipboard.writeText(`pip install agenthelm-sdk\n\nimport agenthelm\ndock = agenthelm.connect("${profile.connect_key}", name="My Agent")`);
                   toast({ title: "Snippet copied" });
                 }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-none border border-zinc-800 bg-[#111] hover:bg-zinc-800"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 text-zinc-400" />
               </Button>
-              <pre className="text-xs text-gray-300 font-mono space-y-4 overflow-x-auto">
+              <pre className="text-[12px] text-zinc-400 font-mono space-y-4 overflow-x-auto">
                 <code>{`# Python\npip install agenthelm-sdk\n\nimport agenthelm\ndock = agenthelm.connect("${profile.connect_key}", name="My Agent")`}</code>
-                <div className="h-px bg-gray-800 my-4" />
+                <div className="h-px bg-zinc-800 my-4" />
                 <code>{`# Node.js\nnpm install agenthelm-sdk\n\nconst dock = require('agenthelm-sdk')\ndock.connect("${profile.connect_key}", { name: "My Agent" })`}</code>
               </pre>
             </div>
@@ -348,55 +348,55 @@ export default function SettingsPage() {
       </Card>
 
       {/* Section 2: Telegram Integration */}
-      <Card className="bg-[#111111] border-[#1f2937] rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-[#1f2937] pb-4">
+      <Card className="bg-[#111] border-zinc-800 rounded-none overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-zinc-800 pb-4">
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle className="text-lg">Telegram Alerts</CardTitle>
-              <CardDescription>Get real-time alerts and control agents via Telegram</CardDescription>
+              <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Telegram Alerts</CardTitle>
+              <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Get real-time alerts and control agents via Telegram</CardDescription>
             </div>
             {profile.telegram_chat_id ? (
-              <Badge className="bg-[#064e3b] text-[#10b981] border-[#065f46]">🟢 Connected</Badge>
+              <Badge className="bg-orange-500/10 text-orange-500 border border-orange-500/30 font-mono text-[10px] uppercase rounded-none tracking-widest">🟢 Connected</Badge>
             ) : (
-              <Badge variant="secondary" className="bg-gray-800 text-gray-400">⚫ Not Connected</Badge>
+              <Badge variant="secondary" className="bg-zinc-800/50 text-zinc-500 border border-zinc-700 font-mono text-[10px] uppercase rounded-none tracking-widest">⚫ Not Connected</Badge>
             )}
           </div>
         </CardHeader>
         <CardContent className="pt-6">
           {!profile.telegram_chat_id ? (
             <div className="space-y-6">
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <p className="text-[13px] font-mono text-zinc-400 uppercase tracking-wider leading-relaxed">
                 Connect your Telegram account to receive agent crash alerts instantly, daily usage summaries, 
                 and control agents with commands.
               </p>
               <Button 
                 onClick={() => window.open(`https://t.me/AgentHelmBot?start=${profile.connect_key}`, '_blank')}
-                className="bg-[#10b981] hover:bg-[#059669] text-white w-full sm:w-auto px-8"
+                className="bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 w-full sm:w-auto px-8 rounded-none font-mono uppercase tracking-widest"
               >
                 Connect Telegram <ExternalLink className="ml-2 w-4 h-4" />
               </Button>
-              <div className="bg-[#1a1a1a]/50 p-4 rounded-lg border border-[#1f2937] space-y-2">
-                <p className="text-xs font-bold text-gray-300 uppercase tracking-widest">How to connect:</p>
-                <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
-                  <li>Click the green button above</li>
+              <div className="bg-[#0a0a0a] p-5 rounded-none border border-zinc-800 space-y-3 mt-4">
+                <p className="text-[11px] font-mono font-bold text-white uppercase tracking-widest">How to connect:</p>
+                <ol className="text-[12px] font-mono text-zinc-400 uppercase tracking-wider space-y-2 list-decimal list-inside">
+                  <li>Click the border button above</li>
                   <li>Telegram opens with @AgentHelmBot</li>
                   <li>Press "Start" or send /start</li>
                 </ol>
               </div>
-              <p className="text-[10px] text-gray-500 italic">
+              <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mt-2">
                 Your messages are private. We never read personal Telegram content.
               </p>
             </div>
           ) : (
             <div className="space-y-6">
-              <p className="text-sm text-gray-300">
+              <p className="text-[13px] font-mono text-zinc-300 uppercase tracking-wider">
                 Telegram is linked to your AgentHelm account.
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleTestAlert} className="border-[#1f2937] hover:bg-gray-800">
+                <Button variant="outline" onClick={handleTestAlert} className="border-zinc-800 bg-[#111] text-white hover:bg-zinc-800 rounded-none font-mono text-[11px] uppercase tracking-widest">
                   Test Alert
                 </Button>
-                <Button variant="outline" onClick={() => setShowDisconnectModal(true)} className="border-[#1f2937] text-red-400 hover:bg-red-950/20 hover:border-red-900">
+                <Button variant="outline" onClick={() => setShowDisconnectModal(true)} className="border-zinc-800 bg-[#111] rounded-none font-mono text-[11px] uppercase tracking-widest text-red-500 hover:bg-red-950/20 hover:border-red-900/50">
                   Disconnect
                 </Button>
               </div>
@@ -406,10 +406,10 @@ export default function SettingsPage() {
       </Card>
 
       {/* Section 3: Notification Preferences */}
-      <Card className="bg-[#111111] border-[#1f2937] rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-[#1f2937] pb-4">
-          <CardTitle className="text-lg">Notifications</CardTitle>
-          <CardDescription>Choose when to receive alerts</CardDescription>
+      <Card className="bg-[#111] border-zinc-800 rounded-none overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-zinc-800 pb-4">
+          <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Notifications</CardTitle>
+          <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Choose when to receive alerts</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-1">
           {prefs && (
@@ -421,27 +421,28 @@ export default function SettingsPage() {
                 { key: 'token_spike', label: 'Token spike warning', desc: 'Notify when token usage is 3x above normal', icon: Zap, color: 'text-yellow-500' },
                 { key: 'credits_warning', label: 'Credits at 80% warning', desc: 'Notify when monthly limit is 80% used', icon: CreditCard, color: 'text-orange-500' },
               ].map((item, idx) => (
-                <div key={item.key} className={cn("flex items-center justify-between py-4", idx !== 0 && "border-t border-[#1f2937]")}>
+                <div key={item.key} className={cn("flex items-center justify-between py-4", idx !== 0 && "border-t border-zinc-800")}>
                   <div className="flex gap-4">
                     <div className={cn("mt-1 shrink-0", item.color)}>
                       <item.icon className="w-5 h-5" />
                     </div>
-                    <div className="space-y-0.5">
-                      <Label htmlFor={item.key} className="text-sm font-medium text-gray-200 cursor-pointer">{item.label}</Label>
-                      <p className="text-xs text-gray-500">{item.desc}</p>
+                    <div className="space-y-1">
+                      <Label htmlFor={item.key} className="text-[12px] font-mono font-bold text-white uppercase tracking-widest cursor-pointer">{item.label}</Label>
+                      <p className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">{item.desc}</p>
                     </div>
                   </div>
                   <Switch 
                     id={item.key} 
                     checked={prefs[item.key as keyof Profile["notifications_prefs"]]} 
                     onCheckedChange={() => handleTogglePref(item.key as keyof Profile["notifications_prefs"])} 
+                    className="data-[state=checked]:bg-orange-500 rounded-none border border-zinc-800"
                   />
                 </div>
               ))}
               
               {prefsChanged && (
-                <div className="pt-4 border-t border-[#1f2937] flex justify-end">
-                  <Button onClick={handleSavePrefs} className="bg-[#10b981] hover:bg-[#059669] text-white">
+                <div className="pt-4 border-t border-zinc-800 flex justify-end">
+                  <Button onClick={handleSavePrefs} className="bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 rounded-none font-mono text-[11px] uppercase tracking-widest">
                     Save Preferences
                   </Button>
                 </div>
@@ -452,53 +453,53 @@ export default function SettingsPage() {
       </Card>
 
       {/* Section 4: Profile */}
-      <Card className="bg-[#111111] border-[#1f2937] rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-[#1f2937] pb-4">
-          <CardTitle className="text-lg">Profile</CardTitle>
-          <CardDescription>Your account information</CardDescription>
+      <Card className="bg-[#111] border-zinc-800 rounded-none overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-zinc-800 pb-4">
+          <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Profile</CardTitle>
+          <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Your account information</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
-          <div className="space-y-2">
-            <Label className="text-gray-300">Full Name</Label>
+          <div className="space-y-3">
+            <Label className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">Full Name</Label>
             <Input 
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Enter your name"
-              className="bg-[#1a1a1a] border-[#1f2937] text-white focus:ring-[#10b981]"
+              className="bg-[#0a0a0a] border-zinc-800 text-white rounded-none font-mono focus-visible:ring-1 focus-visible:ring-orange-500"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-gray-300">Email Address</Label>
+          <div className="space-y-3">
+            <Label className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">Email Address</Label>
             <Input 
               value={profile.email}
               disabled
-              className="bg-[#0c0c0c] border-[#1f2937] text-gray-500 cursor-not-allowed"
+              className="bg-[#050505] border-zinc-800/50 text-zinc-600 rounded-none font-mono cursor-not-allowed opacity-50"
             />
-            <p className="text-[10px] text-gray-600">Email cannot be changed.</p>
+            <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Email cannot be changed.</p>
           </div>
-          <div className="space-y-2">
-            <Label className="text-gray-300 block">Current Plan</Label>
+          <div className="space-y-3">
+            <Label className="text-[12px] font-mono font-bold text-white uppercase tracking-widest block">Current Plan</Label>
             <div className="flex items-center gap-3">
               <Badge className={cn(
-                "capitalize px-3 py-1",
-                profile.plan === 'free' ? "bg-gray-800 text-gray-400" :
-                profile.plan === 'indie' ? "bg-[#064e3b] text-[#10b981]" : "bg-[#1e1b4b] text-[#818cf8]"
+                "capitalize px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-none",
+                profile.plan === 'free' ? "bg-zinc-800/50 text-zinc-400 border border-zinc-700" :
+                profile.plan === 'indie' ? "bg-orange-500/10 text-orange-500 border border-orange-500/30" : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
               )}>
                 {profile.plan}
               </Badge>
               {profile.plan === 'free' && (
-                <Link href="#billing" className="text-xs text-[#10b981] hover:underline">Upgrade Plan →</Link>
+                <Link href="#billing" className="text-[11px] font-mono text-orange-500 uppercase tracking-wider hover:underline">Upgrade Plan →</Link>
               )}
             </div>
           </div>
 
-          <div className="pt-2 flex justify-end">
+          <div className="pt-4 flex justify-end">
              <Button 
                 onClick={handleSaveProfile} 
                 disabled={fullName === profile.full_name}
                 className={cn(
-                  "bg-[#10b981] hover:bg-[#059669] text-white",
-                  fullName === profile.full_name && "opacity-50 grayscale cursor-not-allowed"
+                  "bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 rounded-none font-mono text-[11px] uppercase tracking-widest",
+                  fullName === profile.full_name && "opacity-50 grayscale cursor-not-allowed border-zinc-800 text-zinc-500 hover:bg-transparent"
                 )}
              >
                Save Changes
@@ -508,23 +509,23 @@ export default function SettingsPage() {
       </Card>
 
       {/* Section 5: Plan & Billing */}
-      <Card id="billing" className="bg-[#111111] border-[#1f2937] rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-[#1f2937] pb-4">
-          <CardTitle className="text-lg">Plan & Billing</CardTitle>
+      <Card id="billing" className="bg-[#111] border-zinc-800 rounded-none overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-zinc-800 pb-4">
+          <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-white">Plan & Billing</CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
-           <div className="border border-[#1f2937] rounded-xl p-6 bg-black">
+           <div className="border border-zinc-800 rounded-none p-6 bg-[#0a0a0a]">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-white capitalize">{profile.plan} Plan</h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <h3 className="text-[16px] font-mono font-bold text-white uppercase tracking-widest">{profile.plan} Plan</h3>
+                  <p className="text-[12px] font-mono text-zinc-500 uppercase tracking-wider mt-2">
                     {profile.plan === 'free' ? 'Basic monitoring for small projects.' : 'Enhanced monitoring with all features.'}
                   </p>
                 </div>
-                {profile.plan === 'indie' && <Check className="text-[#10b981] w-6 h-6" />}
+                {profile.plan === 'indie' && <Check className="text-orange-500 w-6 h-6 border-2 border-orange-500 p-0.5 rounded-none" />}
               </div>
               
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-4 mb-8">
                 {[
                   { label: "3 agents", free: true, indie: true, studio: true },
                   { label: "100,000 tokens/month", free: true, indie: true, studio: true },
@@ -533,49 +534,49 @@ export default function SettingsPage() {
                   { label: "AI failure explanations", free: false, indie: true, studio: true },
                   { label: "All anomaly alerts", free: false, indie: true, studio: true },
                 ].map((f, i) => (
-                  <li key={i} className="flex items-center text-sm gap-3">
+                  <li key={i} className="flex items-center text-[12px] font-mono uppercase tracking-wider gap-3">
                     {f[profile.plan as keyof typeof f] ? (
-                      <Check className="w-4 h-4 text-[#10b981] shrink-0" />
+                      <Check className="w-4 h-4 text-orange-500 shrink-0" />
                     ) : (
-                      <X className="w-4 h-4 text-gray-700 shrink-0" />
+                      <X className="w-4 h-4 text-zinc-700 shrink-0" />
                     )}
-                    <span className={f[profile.plan as keyof typeof f] ? "text-gray-300" : "text-gray-600 line-through"}>{f.label}</span>
+                    <span className={f[profile.plan as keyof typeof f] ? "text-zinc-300" : "text-zinc-600 line-through"}>{f.label}</span>
                   </li>
                 ))}
               </ul>
 
               {profile.plan === 'free' ? (
-                <div className="space-y-4">
-                  <div className="h-px bg-[#1f2937] w-full" />
+                <div className="space-y-6">
+                  <div className="h-px bg-zinc-800 w-full" />
                   <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                     <div>
-                      <p className="text-2xl font-bold text-white">₹399<span className="text-sm font-normal text-gray-500">/month</span></p>
-                      <p className="text-xs text-[#10b981]">Indie Plan</p>
+                      <p className="text-[20px] font-mono font-bold text-white">₹399<span className="text-[11px] uppercase tracking-widest text-zinc-500">/month</span></p>
+                      <p className="text-[11px] font-mono uppercase tracking-widest text-orange-500 mt-1">Indie Plan</p>
                     </div>
                     <UpgradeButton 
                       plan="indie"
                       label="Upgrade to Indie →"
-                      className="bg-[#10b981] hover:bg-[#059669] text-white px-8"
+                      className="bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 rounded-none font-mono text-[11px] uppercase tracking-widest px-8"
                     />
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="h-px bg-[#1f2937] w-full" />
+                <div className="space-y-6">
+                  <div className="h-px bg-zinc-800 w-full" />
                   <div className="flex justify-between items-center">
-                    <p className="text-xs text-gray-500">Your plan is managed via Stripe.</p>
-                    <Button variant="outline" className="border-[#1f2937] hover:bg-gray-800 text-xs">Manage Billing</Button>
+                    <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500">Your plan is managed via Stripe.</p>
+                    <Button variant="outline" className="border-zinc-800 rounded-none bg-[#111] font-mono uppercase text-[10px] tracking-widest hover:bg-zinc-800 text-white">Manage Billing</Button>
                   </div>
                 </div>
               )}
            </div>
 
            {profile.plan_expires_at && (
-             <div className="mt-4 p-4 bg-yellow-950/20 border border-yellow-900/30 rounded-lg flex gap-4">
+             <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-none flex gap-4">
                 <div className="mt-0.5"><Zap className="w-5 h-5 text-yellow-500" /></div>
                 <div>
-                  <p className="text-sm font-bold text-yellow-500">Trial Period</p>
-                  <p className="text-xs text-yellow-500/80">
+                  <p className="text-[13px] font-mono font-bold uppercase tracking-widest text-yellow-500">Trial Period</p>
+                  <p className="text-[11px] font-mono uppercase tracking-widest text-yellow-500/80 mt-1 leading-relaxed">
                     Your active trial ends on {new Date(profile.plan_expires_at).toLocaleDateString()}. 
                     Upgrade now to avoid interruption.
                   </p>
@@ -586,16 +587,16 @@ export default function SettingsPage() {
       </Card>
 
       {/* Section 6: Danger Zone */}
-      <Card className="border-red-900 bg-[#0c0505] rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-red-900/30 pb-4">
-          <CardTitle className="text-lg text-red-400">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions for your account</CardDescription>
+      <Card className="border-red-900/50 bg-[#0a0a0a] rounded-none overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-red-900/30 pb-4 bg-red-950/10">
+          <CardTitle className="text-[14px] font-mono font-bold uppercase tracking-widest text-red-500">Danger Zone</CardTitle>
+          <CardDescription className="text-[11px] font-mono uppercase text-red-500/50 pt-1 tracking-wider">Irreversible actions for your account</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <Button 
             variant="outline" 
             onClick={() => setShowDeleteModal(true)}
-            className="w-full border-red-900/50 text-red-500 hover:bg-red-950/30 hover:text-red-400 hover:border-red-900"
+            className="w-full border-red-900/50 rounded-none font-mono text-[11px] uppercase tracking-widest text-red-500 hover:bg-red-950/30 hover:text-red-400 hover:border-red-900 bg-transparent"
           >
             Delete Account
           </Button>
@@ -604,47 +605,47 @@ export default function SettingsPage() {
 
       {/* Modals */}
       <Dialog open={showRegenModal} onOpenChange={setShowRegenModal}>
-        <DialogContent className="bg-[#111111] border-[#1f2937] text-white">
+        <DialogContent className="bg-[#111] border-zinc-800 text-white rounded-none">
           <DialogHeader>
-            <DialogTitle>Regenerate Connect Key?</DialogTitle>
-            <DialogDescription className="text-gray-400 pt-2">
+            <DialogTitle className="font-mono text-[16px] uppercase tracking-widest text-white">Regenerate Connect Key?</DialogTitle>
+            <DialogDescription className="font-mono text-[12px] uppercase tracking-wider text-zinc-500 pt-3 leading-relaxed">
               This will permanently disconnect all agents currently using your key.
               <br /><br />
               You will need to update the key in every agent before they can reconnect.
-              This action cannot be undone.
+              <span className="text-orange-500 block mt-2 font-bold">This action cannot be undone.</span>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="pt-4">
-            <Button variant="ghost" onClick={() => setShowRegenModal(false)} className="text-gray-400 hover:bg-gray-800">Cancel</Button>
-            <Button onClick={handleRegenerateKey} className="bg-red-600 hover:bg-red-700 text-white">Yes, Regenerate</Button>
+          <DialogFooter className="pt-6 gap-2">
+            <Button variant="ghost" onClick={() => setShowRegenModal(false)} className="rounded-none font-mono text-[11px] uppercase tracking-widest text-zinc-400 hover:bg-zinc-800">Cancel</Button>
+            <Button onClick={handleRegenerateKey} className="rounded-none bg-red-600 hover:bg-red-700 text-white font-mono text-[11px] uppercase tracking-widest">Yes, Regenerate</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showDisconnectModal} onOpenChange={setShowDisconnectModal}>
-        <DialogContent className="bg-[#111111] border-[#1f2937] text-white">
+        <DialogContent className="bg-[#111] border-zinc-800 text-white rounded-none">
           <DialogHeader>
-            <DialogTitle>Disconnect Telegram?</DialogTitle>
-            <DialogDescription className="text-gray-400 pt-2">
+            <DialogTitle className="font-mono text-[16px] uppercase tracking-widest text-white">Disconnect Telegram?</DialogTitle>
+            <DialogDescription className="font-mono text-[12px] uppercase tracking-wider text-zinc-500 pt-3 leading-relaxed">
               You will stop receiving real-time alerts and lose control of your agents via Telegram.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="pt-4">
-            <Button variant="ghost" onClick={() => setShowDisconnectModal(false)} className="text-gray-400 hover:bg-gray-800">Cancel</Button>
-            <Button onClick={handleDisconnectTelegram} className="bg-red-600 hover:bg-red-700 text-white">Disconnect</Button>
+          <DialogFooter className="pt-6 gap-2">
+            <Button variant="ghost" onClick={() => setShowDisconnectModal(false)} className="rounded-none font-mono text-[11px] uppercase tracking-widest text-zinc-400 hover:bg-zinc-800">Cancel</Button>
+            <Button onClick={handleDisconnectTelegram} className="rounded-none bg-red-600 hover:bg-red-700 text-white font-mono text-[11px] uppercase tracking-widest">Disconnect</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogContent className="bg-[#111111] border-[#1f2937] text-white">
+        <DialogContent className="bg-[#111] border-red-900/50 text-white rounded-none border-t-2 border-t-red-600">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-red-500 font-mono text-[16px] uppercase tracking-widest">
               <ShieldAlert className="w-5 h-5" /> Delete Account
             </DialogTitle>
-            <div className="text-gray-400 pt-2 text-sm space-y-4">
+            <div className="font-mono text-[12px] uppercase tracking-wider text-zinc-400 pt-4 space-y-4">
               <p>This will permanently delete:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
+              <ul className="list-disc list-inside space-y-2 ml-2 text-zinc-500">
                 <li>Your account and profile</li>
                 <li>All connected agents</li>
                 <li>All logs and chat history</li>
@@ -653,22 +654,22 @@ export default function SettingsPage() {
               <p className="font-bold text-red-500">This action CANNOT be undone.</p>
             </div>
           </DialogHeader>
-          <div className="space-y-2 py-4">
-             <Label htmlFor="confirm-delete" className="text-xs text-gray-300">Type DELETE to confirm</Label>
+          <div className="space-y-3 py-6">
+             <Label htmlFor="confirm-delete" className="font-mono text-[11px] uppercase tracking-widest text-zinc-400">Type DELETE to confirm</Label>
              <Input 
                 id="confirm-delete"
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 placeholder="DELETE"
-                className="bg-[#1a1a1a] border-red-900/30 text-white focus:ring-red-600"
+                className="bg-[#0a0a0a] border-red-900/50 text-white rounded-none font-mono uppercase focus-visible:ring-1 focus-visible:ring-red-600 focus-visible:border-red-600 tracking-widest"
              />
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)} className="text-gray-400 hover:bg-gray-800">Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setShowDeleteModal(false)} className="rounded-none font-mono text-[11px] uppercase tracking-widest text-zinc-400 hover:bg-zinc-800">Cancel</Button>
             <Button 
               disabled={deleteConfirm !== "DELETE"}
               onClick={handleDeleteAccount} 
-              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              className="rounded-none bg-red-600 hover:bg-red-700 text-white font-mono text-[11px] uppercase tracking-widest disabled:opacity-50 disabled:grayscale"
             >
               Delete Account
             </Button>
