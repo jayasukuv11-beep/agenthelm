@@ -110,6 +110,9 @@ function ScanLine() {
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState(0)
+  const [scrolled, setScrolled] = useState(false)
+  const [currency, setCurrency] = useState<CurrencyCode>("USD")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [stats, setStats] = useState({
     traces: 1200000,
     agents: 4,
