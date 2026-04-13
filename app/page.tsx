@@ -109,15 +109,29 @@ function ScanLine() {
 }
 
 export default function LandingPage() {
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [currency, setCurrency] = useState<CurrencyCode>("USD")
   const [activeTab, setActiveTab] = useState(0)
+  const [stats, setStats] = useState({
+    traces: 1200000,
+    agents: 4,
+    members: 4,
+    interventions: 4,
+    uptime: 99.9,
+    sdks: 2
+  })
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener("scroll", handleScroll)
     fetch('/api/geo').then(r => r.json()).then(data => setCurrency(data.currency)).catch(() => setCurrency("USD"))
+    
+    // Fetch real-time stats
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setStats(data)
+      })
+      .catch(err => console.error("Stats fetch error:", err))
+
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
@@ -158,6 +172,7 @@ export default function LandingPage() {
           <Link href="#how-it-works" className="text-zinc-500 hover:text-orange-500 transition-colors">Protocol</Link>
           <Link href="#dispatch" className="text-zinc-500 hover:text-orange-500 transition-colors">Dispatch</Link>
           <Link href="#pricing" className="text-zinc-500 hover:text-orange-500 transition-colors">Pricing</Link>
+          <a href="https://github.com/jayasukuv11-beep/agentdock#readme" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-orange-500 transition-colors">Docs</a>
         </div>
 
         <div className="hidden md:flex items-center gap-3">
@@ -472,10 +487,10 @@ export default function LandingPage() {
       <section className="py-14 px-6 bg-[#111] border-y border-zinc-800">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
-            { value: 1200000, suffix: "+", label: "Traces Processed" },
-            { value: 99, suffix: ".9%", label: "Uptime SLA" },
-            { value: 4, suffix: "", label: "Governance Pillars" },
-            { value: 2, suffix: "", label: "Official SDKs" },
+            { value: stats.traces, suffix: "+", label: "Traces Processed" },
+            { value: stats.uptime, suffix: "%", label: "Uptime SLA" },
+            { value: stats.interventions, suffix: "", label: "Safety Gates" },
+            { value: stats.sdks, suffix: "", label: "Official SDKs" },
           ].map((stat, i) => (
             <div key={i}>
               <div className="text-2xl md:text-4xl font-mono font-black text-orange-500 mb-1">

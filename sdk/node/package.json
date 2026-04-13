@@ -1,6 +1,6 @@
 {
   "name": "agenthelm-node-sdk",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "Monitor your AI agents from AgentHelm — add one line, see everything",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

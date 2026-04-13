@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
+import { sendTelegramToUser } from '@/lib/telegram'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -101,6 +102,37 @@ export async function POST(req: Request) {
       .single()
 
     if (error) throw error
+
+    // Send Telegram Notification for pending approval
+    if (execution.status === 'pending_approval') {
+      setImmediate(async () => {
+        try {
+          const { data: agent } = await supabaseAdmin!
+            .from('agents')
+            .select('name')
+            .eq('id', agent_id)
+            .single()
+
+          const agentName = agent?.name || 'Agent'
+          const message = `🛡️ <b>Action Required: ${agentName}</b>\n\n` +
+            `The agent is requesting approval to run an <b>@irreversible</b> tool:\n\n` +
+            `🔹 <b>Tool:</b> <code>${tool_name}</code>\n` +
+            `${input_preview ? `🔹 <b>Preview:</b> ${input_preview}\n` : ''}\n` +
+            `Use the buttons below to respond. You can also type <code>/resume ${agentName}</code> if this message is lost.`
+          
+          await sendTelegramToUser(userId, message, 'HTML', {
+            inline_keyboard: [
+              [
+                { text: '✅ Approve', callback_data: `approve_tool:${execution.id}` },
+                { text: '❌ Reject', callback_data: `reject_tool:${execution.id}` },
+              ]
+            ]
+          })
+        } catch (tgErr) {
+          console.error('Telegram Safety Bridge error:', tgErr)
+        }
+      })
+    }
 
     return NextResponse.json({
       success: true,

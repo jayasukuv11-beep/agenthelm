@@ -609,6 +609,23 @@ export class AgentHelm {
     // Notify the gateway (Intervention needed)
     this.log(`[IRREVERSIBLE] Action '${toolName}' pending approval via ${confirm}`, 'warning')
 
+    // Register intent for @irreversible action
+    try {
+      await this.fetch('/execution', {
+        key: this.getAuthKey(),
+        agent_id: this._agentId,
+        task_id: this._currentTaskId,
+        tool_name: toolName,
+        classification: 'irreversible',
+        confirm_channel: confirm,
+        status: 'pending_approval'
+      })
+    } catch (err) {
+      if (this.verbose) {
+        console.error(`[AgentHelm] \uD83D\uDED1 Failed to register irreversible action:`, err)
+      }
+    }
+
     const startTime = Date.now()
     while (Date.now() - startTime < timeout) {
       if (!this._running) return null

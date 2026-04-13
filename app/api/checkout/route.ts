@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Cashfree, CFEnvironment } from "cashfree-pg";
+import { MULTI_CURRENCY_PLANS, type CurrencyCode } from "@/lib/currency";
 
 const cashfree = new Cashfree(
   process.env.CASHFREE_ENVIRONMENT === "PRODUCTION"
@@ -13,8 +14,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      amount,
-      currency = "INR",
+      plan,
+      currency = "USD",
       customer_id,
       customer_phone,
       customer_email,
@@ -22,12 +23,22 @@ export async function POST(request: Request) {
       order_meta,
     } = body;
 
-    if (!amount || !customer_id || !customer_phone) {
+    if (!plan || !customer_id || !customer_phone) {
       return NextResponse.json(
-        { error: "Missing required fields: amount, customer_id, customer_phone" },
+        { error: "Missing required fields: plan, customer_id, customer_phone" },
         { status: 400 }
       );
     }
+
+    // Server-side price lookup
+    const validCurrency = (currency.toUpperCase() === "INR" ? "INR" : "USD") as CurrencyCode;
+    const planData = MULTI_CURRENCY_PLANS[validCurrency][plan.toLowerCase()];
+    
+    if (!planData) {
+      return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
+    }
+
+    const amount = planData.amount;
 
     const orderId = `order_${Date.now()}_${Math.random()
       .toString(36)
@@ -45,8 +56,12 @@ export async function POST(request: Request) {
         customer_email: customer_email || "customer@example.com",
         customer_name: customer_name || "Customer",
       },
-      order_meta: order_meta || {
+      order_meta: {
+        ...(order_meta || {}),
+        payment_methods: "cc,dc,up,nb",
         return_url: `${origin}/payment/status?order_id=${orderId}`,
+        // We inject the plan here for webhook verification
+        plan: plan.toLowerCase(),
       },
     };
 
