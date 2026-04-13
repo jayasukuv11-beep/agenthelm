@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { ShieldCheck, ShieldAlert, ArrowDown, ArrowUp, Zap, Lock, Siren, RefreshCcw, Hand } from "lucide-react";
 import { UpgradeButton } from "@/components/dashboard/UpgradeButton";
+import { cn } from "@/lib/utils";
 
 interface HealthProps {
   plan: string;
