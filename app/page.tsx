@@ -703,9 +703,9 @@ export default function LandingPage() {
             <div>
               <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">Legal</h4>
               <ul className="space-y-3 text-sm text-zinc-500 font-mono">
-                <li><a href="/PrivacyPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Privacy Policy</a></li>
-                <li><a href="/TermsOfService.md" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Terms of Service</a></li>
-                <li><a href="/RefundPolicy.md" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Refund Policy</a></li>
+                <li><Link href="/privacy-policy" className="hover:text-orange-500 transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms-of-service" className="hover:text-orange-500 transition-colors">Terms of Service</Link></li>
+                <li><Link href="/refund-policy" className="hover:text-orange-500 transition-colors">Refund Policy</Link></li>
               </ul>
             </div>
 
