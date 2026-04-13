@@ -808,7 +808,41 @@ async function handleResume(
     return
   }
 
-  // 1. Find the last failed task for this agent
+  // 1. Check for PENDING TOOL APPROVALS first (Highest priority for /resume)
+  const { data: pendingTool } = await supabaseAdmin
+    .from('tool_executions')
+    .select('id, tool_name, classification, created_at')
+    .eq('agent_id', agent.id)
+    .eq('status', 'pending_approval')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (pendingTool) {
+    const timeAgo = getTimeAgo(new Date(pendingTool.created_at))
+    await sendMessage(
+      chatId,
+      `🛑 <b>Pending Action Approval</b>\n\n` +
+        `<b>Agent:</b> ${agent.name}\n` +
+        `<b>Action:</b> <code>${pendingTool.tool_name}</code>\n` +
+        `<b>Risk:</b> ${pendingTool.classification.toUpperCase()}\n` +
+        `<b>Requested:</b> ${timeAgo}\n\n` +
+        `This agent is paused waiting for your signal.`,
+      'HTML',
+      {
+        inline_keyboard: [
+          [
+            { text: '✅ Approve', callback_data: `approve_tool:${pendingTool.id}` },
+            { text: '❌ Reject', callback_data: `reject_tool:${pendingTool.id}` },
+          ],
+          [{ text: ' Cancel', callback_data: 'cancel:0' }],
+        ],
+      }
+    )
+    return
+  }
+
+  // 2. Find the last failed task for this agent
   const { data: lastFailedTask } = await supabaseAdmin
     .from('agent_tasks')
     .select('id, task_description, created_at')
@@ -821,13 +855,13 @@ async function handleResume(
   if (!lastFailedTask) {
     await sendMessage(
       chatId,
-      `ℹ️ No failed tasks found for <b>${agent.name}</b> to resume from.`,
+      `ℹ️ No failed tasks or pending approvals found for <b>${agent.name}</b>.`,
       'HTML'
     )
     return
   }
 
-  // 2. Find the last successful checkpoint for that task
+  // 3. Find the last successful checkpoint for that task
   const { data: lastCheckpoint } = await supabaseAdmin
     .from('agent_checkpoints')
     .select('id, step_name, step_index, created_at')

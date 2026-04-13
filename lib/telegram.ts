@@ -12,7 +12,8 @@ type ProfileRow = {
 export async function sendTelegramToUser(
   userId: string,
   message: string,
-  parseMode?: 'HTML' | 'Markdown'
+  parseMode?: 'HTML' | 'Markdown',
+  replyMarkup?: any
 ): Promise<void> {
   try {
     const supabaseAdmin = createClient(
@@ -38,6 +39,7 @@ export async function sendTelegramToUser(
           chat_id: parseInt(profile.telegram_chat_id),
           text: message,
           ...(parseMode ? { parse_mode: parseMode } : {}),
+          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
         }),
       }
     )

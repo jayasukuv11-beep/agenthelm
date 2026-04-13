@@ -1,57 +1,92 @@
-# AgentHelm — AI Agent Control Plane
+<div align="center">
+  <img src="https://agenthelm.online/logo.png" width="120" alt="AgentHelm Logo" />
+  <h1>AgentHelm</h1>
+  <p><strong>The Industrial Control Plane for AI Autonomous Agents</strong></p>
 
-> Monitor, control and debug your AI agents in real time.
+  <p>
+    <a href="https://pypi.org/project/agenthelm-sdk"><img src="https://img.shields.io/pypi/v/agenthelm-sdk?color=orange&style=flat-square" alt="PyPI" /></a>
+    <a href="https://www.npmjs.com/package/agenthelm-node-sdk"><img src="https://img.shields.io/npm/v/agenthelm-node-sdk?color=orange&style=flat-square" alt="npm" /></a>
+    <a href="https://github.com/jayasukuv11-beep/agenthelm/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayasukuv11-beep/agenthelm?style=flat-square" alt="License" /></a>
+    <a href="https://agenthelm.online"><img src="https://img.shields.io/badge/status-production-success?style=flat-square" alt="Status" /></a>
+  </p>
+</div>
 
-[![PyPI](https://img.shields.io/pypi/v/agenthelm-sdk)](https://pypi.org/project/agenthelm-sdk)
-[![License](https://img.shields.io/github/license/jayasukuv11-beep/agenthelm)](LICENSE)
+---
 
-## Quick Start
+## 🏗️ Governance vs. Orchestration
 
+Most tools focus on how agents *think* (LangChain, CrewAI). **AgentHelm** focuses on how agents *behave*. 
+
+It is a lightweight governance layer that wraps your existing agents, providing a secure bridge between autonomous execution and human oversight.
+
+### Key Pillars
+- **🔭 Absolute Observability**: Real-time log streaming, token tracing, and state inspection.
+- **🛡️ Human-in-the-Loop (HITL)**: One-click Telegram approvals for irreversible actions (deletes, payments, transfers).
+- **📉 Cost Safeguards**: Hard limits on token spend per task and automated injection detection.
+- **⏸️ Remote Control**: Pause, stop, or override agent state from the dashboard or your phone.
+
+---
+
+## 🚀 Quick Start (v1.0.0)
+
+### Python
+```bash
 pip install agenthelm-sdk
-
+```
+```python
 from agenthelm import Agent
 
-agent = Agent(key="ahe_live_...", name="My Agent")
-agent.log("Started!", level="info")
-agent.output({"result": "done", "tokens": 312}, label="summary")
-agent.track_tokens(used=312, model="llama-3.1-8b", cost_per_1k=0.0002)
-agent.stop()
+# Connect to the control plane
+agent = Agent(key="ahe_live_...", name="Market Researcher")
 
-## Features
-- Real-time log streaming to dashboard
-- Token usage and cost tracking (₹)
-- Remote control — stop/start/restart from dashboard
-- Telegram crash alerts
-- Multi-agent support
+@agent.irreversible(confirm="telegram")
+def execute_trade(symbol, amount):
+    # This won't run until you click 'Approve' on your phone
+    return broker.trade(symbol, amount)
 
-## Dashboard
-Live at: https://agenthelm.online
+agent.log("Scanning market trends...", level="info")
+```
 
-## SDK Methods
+### Node.js
+```bash
+npm install agenthelm-node-sdk
+```
+```javascript
+import { Agent } from 'agenthelm-node-sdk';
 
-| Method | Description |
-|---|---|
-| log(msg, level) | Send log — info/warning/error/success |
-| output(data, label) | Send structured dict output |
-| track_tokens(used, model, cost_per_1k) | Track token usage + cost |
-| warn(msg) | Warning shortcut |
-| error(msg) | Error shortcut |
-| success(msg) | Success shortcut |
-| stop() | Mark agent stopped |
+const agent = new Agent({ key: 'ahe_live_...', name: 'Support Bot' });
 
-## Self-host
+agent.log('Analyzing sentiment...', 'info');
+agent.output({ score: 0.92 }, 'sentiment_results');
+```
 
-git clone https://github.com/jayasukuv11-beep/agenthelm
-cd agenthelm
-npm install
-cp .env.example .env.local
-# fill in your env vars
-npm run dev
+---
 
-## Links
-- PyPI: https://pypi.org/project/agenthelm-sdk
-- Dashboard: https://agenthelm.online/dashboard
-- Issues: https://github.com/jayasukuv11-beep/agenthelm/issues
+## 📲 The Safety Bridge (Telegram)
 
-## License
-MIT
+AgentHelm bridges the gap between your server and your pocket. When an agent hits a method decorated with `@irreversible`, you receive a rich alert on Telegram:
+
+> **⚠️ Irreversible Action Requested**
+> **Agent:** `Cloud Architect`
+> **Action:** `destroy_infrastructure`
+> **Payload:** `{"region": "us-east-1"}`
+>
+> [ ✅ Approve ]   [ ❌ Reject ]
+
+---
+
+## 📊 Dashboard
+
+The **Industrial Signal Orange** dashboard provides a high-fidelity view of your entire agent fleet. Surface anomalies, track multi-currency billing, and audit every single tool execution.
+
+Visit **[agenthelm.online](https://agenthelm.online)** to get started.
+
+---
+
+## 🛠️ Tech Stack
+- **Dashboard**: Next.js, TailwindCSS (Industrial Theme), Supabase, Shadcn/UI.
+- **SDKs**: Python (twine), Node.js (TypeScript).
+- **Control**: Telegram Bot API, Edge Functions.
+
+## ⚖️ License
+MIT © [AgentHelm Team](https://agenthelm.online)

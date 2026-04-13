@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="agenthelm-sdk",
-    version="0.4.0",
+    version="1.0.0",
     author="AgentHelm Team",
     author_email="hello@agenthelm.dev",
     description="Python SDK for AgentHelm — AI Agent Control Plane",

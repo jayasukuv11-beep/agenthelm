@@ -6,6 +6,8 @@ import { acquireLock } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
+import { MULTI_CURRENCY_PLANS, type CurrencyCode } from "@/lib/currency";
+ 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -52,8 +54,9 @@ export async function POST(req: Request) {
       case "PAYMENT_SUCCESS_WEBHOOK": {
         const orderId = payload.data.order.order_id;
         const paymentAmount = payload.data.payment.payment_amount;
+        const orderCurrency = payload.data.order.order_currency as CurrencyCode;
         
-        console.log(`✅ Payment confirmed for order: ${orderId} (Amount: ₹${paymentAmount})`);
+        console.log(`✅ Payment received for order: ${orderId} (Amount: ${orderCurrency} ${paymentAmount})`);
         
         // 1. Fetch the subscription to get the associated user
         const { data: subData, error: subError } = await supabaseAdmin
@@ -61,12 +64,32 @@ export async function POST(req: Request) {
           .select('user_id, plan')
           .eq('order_id', orderId)
           .single();
-
+ 
         if (subError || !subData) {
           console.error('Subscription not found for order:', orderId, subError);
           break;
         }
 
+        // 1b. Verify paid amount matches expected plan price
+        const expectedPlan = subData.plan.toLowerCase();
+        const planPricing = MULTI_CURRENCY_PLANS[orderCurrency]?.[expectedPlan];
+        
+        if (!planPricing) {
+          console.error(`[FRAUD_DETECTION] Invalid plan or currency in webhook: ${expectedPlan} / ${orderCurrency}`);
+          break;
+        }
+
+        // Allow for minor floating point diffs if USD, but usually they are exact match
+        if (paymentAmount < planPricing.amount) {
+          console.error(`[FRAUD_DETECTION] Price mismatch for order ${orderId}. Expected ${planPricing.amount}, got ${paymentAmount}`);
+          // Mark as suspicious/failed
+          await supabaseAdmin
+            .from('subscriptions')
+            .update({ status: 'fraud_investigation', metadata: { received: paymentAmount, expected: planPricing.amount } })
+            .eq('order_id', orderId);
+          break;
+        }
+ 
         const userId = subData.user_id;
 
         // 2. Update Subscription status
