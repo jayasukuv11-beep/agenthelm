@@ -59,6 +59,34 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
   };
 
   const [replayLoading, setReplayLoading] = useState(false);
+  const [converting, setConverting] = useState(false);
+
+  const handleConvertToEval = async () => {
+    if (!selectedTask) return;
+    setConverting(true);
+    try {
+      const res = await fetch("/api/sdk/evals/from-trace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_id: selectedTask.id,
+          agent_id: agentId,
+          name: `Auto-Eval: ${selectedTask.task_description?.slice(0, 30) || selectedTask.id.slice(0, 8)}`
+        })
+      });
+      if (res.ok) {
+        // Simple success handling
+        alert("Success: Trace converted to Eval Set. Check the Evals tab.");
+      } else {
+        throw new Error("Conversion failed");
+      }
+    } catch (err) {
+      console.error("Conversion failed:", err);
+      alert("Failed to convert trace to eval set.");
+    } finally {
+      setConverting(false);
+    }
+  };
 
   const handleReplay = async () => {
     if (!selectedTask) return;
@@ -140,7 +168,16 @@ export function TraceTimeline({ agentId, plan }: TraceTimelineProps) {
                 </div>
               </div>
               {plan === "studio" ? (
-                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleConvertToEval} 
+                    disabled={converting} 
+                    className="rounded-none font-mono text-[10px] uppercase tracking-widest border-emerald-500/50 text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white transition-all"
+                  >
+                    {converting ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Check className="w-3 h-3 mr-2" />}
+                    Convert to Eval
+                  </Button>
                   <Button variant="outline" size="sm" onClick={handleReplay} disabled={replayLoading} className="rounded-none font-mono text-[10px] uppercase tracking-widest border-purple-500/50 text-purple-500 bg-purple-500/10 hover:bg-purple-500 hover:text-white transition-all">
                     {replayLoading ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <GitFork className="w-3 h-3 mr-2" />}
                     Fork / Replay
