@@ -21,8 +21,9 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
 import { TraceTimeline } from "@/components/dashboard/TraceTimeline";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
-import { GuardrailHealthScore } from "@/components/dashboard/GuardrailHealthScore";
-import { SLAMetrics } from "@/components/dashboard/SLAMetrics";
+import { GuardrailHealthScore } from "@/components/dashboard/guardrail-health-score";
+import { SLAMetrics } from "@/components/dashboard/sla-metrics";
+import { RegressionAlerts } from "@/components/dashboard/RegressionAlerts";
 import {
   Bar,
   BarChart,
@@ -401,7 +402,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
         supabase.from("agent_logs").select("type,level,message").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(500),
         supabase.from("tool_executions").select("classification,status,retry_count").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(500),
         supabase.from("agent_interventions").select("action_taken").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(500),
-        supabase.from("agent_eval_results").select("*, agent_eval_sets(name)").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(10),
+        supabase.from("agent_eval_results").select("*, agent_eval_sets(name, auto_generated)").eq("agent_id", agentId).order("created_at", { ascending: false }).limit(20),
       ]);
 
     setEvalResults(evalResults || []);
@@ -1006,7 +1007,12 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
         {/* Evals tab */}
         <TabsContent value="evals">
-          <div className="rounded-none border border-zinc-800 bg-[#0a0a0a] p-6 space-y-6">
+          <div className="rounded-none border border-zinc-800 bg-[#0a0a0a] p-6 space-y-8">
+            {/* Feature 9: Regression Intel */}
+            <div className="pb-6 border-b border-zinc-800">
+              <RegressionAlerts agentId={agentId} />
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[13px] font-mono tracking-wider font-bold text-white uppercase">Evaluation Runner</h3>
@@ -1037,7 +1043,14 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                     <tbody className="divide-y divide-zinc-800 text-zinc-300">
                       {evalResults.map((res: any) => (
                         <tr key={res.id} className="hover:bg-[#111] transition-colors">
-                          <td className="px-4 py-4 font-bold text-white">{res.agent_eval_sets?.name}</td>
+                          <td className="px-4 py-4 font-bold text-white">
+                            <div className="flex items-center gap-2">
+                              {res.agent_eval_sets?.name}
+                              {res.agent_eval_sets?.auto_generated && (
+                                <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-none text-[8px] uppercase tracking-tighter">Trace</Badge>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-4">
                             {res.passed ? (
                               <Badge className="bg-orange-500/10 text-orange-500 border border-orange-500/30 rounded-none text-[10px]">PASS</Badge>

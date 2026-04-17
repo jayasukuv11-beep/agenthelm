@@ -379,6 +379,72 @@ export class AgentHelm {
   }
 
   /**
+   * Convert a production trace into an eval set.
+   * Activated by Feature 9: Trace-Connected Eval Pipeline.
+   * @param taskId - The task UUID to extract trace from
+   * @param name - Optional name for the new eval set
+   */
+  async evalFromTrace(
+    taskId: string,
+    name?: string
+  ): Promise<Record<string, unknown>> {
+    try {
+      const res = await this.fetch('/evals/from-trace', {
+        key: this.getAuthKey(),
+        task_id: taskId,
+        name: name ?? null,
+        agent_id: this._agentId,
+      })
+
+      if (res.ok) {
+        return (await res.json()) as Record<string, unknown>
+      }
+      return {
+        error: `HTTP ${res.status}`,
+        detail: await res.text(),
+      }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /**
+   * Check for performance regressions against a baseline version.
+   * Activated by Feature 9: Trace-Connected Eval Pipeline.
+   * @param currentVersion - Version to test
+   * @param baselineVersion - Version to compare against
+   * @param evalSetId - Eval set to run against
+   * @param threshold - Pass rate drop threshold (default 0.10)
+   */
+  async regressionCheck(
+    currentVersion: string,
+    baselineVersion: string,
+    evalSetId: string,
+    threshold = 0.10
+  ): Promise<Record<string, unknown>> {
+    try {
+      const res = await this.fetch('/evals/regression', {
+        key: this.getAuthKey(),
+        eval_set_id: evalSetId,
+        agent_id: this._agentId,
+        current_version: currentVersion,
+        baseline_version: baselineVersion,
+        threshold,
+      })
+
+      if (res.ok) {
+        return (await res.json()) as Record<string, unknown>
+      }
+      return {
+        error: `HTTP ${res.status}`,
+        detail: await res.text(),
+      }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /**
    * Register a handler for dispatched tasks from the dashboard/Telegram.
    * @param handler - Function called with task name and data object
    */

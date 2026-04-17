@@ -1979,6 +1979,61 @@ class Agent:
                 results["failed"] += 1
                 
         return results
+
+    def eval_from_trace(self, task_id: str, name: str = None) -> dict:
+        """
+        Convert a production trace into an eval set.
+        Activated by Feature 9: Trace-Connected Eval Pipeline.
+        """
+        try:
+            payload = {
+                "key": self._key,
+                "task_id": task_id,
+                "name": name,
+                "agent_id": self._agent_id
+            }
+            # Use requests.post directly since _send doesn't return response data
+            response = requests.post(
+                f"{self._base_url}/api/sdk/evals/from-trace",
+                json=payload,
+                timeout=self._timeout
+            )
+            if response.status_code == 200:
+                return response.json()
+            return {"error": f"HTTP {response.status_code}", "detail": response.text}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def regression_check(
+        self, 
+        current_version: str, 
+        baseline_version: str, 
+        eval_set_id: str, 
+        threshold: float = 0.10
+    ) -> dict:
+        """
+        Check for performance regressions against a baseline version.
+        Activated by Feature 9: Trace-Connected Eval Pipeline.
+        """
+        try:
+            payload = {
+                "key": self._key,
+                "eval_set_id": eval_set_id,
+                "agent_id": self._agent_id,
+                "current_version": current_version,
+                "baseline_version": baseline_version,
+                "threshold": threshold
+            }
+            response = requests.post(
+                f"{self._base_url}/api/sdk/evals/regression",
+                json=payload,
+                timeout=self._timeout
+            )
+            if response.status_code == 200:
+                return response.json()
+            return {"error": f"HTTP {response.status_code}", "detail": response.text}
+        except Exception as e:
+            return {"error": str(e)}
     
     # ─── STATIC / DUNDER ──────────────────────────────────
     
