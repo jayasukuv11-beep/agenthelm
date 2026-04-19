@@ -38,7 +38,13 @@ function checkRateLimit(key: string) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    let body: any = {}
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const { key, name, agent_type, version, status, error_message } = body
 
     if (!checkRateLimit(key)) {
@@ -54,15 +60,30 @@ export async function POST(req: Request) {
     const { getUserUsage } = await import('@/lib/usage')
     const usage = await getUserUsage(userId)
 
-    // Find agent by user_id and name
-    const { data: existingAgent } = await supabaseAdmin!
-      .from('agents')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('name', name)
-      .single()
+    let agentId = body.agent_id
+    let existingAgent = null
 
-    let agentId = existingAgent?.id
+    if (agentId) {
+      const { data } = await supabaseAdmin!
+        .from('agents')
+        .select('id')
+        .eq('id', agentId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      existingAgent = data
+    }
+
+    if (!existingAgent && name) {
+      const { data } = await supabaseAdmin!
+        .from('agents')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', name)
+        .maybeSingle()
+      existingAgent = data
+    }
+
+    agentId = existingAgent?.id
 
     if (agentId) {
       // Update existing

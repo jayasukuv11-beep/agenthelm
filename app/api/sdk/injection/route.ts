@@ -47,6 +47,29 @@ export async function POST(req: Request) {
       }
     }
 
+    // Ensure task exists if task_id provided
+    if (task_id) {
+        const { data: taskExists } = await supabaseAdmin!
+            .from('agent_tasks')
+            .select('id')
+            .eq('id', task_id)
+            .maybeSingle()
+
+        if (!taskExists) {
+            await supabaseAdmin!
+                .from('agent_tasks')
+                .insert({
+                    id: task_id,
+                    agent_id,
+                    user_id: userId,
+                    task_description: 'Auto-detected Task',
+                    status: 'running',
+                    source: 'dashboard',
+                    started_at: new Date().toISOString()
+                })
+        }
+    }
+
     // Insert injection event
     const { error: insertError } = await supabaseAdmin!
       .from('injection_events')

@@ -91,6 +91,15 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Verify Telegram webhook secret to prevent forged requests
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET
+    if (webhookSecret) {
+      const incomingToken = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
+      if (incomingToken !== webhookSecret) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+    }
+
     const body = (await request.json()) as TelegramUpdate
 
     const message = body.message ?? body.edited_message
@@ -235,6 +244,52 @@ async function handleCallbackQuery(
     await deleteMessage(chatId, messageId)
     await sendMessage(chatId, '✅ Task dispatch confirmed.')
     await answerCallbackQuery(callbackQueryId, 'Dispatch confirmed.')
+  }
+
+  if (action === 'approve_tool' || action === 'reject_tool') {
+    const executionId = id
+    // SECURITY: Verify the tool execution belongs to this user's agent
+    const { data: execution } = await supabaseAdmin
+      .from('tool_executions')
+      .select('id, agent_id')
+      .eq('id', executionId)
+      .single()
+
+    if (!execution) {
+      await answerCallbackQuery(callbackQueryId, '❌ Execution not found.')
+      return
+    }
+
+    // Verify agent ownership
+    const { data: ownerAgent } = await supabaseAdmin
+      .from('agents')
+      .select('id')
+      .eq('id', execution.agent_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!ownerAgent) {
+      await answerCallbackQuery(callbackQueryId, '❌ Unauthorized: this approval does not belong to your account.')
+      return
+    }
+
+    const newStatus = action === 'approve_tool' ? 'approved' : 'rejected'
+    const { error: updateErr } = await supabaseAdmin
+      .from('tool_executions')
+      .update({ status: newStatus })
+      .eq('id', executionId)
+      .eq('status', 'pending_approval')
+
+    if (updateErr) {
+      await answerCallbackQuery(callbackQueryId, '❌ Failed to update execution.')
+    } else {
+      const emoji = action === 'approve_tool' ? '✅' : '🚫'
+      const verb = action === 'approve_tool' ? 'approved' : 'rejected'
+      await deleteMessage(chatId, messageId)
+      await sendMessage(chatId, `${emoji} Tool execution ${verb}.`)
+      await answerCallbackQuery(callbackQueryId, `Tool ${verb}.`)
+    }
+    return
   }
 
   if (action === 'confirm_resume') {

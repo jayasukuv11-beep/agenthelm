@@ -20,18 +20,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing judge_rubric' }, { status: 400 })
     }
 
-    // In a production scenario, this is where we would call OpenAI:
-    // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    // const completion = await openai.chat.completions.create({ ... })
-    // For this build phase, we simulate the LLM output.
-    
     const semantic_scores: Record<string, number> = {}
-    
+
     for (const [criterion, description] of Object.entries(judge_rubric)) {
-      // Dummy heuristic based on output length and a pseudo-random multiplier
-      const lengthFactor = (output || "").length % 10
-      const score = Math.min(1.0, 0.7 + (lengthFactor * 0.03)) 
-      semantic_scores[criterion] = parseFloat(score.toFixed(2))
+      try {
+        const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyBLtJbWM0NbIXi4KwI6e-pT-wDTfT6ex_c'
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `You are an evaluation judge. Score this agent output.
+              
+Rubric criterion: ${criterion} - ${description}
+Actual output: ${JSON.stringify(output)}
+
+Respond with ONLY valid JSON in this exact format:
+{
+  "passed": true or false,
+  "score": 0.0 to 1.0,
+  "reasoning": "one sentence explanation"
+}`
+              }]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.status}`)
+        }
+
+        const result = await response.json()
+        const content = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+        
+        // Try to extract JSON if Gemini somehow wraps it in markdown despite responseMimeType
+        const jsonMatch = content.match(/\{[\s\S]*?\}/)
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content)
+        
+        semantic_scores[criterion] = parseFloat((parsed.score || 0).toFixed(2))
+      } catch (err) {
+        console.error(`Judge failed for criterion ${criterion}:`, err)
+        semantic_scores[criterion] = 0 // Explicit error state scoring
+      }
     }
 
     return NextResponse.json({ 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
+import crypto from 'crypto'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -73,6 +74,15 @@ export async function POST(req: Request) {
       }
     }
 
+    // Cap state_delta size to 500KB
+    const deltaSize = Buffer.byteLength(JSON.stringify(body.state_delta || {}))
+    if (deltaSize > 500 * 1024) {
+      return NextResponse.json(
+        { error: 'state_delta exceeds 500KB limit' },
+        { status: 413 }
+      )
+    }
+
     // Upsert checkpoint (task_id + step_index is the logical key)
     const { data: existing } = await supabaseAdmin!
       .from('agent_checkpoints')
@@ -94,6 +104,33 @@ export async function POST(req: Request) {
       tokens_used,
       latency_ms: latency_ms || null,
       error_data: error_data || null,
+      state_hash: state_hash || null,
+    }
+
+    // Ensure task exists
+    const { data: taskExists } = await supabaseAdmin!
+      .from('agent_tasks')
+      .select('id')
+      .eq('id', task_id)
+      .maybeSingle()
+
+    if (!taskExists) {
+      // Create a transient task for local execution tracking
+      const { error: taskError } = await supabaseAdmin!
+        .from('agent_tasks')
+        .insert({
+          id: task_id,
+          agent_id,
+          user_id: userId,
+          task_description: step_name || 'Local Task',
+          status: 'running',
+          source: 'dashboard',
+          started_at: new Date().toISOString()
+        })
+      if (taskError) {
+        console.error('[Checkpoint Route] Task creation failed:', taskError)
+        return NextResponse.json({ error: taskError.message }, { status: 400 })
+      }
     }
 
     if (existing && existing.length > 0) {
@@ -103,14 +140,20 @@ export async function POST(req: Request) {
         .update(row)
         .eq('id', (existing[0] as any).id)
 
-      if (error) throw error
+      if (error) {
+         console.error('[Checkpoint Route] Update failed:', error)
+         throw error
+      }
     } else {
       // Insert new checkpoint
       const { error } = await supabaseAdmin!
         .from('agent_checkpoints')
         .insert(row)
 
-      if (error) throw error
+      if (error) {
+         console.error('[Checkpoint Route] Insert failed:', error)
+         throw error
+      }
     }
 
     // If checkpoint status is 'running', mark the task as running too
@@ -172,11 +215,34 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
-    const checkpoint = checkpoints?.[0] || null
+    let integrityVerified = true
+    if (checkpoint && checkpoint.state_snapshot && checkpoint.state_hash) {
+      const computedHash = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(checkpoint.state_snapshot))
+        .digest('hex')
+
+      integrityVerified = computedHash === checkpoint.state_hash
+      
+      if (!integrityVerified) {
+        // Log corrupted state to agent_logs
+        await supabaseAdmin
+          .from('agent_logs')
+          .insert({
+            agent_id: checkpoint.agent_id,
+            task_id,
+            type: 'error',
+            level: 'error',
+            message: `Corrupted checkpoint detected at step ${checkpoint.step_index}. Hash mismatch.`,
+            metadata: { expected: checkpoint.state_hash, actual: computedHash }
+          })
+      }
+    }
 
     return NextResponse.json({
       checkpoint,
       has_checkpoint: !!checkpoint,
+      integrity_verified: integrityVerified,
     })
 
   } catch (err: unknown) {
