@@ -4,6 +4,8 @@ const DEFAULT_BASE_URL = 'https://agenthelm.online/api/sdk'
 
 // ─── TYPES ────────────────────────────────────────────
 
+import crypto from 'crypto'
+
 export interface AgentHelmOptions {
   key: string
   name?: string
@@ -99,10 +101,10 @@ export class AgentHelm {
 
     this._burnRateThreshold = burnRateThreshold
 
-    if (!key || !key.startsWith('ahe_')) {
+    if (!key || !key.startsWith('ahe_live_')) {
       throw new Error(
         'Invalid AgentHelm key. ' +
-        'Keys must start with "ahe_". ' +
+        'Keys must start with "ahe_live_". ' +
         'Get your key at agenthelm.online/dashboard/settings'
       )
     }
@@ -272,7 +274,10 @@ export class AgentHelm {
       sendSnapshot = null // Don't send full snapshot for deltas
     }
 
-    this._lastCheckpointState = state
+    const stateHash = crypto
+      .createHash('sha256')
+      .update(JSON.stringify(state))
+      .digest('hex')
 
     const payload: Record<string, unknown> = {
       key: this.getAuthKey(),
@@ -283,6 +288,7 @@ export class AgentHelm {
       status,
       state_snapshot: sendSnapshot,
       state_delta: stateDelta,
+      state_hash: stateHash,
       input_data: inputData ?? null,
       output_data: outputData ?? null,
       latency_ms: latencyMs,
@@ -292,7 +298,15 @@ export class AgentHelm {
       payload.error_data = outputData ?? null
     }
 
-    this.send('/checkpoint', payload)
+    this.fetch('/checkpoint', payload)
+      .then((res) => {
+        if (res.ok) {
+          this._lastCheckpointState = state
+        }
+      })
+      .catch(() => {
+        this.queue.push('/checkpoint', payload)
+      })
 
     // Phase 4: Check for user interventions (stop, pause, override)
     this.processInterventions().catch((err) => {

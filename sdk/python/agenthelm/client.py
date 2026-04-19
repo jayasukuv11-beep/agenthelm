@@ -6,6 +6,7 @@ import os
 import time
 import json
 import hashlib
+import uuid
 import threading
 import traceback
 import functools
@@ -108,7 +109,8 @@ class Agent:
         # Phase 4 Configs
         sla_target_ms: Optional[int] = None,
         sla_percentile: int = 95,
-        max_context_tokens: Optional[int] = None
+        max_context_tokens: Optional[int] = None,
+        fail_closed: bool = False
     ):
         """
         Initialize AgentHelm connection.
@@ -138,6 +140,7 @@ class Agent:
         self._version = version
         self._base_url = base_url.rstrip("/")
         self._verbose = verbose
+        self._fail_closed = fail_closed
         
         # Professional Grade Stats & Observability
         self.stats = Stats()
@@ -148,7 +151,7 @@ class Agent:
         self._checkpoints: List[dict] = []
         self._reasoning_steps: List[dict] = []
         self._episodic_log: List[dict] = []
-        self._timeout = 10
+        self._timeout = timeout
         self._ping_interval = ping_interval
         self._command_poll_interval = command_poll_interval
         
@@ -386,7 +389,7 @@ class Agent:
                 "key": self._key,
                 "agent_id": self._agent_id,
                 "type": "log",
-                "level": "warn",
+                "level": "warning",
                 "message": str(message),
                 "data": data,
                 "timestamp": self._now()
@@ -511,7 +514,7 @@ class Agent:
         if tokens_per_minute > self._burn_rate_threshold and not self._burn_rate_alerted:
             self._burn_rate_alerted = True
             self.warn(
-                f"\U0001f525 Token burn rate: {tokens_per_minute:,}/min "
+                f"BURN RATE: Token burn rate: {tokens_per_minute:,}/min "
                 f"exceeds threshold ({self._burn_rate_threshold:,}/min)"
             )
             # Send a special burn_rate log for Telegram alerts
@@ -545,8 +548,8 @@ class Agent:
                     "3. Reset agent memory index via dock.memory.prune()"
                 ]
                 drift_msg = (
-                    f"\u26a0\ufe0f Context drift: {self._tokens_session:,}/{self._max_context_tokens:,} "
-                    f"tokens ({pct}%). Suggested actions:\n" + "\n".join(suggestions)
+                    f"Context Drift Warning: {pct:.0f}% of context window used "
+                    f"({self._tokens_session:,}/{self._max_context_tokens:,} tokens)."
                 )
                 self.warn(drift_msg)
                 drift_payload = {
@@ -582,10 +585,10 @@ class Agent:
             # Fire and forget over async worker pool
             self._send_async("/api/sdk/memory", payload)
             if self._verbose:
-                print(f"[AgentHelm] 🧠 Synced agent memory context ({len(index_content)} bytes)")
+                print(f"[AgentHelm] MEMORY: Synced agent memory context ({len(index_content)} bytes)")
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ Failed to sync memory: {e}")
+                print(f"[AgentHelm] WARNING: Failed to sync memory: {e}")
 
     def checkpoint(
         self,
@@ -623,7 +626,7 @@ class Agent:
                 json.dumps(state, default=str)
             except (TypeError, ValueError) as e:
                 if self._verbose:
-                    print(f"[AgentHelm] ❌ State is not JSON-serializable: {e}")
+                    print(f"[AgentHelm] ERROR: State is not JSON-serializable: {e}")
                 return
             
             if step_index is None:
@@ -660,6 +663,12 @@ class Agent:
                 "timestamp": self._now()
             }
             
+            if not self._current_task_id:
+                # Generate a transient task ID for standalone runs
+                self._current_task_id = str(uuid.uuid4())
+                if self._verbose:
+                    print(f"[AgentHelm] INFO: Starting local task context: {self._current_task_id}")
+
             payload = {
                 "key": self.auth_key,
                 "agent_id": self._agent_id,
@@ -688,17 +697,17 @@ class Agent:
                 self._last_checkpoint_state = state
             else:
                 if self._verbose:
-                    print(f"[AgentHelm] ⚠️ Checkpoint NOT persisted — state rollback")
+                    print(f"[AgentHelm] WARNING: Checkpoint NOT persisted -- state rollback")
             
             # Phase 4: Check for user interventions (stop, pause, override)
             self._process_interventions()
             
             if self._verbose:
-                print(f"[AgentHelm] 📌 Checkpoint: {step_name} (step {step_index}) [hash:{state_hash[:8]}]")
+                print(f"[AgentHelm] CHECKPOINT: {step_name} (step {step_index}) [hash:{state_hash[:8]}]")
                 
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ Failed to checkpoint: {e}")
+                print(f"[AgentHelm] ERROR: Failed to checkpoint: {e}")
     
     def resume_from(
         self,
@@ -762,17 +771,17 @@ class Agent:
                     if self._verbose:
                         step_name = checkpoint.get("step_name", "unknown")
                         idx = checkpoint.get("step_index", "?")
-                        print(f"[AgentHelm] 🔄 Resuming from: {step_name} (step {idx})")
+                        print(f"[AgentHelm] RESUMING from: {step_name} (step {idx})")
                     
                     return checkpoint.get("state_snapshot")
                 
                 if self._verbose:
-                    print(f"[AgentHelm] ⚠️ No checkpoint found for task {task_id[:8]}...")
+                    print(f"[AgentHelm] WARNING: No checkpoint found for task {task_id[:8]}...")
                 return None
                 
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ Failed to resume: {e}")
+                print(f"[AgentHelm] ERROR: Failed to resume: {e}")
             return None
 
     def rollback(self, step_index: int) -> Optional[dict]:
@@ -782,11 +791,11 @@ class Agent:
         """
         if not self._current_task_id:
             if self._verbose:
-                print("[AgentHelm] ⚠️ Cannot rollback: No active task context.")
+                print("[AgentHelm] WARNING: Cannot rollback: No active task context.")
             return None
             
         if self._verbose:
-            print(f"[AgentHelm] ⏪ Rolling back to step {step_index}...")
+            print(f"[AgentHelm] ROLLBACK: Rolling back to step {step_index}...")
             
         return self.resume_from(self._current_task_id, step_index=step_index)
     
@@ -874,10 +883,10 @@ class Agent:
                         pass
             
             if self._verbose:
-                print(f"[AgentHelm] \u23f9  {self._name} stopped")
+                print(f"[AgentHelm] STOPPED: {self._name} stopped")
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] \u26a0\ufe0f Failed to stop: {e}")
+                print(f"[AgentHelm] WARNING: Failed to stop: {e}")
 
     def _log_reasoning_step(self, step_data: dict) -> None:
         """Sends an auto-captured reasoning step (from monkeys) to SDK."""
@@ -904,7 +913,7 @@ class Agent:
     def _handle_memory_poisoning(self, alert_data: dict) -> None:
         """Phase 4: Handles memory poisoning alerts from MemoryEngine."""
         msg = (
-            f"\u26a0\ufe0f Memory Poisoning Alert: "
+            f"WARNING: Memory Poisoning Alert: "
             f"{alert_data['writes_in_window']} writes in {alert_data['window_seconds']}s "
             f"(threshold: {alert_data['threshold']}). "
             f"Size growth: {alert_data['size_growth_ratio']}x"
@@ -931,13 +940,13 @@ class Agent:
         Handles KeyboardInterrupt (Ctrl+C) gracefully.
         """
         if self._verbose:
-            print(f"[AgentHelm] 👂 {self._name} listening for commands...")
+            print(f"[AgentHelm] LISTENING: {self._name} listening for commands...")
         try:
             while self._running:
                 time.sleep(1)
         except KeyboardInterrupt:
             if self._verbose:
-                print(f"\n[AgentHelm] 🛑 Shutdown requested")
+                print(f"\n[AgentHelm] SHUTDOWN requested")
             self.stop()
             
         # Graceful Shutdown
@@ -946,7 +955,7 @@ class Agent:
         while self._active_tasks > 0:
             time.sleep(1)
         if self._verbose:
-            print(f"[AgentHelm] 💤 Graceful shutdown complete.")
+            print(f"[AgentHelm] SLEEPING: Graceful shutdown complete.")
     
     # ─── DECORATORS ───────────────────────────────────────
     
@@ -1074,7 +1083,7 @@ class Agent:
                     if self._agent_id:
                         agent_short = str(self._agent_id)[:8] + "..."
                     print(
-                        f"[AgentHelm] ✅ Connected: "
+                        f"[AgentHelm] SUCCESS: Connected: "
                         f"{self._name} ({agent_short})"
                     )
                 
@@ -1102,25 +1111,25 @@ class Agent:
                         self._reasoning_capture.patch_providers(self._capture_providers)
                     else:
                         if self._verbose:
-                            print("[AgentHelm] ⚠️ Reasoning chain capture is restricted to 'Studio' plan. Capture disabled.")
+                            print("[AgentHelm] WARNING: Reasoning chain capture is restricted to 'Studio' plan. Capture disabled.")
             elif response.status_code == 401:
                 if self._verbose:
-                    print("[AgentHelm] ❌ Invalid connect key.")
+                    print("[AgentHelm] ERROR: Invalid connect key.")
             else:
                 if self._verbose:
-                    print(f"[AgentHelm] ⚠️ HTTP {response.status_code}")
+                    print(f"[AgentHelm] WARNING: HTTP {response.status_code}")
                 
         except requests.exceptions.ConnectionError:
             if self._verbose:
-                print("[AgentHelm] ⚠️  Offline mode — will retry connection...")
+                print("[AgentHelm] WARNING: Offline mode — will retry connection...")
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️  Connection failed: {e}")
+                print(f"[AgentHelm] WARNING: Connection failed: {e}")
     
     def _send(self, endpoint: str, payload: dict) -> bool:
         """
         Send request to AgentHelm API (synchronous).
-        Falls back to offline queue on failure.
+        Falls back to offline queue on failure unless fail_closed is true.
         Used for critical paths: checkpoint, register.
         """
         payload["key"] = self.auth_key
@@ -1130,8 +1139,26 @@ class Agent:
                 json=payload,
                 timeout=self._timeout
             )
+            if response.status_code != 200 and self._verbose:
+                print(f"[AgentHelm] DEBUG: {endpoint} returned {response.status_code}: {response.text[:200]}")
             return response.status_code == 200
-        except Exception:
+        except requests.exceptions.ConnectionError:
+            if self._fail_closed:
+                raise AgentHelmError(
+                    "AgentHelm server unreachable. Agent halted (fail_closed=True). "
+                    "Check your connection and restart."
+                )
+            else:
+                if self._verbose:
+                    print("[AgentHelm] Offline mode warning \u2014 governance inactive")
+            
+            # Queue for retry when back online
+            if self._queue.size() < 1000:
+                self._queue.push(endpoint, payload)
+            return False
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] DEBUG: {endpoint} exception: {e}")
             # Queue for retry when back online
             if self._queue.size() < 1000:
                 self._queue.push(endpoint, payload)
@@ -1166,6 +1193,9 @@ class Agent:
                 json={
                     "key": self.auth_key,
                     "agent_id": self._agent_id,
+                    "name": self._name,
+                    "agent_type": self._agent_type,
+                    "version": self._version,
                     "status": "running",
                     "timestamp": self._now()
                 },
@@ -1232,7 +1262,7 @@ class Agent:
                         daemon=True
                     ).start()
                 elif self._verbose:
-                    print(f"[AgentHelm] ⚠️ No @on_dispatch handler for task: {task}")
+                    print(f"[AgentHelm] WARNING: No @on_dispatch handler for task: {task}")
                     
             elif command_type == "custom":
                 # Route to custom action handler (e.g. resume)
@@ -1244,7 +1274,7 @@ class Agent:
                         daemon=True
                     ).start()
                 elif self._verbose:
-                    print(f"[AgentHelm] ⚠️ Unknown custom action: {action}")
+                    print(f"[AgentHelm] WARNING: Unknown custom action: {action}")
 
             elif command_type in self._command_handlers:
                 # Route to registered command handler
@@ -1256,7 +1286,7 @@ class Agent:
                 ).start()
                 
         except Exception as e:
-            print(f"[AgentHelm] ❌ Command handler error: {e}")
+            print(f"[AgentHelm] ERROR: Command handler error: {e}")
 
     def _handle_resume(self, payload: dict) -> None:
         """Handle incoming resume command (usually from Telegram)."""
@@ -1265,7 +1295,7 @@ class Agent:
         
         if not task_id or not checkpoint_id:
             if self._verbose:
-                print("[AgentHelm] ⚠️ Resume failed: Missing task_id or checkpoint_id")
+                print("[AgentHelm] WARNING: Resume failed: Missing task_id or checkpoint_id")
             return
             
         # 1. Resume state from checkpoint
@@ -1299,7 +1329,7 @@ class Agent:
                 self._run_dispatch_safe(task_description, is_resume=True)
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ Resume routing error: {e}")
+                print(f"[AgentHelm] WARNING: Resume routing error: {e}")
 
     def _run_dispatch_safe(self, task: str, is_resume: bool = False) -> None:
         """Run dispatch handler with progress/output/error wrapping."""
@@ -1330,7 +1360,7 @@ class Agent:
             except Exception as e:
                 # self.error isn't defined, using log/warn pattern or just printing for now
                 if self._verbose:
-                    print(f"[AgentHelm] ❌ Task failed: {e}")
+                    print(f"[AgentHelm] ERROR: Task failed: {e}")
                 self.log(f"Task failed: {e}", level="error")
         finally:
             with self._task_lock:
@@ -1424,7 +1454,7 @@ class Agent:
             raise
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ Failed to check interventions: {e}")
+                print(f"[AgentHelm] WARNING: Failed to check interventions: {e}")
 
     def _send_patch(self, endpoint: str, payload: dict) -> None:
         """Helper for PATCH requests (not part of the standard _send queue yet)."""
@@ -1434,7 +1464,7 @@ class Agent:
             requests.patch(url, params=params, json=payload, timeout=self._timeout)
         except Exception as e:
             if self._verbose:
-                print(f"[AgentHelm] ⚠️ PATCH failed: {e}")
+                print(f"[AgentHelm] WARNING: PATCH failed: {e}")
 
     @staticmethod
     def _now() -> str:
@@ -1477,7 +1507,7 @@ class Agent:
             self._enforce_tool_execution_safety(tool_name, args, kwargs)
             self._log_tool_execution(tool_name, "read", args, kwargs)
             if self._verbose:
-                print(f"[AgentHelm] 🔍 READ: {tool_name}")
+                print(f"[AgentHelm] READ: {tool_name}")
             
             span = None
             if self._otel_exporter:
@@ -1526,7 +1556,7 @@ class Agent:
                                 and prev.get("status") == "executed"):
                             if self._verbose:
                                 print(
-                                    f"[AgentHelm] ⏭️ DEDUP: {tool_name} "
+                                    f"[AgentHelm] DEDUP: {tool_name} "
                                     f"skipped (identical call already executed)"
                                 )
                             return prev.get("result")
@@ -1558,8 +1588,8 @@ class Agent:
                         )
                         if self._verbose:
                             print(
-                                f"[AgentHelm] ⚡ SIDE_EFFECT: {tool_name} "
-                                f"(attempt {attempt}/{max_retries}) ✅"
+                                f"[AgentHelm] SIDE_EFFECT: {tool_name} "
+                                f"(attempt {attempt}/{max_retries}) SUCCESS"
                             )
                             
                         if span:
@@ -1571,8 +1601,8 @@ class Agent:
                             self._otel_exporter.end_span(span, error=e)
                         if self._verbose:
                             print(
-                                f"[AgentHelm] ⚡ SIDE_EFFECT: {tool_name} "
-                                f"(attempt {attempt}/{max_retries}) ❌ {e}"
+                                f"[AgentHelm] SIDE_EFFECT: {tool_name} "
+                                f"(attempt {attempt}/{max_retries}) ERROR: {e}"
                             )
                         if attempt < max_retries:
                             time.sleep(min(2 ** attempt, 10))  # exponential backoff
@@ -1617,7 +1647,7 @@ class Agent:
                 
                 if self._verbose:
                     print(
-                        f"[AgentHelm] 🛑 IRREVERSIBLE: {tool_name} — "
+                        f"[AgentHelm] IRREVERSIBLE: {tool_name} -- "
                         f"requesting human approval ({confirm})..."
                     )
                 
@@ -1654,7 +1684,7 @@ class Agent:
                             if status == "approved":
                                 if self._verbose:
                                     print(
-                                        f"[AgentHelm] ✅ APPROVED: {tool_name} — executing"
+                                        f"[AgentHelm] APPROVED: {tool_name} -- executing"
                                     )
                                 
                                 span = None
@@ -1677,7 +1707,7 @@ class Agent:
                             elif status == "rejected":
                                 if self._verbose:
                                     print(
-                                        f"[AgentHelm] ❌ REJECTED: {tool_name} — skipped"
+                                        f"[AgentHelm] REJECTED: {tool_name} -- skipped"
                                     )
                                 self._log_tool_execution(
                                     tool_name, "irreversible", args, kwargs,
@@ -1691,7 +1721,7 @@ class Agent:
                 # Timeout — auto-reject for safety
                 if self._verbose:
                     print(
-                        f"[AgentHelm] ⏰ TIMEOUT: {tool_name} — "
+                        f"[AgentHelm] TIMEOUT: {tool_name} -- "
                         f"auto-rejected after {wait_seconds}s"
                     )
                 self._log_tool_execution(

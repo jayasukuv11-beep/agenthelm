@@ -21,8 +21,8 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
 import { TraceTimeline } from "@/components/dashboard/TraceTimeline";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
-import { GuardrailHealthScore } from "@/components/dashboard/guardrail-health-score";
-import { SLAMetrics } from "@/components/dashboard/sla-metrics";
+import { GuardrailHealthScore } from "@/components/dashboard/GuardrailHealthScore";
+import { SLAMetrics } from "@/components/dashboard/SLAMetrics";
 import { RegressionAlerts } from "@/components/dashboard/RegressionAlerts";
 import {
   Bar,

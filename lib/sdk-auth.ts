@@ -1,9 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import * as jose from 'jose'
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'agenthelm-fallback-secret-2026'
-)
+const secretSource = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!secretSource) {
+  throw new Error(
+    'FATAL: ENCRYPTION_KEY or SUPABASE_SERVICE_ROLE_KEY must be set. ' +
+    'Server cannot start without a JWT signing secret.'
+  )
+}
+const JWT_SECRET = new TextEncoder().encode(secretSource)
 
 export async function issueAgentToken(userId: string, agentId: string, plan: string) {
   // Issue a short-lived (12 hour) token for this specific agent
@@ -50,8 +55,8 @@ export async function validateConnectKey(keyOrToken: string | null) {
     return { error: 'Invalid connect key format', status: 401 }
   }
 
-  // Bypass for local testing if no real Supabase credentials exist
-  if (process.env.TEST_MODE === 'true' && key === 'ahe_live_testkey12345') {
+  // Bypass for local testing ONLY in development mode
+  if (process.env.NODE_ENV === 'development' && process.env.TEST_MODE === 'true' && key === 'ahe_live_testkey12345') {
     return {
       userId: '00000000-0000-0000-0000-000000000000',
       plan: 'studio',

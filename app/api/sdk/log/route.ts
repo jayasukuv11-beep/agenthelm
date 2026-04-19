@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { validateConnectKey } from '@/lib/sdk-auth'
+import { getCostPerToken } from '@/lib/pricing'
 import { sendTelegramToUser } from '@/lib/telegram'
 
 // ─── Request Hardening ───────────────────────────────────────────────────────
@@ -226,6 +227,13 @@ export async function POST(req: Request) {
       event_id,
     } = body
 
+    if (body.tokens_used !== undefined && body.tokens_used <= 0) {
+      return NextResponse.json(
+        { error: 'tokens_used must be a positive integer' },
+        { status: 400 }
+      )
+    }
+
     // Validate + normalize message
     let safeMessage = typeof message === 'string' ? message : String(message ?? '')
     if (safeMessage.length > MESSAGE_MAX_LENGTH) {
@@ -342,10 +350,10 @@ export async function POST(req: Request) {
 
     // Handle token tracking 
     if (type === 'tokens' && tokens_used > 0) {
-      let cost_usd = 0;
-      if (model?.includes('gemini-flash')) cost_usd = tokens_used * 0.0000001;
-      else if (model?.includes('gpt-4')) cost_usd = tokens_used * 0.00003;
-      else if (model?.includes('sonnet')) cost_usd = tokens_used * 0.000015;
+      // Use SDK-provided cost if available, otherwise calculate from unified pricing
+      const cost_usd = (body.cost_usd && body.cost_usd > 0)
+        ? body.cost_usd
+        : tokens_used * getCostPerToken(model);
 
       await supabaseAdmin!
         .from('credit_usage')

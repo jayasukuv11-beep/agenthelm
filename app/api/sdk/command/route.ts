@@ -49,12 +49,12 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
-    // Mark as delivered
+    // Mark as delivering
     if (commands && commands.length > 0) {
       const commandIds = (commands as any[]).map(c => c.id)
       await supabaseAdmin!
         .from('agent_commands')
-        .update({ status: 'delivered' })
+        .update({ status: 'delivering' })
         .in('id', commandIds)
     }
 
@@ -145,6 +145,42 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.error('Command POST error:', err)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json()
+    const { key, command_id, status } = body
+
+    if (!command_id || status !== 'delivered') {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    const auth: any = await validateConnectKey(key)
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const { supabaseAdmin } = auth
+
+    // Acknowledge command delivery
+    const { error } = await supabaseAdmin
+      .from('agent_commands')
+      .update({ 
+        status: 'delivered',
+        delivered_at: new Date().toISOString()
+      })
+      .eq('id', command_id)
+      .eq('status', 'delivering')
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+
+  } catch (err: any) {
+    console.error('Command PATCH error:', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

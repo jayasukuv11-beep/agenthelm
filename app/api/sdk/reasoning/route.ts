@@ -24,6 +24,13 @@ export async function POST(req: Request) {
       latency_ms
     } = await req.json()
 
+    if (confidence !== undefined && (confidence < 0 || confidence > 1)) {
+      return NextResponse.json(
+        { error: 'confidence must be between 0 and 1' },
+        { status: 400 }
+      )
+    }
+
     if (!key || !agent_id || !task_id || !step_index) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }

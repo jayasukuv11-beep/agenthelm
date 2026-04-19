@@ -152,7 +152,17 @@ export async function PATCH(req: Request) {
     const auth: any = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { supabaseAdmin } = auth as any
+    const { supabaseAdmin, userId } = auth as any
+
+    const interventionCheck = await supabaseAdmin
+      .from('agent_interventions')
+      .select('id, agent_id, agents!inner(user_id)')
+      .in('id', ids)
+      .eq('agents.user_id', userId)
+
+    if (interventionCheck.data?.length !== ids.length) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
 
     const { error } = await supabaseAdmin!
       .from('agent_interventions')
