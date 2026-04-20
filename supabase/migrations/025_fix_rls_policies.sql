@@ -12,9 +12,6 @@ DROP POLICY IF EXISTS "service_role_injection" ON injection_events;
 DROP POLICY IF EXISTS "Service role manages reasoning steps" ON agent_reasoning_steps;
 DROP POLICY IF EXISTS "service_role_reasoning" ON agent_reasoning_steps;
 
--- Fix agent_handoffs: remove permissive policy
-DROP POLICY IF EXISTS "Service role manages handoffs" ON agent_handoffs;
-DROP POLICY IF EXISTS "service_role_handoffs" ON agent_handoffs;
 
 -- Verify remaining policies are user-scoped only
 -- (The SELECT policies joining through agents.user_id are correct — keep those)
