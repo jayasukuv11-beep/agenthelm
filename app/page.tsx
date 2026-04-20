@@ -588,9 +588,11 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <div className="w-full py-3 text-center font-mono text-sm font-bold bg-zinc-800 text-zinc-600 cursor-not-allowed">
-                UPCOMING
-              </div>
+              <UpgradeButton
+                plan="studio"
+                label={`START FREE TRIAL — ${symbol}${plans.studio.amount}/mo`}
+                className="w-full bg-zinc-800 hover:bg-orange-500 text-zinc-300 hover:text-white font-mono font-bold py-3 text-sm transition-colors"
+              />
             </div>
           </div>
           <p className="text-center text-zinc-600 text-[12px] font-mono">All plans include a 14-day Indie trial · No credit card required</p>
