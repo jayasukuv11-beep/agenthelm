@@ -381,7 +381,7 @@ async function handleStart(
       `/run — start an agent\n` +
       `/stop — stop an agent\n` +
       `/dispatch — send a task to an agent\n` +
-      `/resume — resume a failed task\n` +
+      `/resume — resume a failed task or approve action\n` +
       `/credits — check token usage\n` +
       `/help — show all commands\n` +
       `/disconnect — unlink Telegram`,
@@ -405,7 +405,9 @@ async function handleHelp(chatId: number): Promise<void> {
       `/run [name] — start an agent\n` +
       `/stop [name] — stop an agent\n` +
       `/dispatch [name] [task] — send task to agent\n` +
-      `/resume [name] — resume last failed task\n\n` +
+      `/resume [name] — resume failed task or pending approval\n\n` +
+      `<b>Safety & Governance:</b>\n` +
+      `⚠️ When an agent attempts an irreversible action, you will automatically receive an inline keyboard here to Approve or Reject it!\n\n` +
       `<b>Account:</b>\n` +
       `/disconnect — unlink this Telegram\n` +
       `/help — show this message\n\n` +

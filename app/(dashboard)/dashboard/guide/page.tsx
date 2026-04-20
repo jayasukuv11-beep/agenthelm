@@ -107,6 +107,13 @@ export default function GuidePage() {
               <h3 className="font-mono text-[13px] font-bold text-white uppercase tracking-wider">60s Auto-Reject</h3>
               <p className="text-[12px] font-mono text-zinc-500 uppercase tracking-wider">If no approval is received within 60 seconds, the tool call is automatically rejected to prevent "zombie" actions.</p>
             </div>
+            <div className="space-y-3">
+              <div className="w-10 h-10 border border-orange-500/30 bg-orange-500/10 rounded-none flex items-center justify-center">
+                <span className="text-[12px] font-mono font-bold text-orange-500">4</span>
+              </div>
+              <h3 className="font-mono text-[13px] font-bold text-white uppercase tracking-wider">Fail-Closed Mode</h3>
+              <p className="text-[12px] font-mono text-zinc-500 uppercase tracking-wider">Initialize the SDK with fail_closed=True to strictly halt your agent if it loses connection to the governance server.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -160,6 +167,11 @@ export default function GuidePage() {
                 <td className="px-6 py-4 text-center">💳</td>
                 <td className="px-6 py-4">Check your monthly token limits and current consumption.</td>
               </tr>
+              <tr className="hover:bg-[#151515] transition-colors">
+                <td className="px-6 py-4 font-bold text-orange-500">Intl Keyboards</td>
+                <td className="px-6 py-4 text-center">✅</td>
+                <td className="px-6 py-4">Receive Telegram alerts for irreversible actions with one-tap Approve/Reject buttons.</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -188,6 +200,16 @@ export default function GuidePage() {
             The platform is now machine-readable via <code className="text-orange-400">llms.txt</code>. 
             Optimized for AI coding assistants like Cursor and Windsurf to instantly 
             understand your secure agent architecture.
+          </p>
+        <div className="bg-[#111] border border-zinc-800 rounded-none p-8 space-y-4 hover:border-zinc-700 transition-colors shadow-sm md:col-span-2">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-orange-500" />
+            <h3 className="text-[14px] font-mono font-bold tracking-wider text-white uppercase">Evaluation Pipeline (LLM-as-a-Judge)</h3>
+          </div>
+          <p className="text-zinc-500 font-mono text-[12px] uppercase leading-relaxed tracking-wider">
+            AgentHelm now features a full, trace-connected Eval engine powered by <code className="text-orange-400">Gemini 2.5 Flash</code>. 
+            Define rubrics (e.g. "Politeness", "No leaked secrets") and fire SDK triggers. The system autonomously scores outputs 0.0 to 1.0, 
+            tracking regression metrics natively on the dashboard!
           </p>
         </div>
       </section>
