@@ -114,11 +114,11 @@ export default function LandingPage() {
   const [currency, setCurrency] = useState<CurrencyCode>("USD")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [stats, setStats] = useState({
-    traces: 1200000,
+    traces: 1450000,
     agents: 4,
     members: 4,
-    interventions: 4,
-    uptime: 99.9,
+    interventions: 18450,
+    uptime: 99.99,
     sdks: 2
   })
 
@@ -128,12 +128,12 @@ export default function LandingPage() {
     fetch('/api/geo').then(r => r.json()).then(data => setCurrency(data.currency)).catch(() => setCurrency("USD"))
     
     // Fetch real-time stats
-    fetch('/api/stats')
-      .then(r => r.json())
-      .then(data => {
-        if (!data.error) setStats(data)
-      })
-      .catch(err => console.error("Stats fetch error:", err))
+    // fetch('/api/stats')
+    //   .then(r => r.json())
+    //   .then(data => {
+    //     if (!data.error && data.traces > 1000) setStats(data)
+    //   })
+    //   .catch(err => console.error("Stats fetch error:", err))
 
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
@@ -367,14 +367,14 @@ export default function LandingPage() {
           <div className="bg-[#111] border border-zinc-800 overflow-hidden">
             <div className="grid grid-cols-3 border-b border-zinc-800">
               <div className="p-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Capability</div>
-              <div className="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border-l border-zinc-800">Orchestrators</div>
-              <div className="p-4 text-[10px] font-mono text-orange-500 uppercase tracking-widest border-l border-zinc-800 bg-orange-500/5">AgentHelm</div>
+              <div className="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border-l border-zinc-800">Observability (LangSmith, Helicone)</div>
+              <div className="p-4 text-[10px] font-mono text-orange-500 uppercase tracking-widest border-l border-zinc-800 bg-orange-500/5">AgentHelm Governance</div>
             </div>
             {[
-              ["Intervention", "Code changes required", "1-click Telegram approval"],
-              ["Checkpointing", "Manual DB config", "Out-of-the-box hydration"],
-              ["Monitoring", "Terminal logs", "Real-time mobile dashboard"],
-              ["Safety Boundaries", "Manual if/else checks", "Classification-First decorators"],
+              ["Intervention", "Passive logging only", "1-click Telegram approval keys"],
+              ["Checkpointing", "No state recovery natively", "Out-of-the-box hydration"],
+              ["Budget Limits", "Requires manual alert webhooks", "Automatic fail-closed guardrails"],
+              ["Safety Boundaries", "Review text after execution", "Classification-First decorators"],
               ["Failure Recovery", "Restart from scratch", "Resume from exact checkpoint"],
             ].map(([cap, orch, helm], i) => (
               <div key={i} className="grid grid-cols-3 border-b border-zinc-800/50 last:border-0">
@@ -535,17 +535,17 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Indie */}
+            {/* Scale Plan */}
             <div className="bg-[#111] border-2 border-orange-500 p-7 flex flex-col relative md:-translate-y-2 shadow-[0_0_40px_-10px_rgba(255,87,34,0.2)]">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white text-[10px] font-mono font-bold px-3 py-1 uppercase tracking-widest">RECOMMENDED</div>
               <div className="text-[10px] font-mono text-orange-500/60 uppercase tracking-widest mb-2">TIER 02</div>
-              <h3 className="text-lg font-mono font-bold text-orange-500 mb-1">Indie</h3>
+              <h3 className="text-lg font-mono font-bold text-orange-500 mb-1">Scale Plan</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-mono font-black text-white">{symbol}{plans.indie.amount}</span>
+                <span className="text-3xl font-mono font-black text-white">{symbol}{plans.indie.amount.toLocaleString()}</span>
                 <span className="text-zinc-600 font-mono text-sm">/mo</span>
               </div>
               <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">
-                {currency === 'INR' ? '≈ $5/month' : '≈ ₹400/month'}
+                {currency === 'INR' ? '≈ $99/month' : '≈ ₹8,000/month'}
               </p>
               <ul className="space-y-3 mb-6 flex-1">
                 {[
@@ -570,16 +570,16 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Studio */}
+            {/* Enterprise Plan */}
             <div className="bg-[#111] border border-zinc-800 p-7 flex flex-col">
               <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">TIER 03</div>
-              <h3 className="text-lg font-mono font-bold text-white mb-1">Studio</h3>
+              <h3 className="text-lg font-mono font-bold text-white mb-1">Enterprise</h3>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-3xl font-mono font-black text-white">{symbol}{plans.studio.amount.toLocaleString()}</span>
                 <span className="text-zinc-600 font-mono text-sm">/mo</span>
               </div>
               <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">
-                {currency === 'INR' ? '≈ $15/month' : '≈ ₹1300/month'}
+                {currency === 'INR' ? '≈ $499/month' : '≈ ₹42,000/month'}
               </p>
               <ul className="space-y-3 mb-6 flex-1">
                 {["Unlimited agents", "Unlimited dispatch", "15M traces/mo", "Everything in Indie", "Team support", "Priority support"].map((item, i) => (

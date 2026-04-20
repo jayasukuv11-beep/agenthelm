@@ -53,11 +53,11 @@ export const MULTI_CURRENCY_PLANS: Record<
   Record<string, { amount: number; name: string }>
 > = {
   INR: {
-    indie: { amount: 399, name: 'AgentHelm Indie (Monthly)' },
-    studio: { amount: 1299, name: 'AgentHelm Studio (Monthly)' },
+    indie: { amount: 8499, name: 'AgentHelm Scale (Monthly)' },
+    studio: { amount: 42999, name: 'AgentHelm Enterprise (Monthly)' },
   },
   USD: {
-    indie: { amount: 4.99, name: 'AgentHelm Indie (Monthly)' },
-    studio: { amount: 14.99, name: 'AgentHelm Studio (Monthly)' },
+    indie: { amount: 99, name: 'AgentHelm Scale (Monthly)' },
+    studio: { amount: 499, name: 'AgentHelm Enterprise (Monthly)' },
   },
 }
