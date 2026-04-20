@@ -535,17 +535,17 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Scale Plan */}
+            {/* Pro Plan */}
             <div className="bg-[#111] border-2 border-orange-500 p-7 flex flex-col relative md:-translate-y-2 shadow-[0_0_40px_-10px_rgba(255,87,34,0.2)]">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white text-[10px] font-mono font-bold px-3 py-1 uppercase tracking-widest">RECOMMENDED</div>
               <div className="text-[10px] font-mono text-orange-500/60 uppercase tracking-widest mb-2">TIER 02</div>
-              <h3 className="text-lg font-mono font-bold text-orange-500 mb-1">Scale Plan</h3>
+              <h3 className="text-lg font-mono font-bold text-orange-500 mb-1">Pro Plan</h3>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-mono font-black text-white">{symbol}{plans.indie.amount.toLocaleString()}</span>
+                <span className="text-3xl font-mono font-black text-white">{symbol}{plans.indie.amount}</span>
                 <span className="text-zinc-600 font-mono text-sm">/mo</span>
               </div>
               <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">
-                {currency === 'INR' ? '≈ $99/month' : '≈ ₹8,000/month'}
+                {currency === 'INR' ? '≈ $19/month' : '≈ ₹1,499/month'}
               </p>
               <ul className="space-y-3 mb-6 flex-1">
                 {[
@@ -570,16 +570,16 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Enterprise Plan */}
+            {/* Studio Plan */}
             <div className="bg-[#111] border border-zinc-800 p-7 flex flex-col">
               <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">TIER 03</div>
-              <h3 className="text-lg font-mono font-bold text-white mb-1">Enterprise</h3>
+              <h3 className="text-lg font-mono font-bold text-white mb-1">Studio Plan</h3>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-3xl font-mono font-black text-white">{symbol}{plans.studio.amount.toLocaleString()}</span>
                 <span className="text-zinc-600 font-mono text-sm">/mo</span>
               </div>
               <p className="text-zinc-600 text-[12px] font-mono mb-6 pb-6 border-b border-zinc-800">
-                {currency === 'INR' ? '≈ $499/month' : '≈ ₹42,000/month'}
+                {currency === 'INR' ? '≈ $99/month' : '≈ ₹8,499/month'}
               </p>
               <ul className="space-y-3 mb-6 flex-1">
                 {["Unlimited agents", "Unlimited dispatch", "15M traces/mo", "Everything in Indie", "Team support", "Priority support"].map((item, i) => (
