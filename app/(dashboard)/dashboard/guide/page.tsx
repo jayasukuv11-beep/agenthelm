@@ -201,6 +201,8 @@ export default function GuidePage() {
             Optimized for AI coding assistants like Cursor and Windsurf to instantly 
             understand your secure agent architecture.
           </p>
+        </div>
+
         <div className="bg-[#111] border border-zinc-800 rounded-none p-8 space-y-4 hover:border-zinc-700 transition-colors shadow-sm md:col-span-2">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-orange-500" />
