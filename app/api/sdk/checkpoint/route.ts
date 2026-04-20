@@ -214,6 +214,7 @@ export async function GET(req: Request) {
     const { data: checkpoints, error } = await query.limit(1)
 
     if (error) throw error
+    const checkpoint = checkpoints?.[0]
 
     let integrityVerified = true
     if (checkpoint && checkpoint.state_snapshot && checkpoint.state_hash) {
