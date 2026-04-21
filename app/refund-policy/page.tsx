@@ -35,7 +35,7 @@ export default function RefundPolicyPage() {
       <section>
         <h2 className="text-xl font-bold mb-4">Payment Processor</h2>
         <p>
-          All approved refunds will be processed securely through our payment provider, <strong>Cashfree</strong>. 
+          All approved refunds will be processed securely through our payment provider, <strong>Dodo Payments</strong>. 
           Please note that it may take several business days for the refund to reflect in your account, 
           depending on your bank or card issuer.
         </p>

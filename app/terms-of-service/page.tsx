@@ -37,7 +37,7 @@ export default function TermsOfServicePage() {
       <section>
         <h2 className="text-xl font-bold mb-4">4. Payments and Subscriptions</h2>
         <ul className="list-disc pl-6 space-y-2">
-          <li>All payments for our Services are securely processed via <strong>Cashfree</strong>.</li>
+          <li>All payments for our Services are securely processed via <strong>Dodo Payments</strong>.</li>
           <li><strong>We do not store raw credit card data on our servers.</strong></li>
           <li>By submitting payment details, you authorize our third-party payment processor to charge the applicable fees to your payment method.</li>
         </ul>
