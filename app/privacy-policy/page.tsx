@@ -20,7 +20,7 @@ export default function PrivacyPolicyPage() {
         </p>
         <ul className="list-disc pl-6 space-y-2">
           <li><strong>Personal Identification Information:</strong> Name, email address, phone number.</li>
-          <li><strong>Payment Information:</strong> We use <strong>Cashfree</strong> as our payment processor for all secure payments. 
+          <li><strong>Payment Information:</strong> We use <strong>Dodo Payments</strong> as our payment processor for all secure payments. 
           We do not store raw credit card data or payment instrument details on our servers.</li>
         </ul>
       </section>
@@ -49,7 +49,7 @@ export default function PrivacyPolicyPage() {
         <p>
           We may share your information with third-party vendors, service providers, contractors, or agents who perform 
           services for us or on our behalf and require access to such information to do that work. 
-          This includes our payment processor, Cashfree.
+          This includes our payment processor, Dodo Payments.
         </p>
       </section>
 
