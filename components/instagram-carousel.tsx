@@ -160,7 +160,29 @@ export default function InstagramCarousel() {
   );
 }
 
-function SlideContent({ slide }) {
+interface Slide {
+  id: number;
+  type: string;
+  title: string;
+  subtitle?: string;
+  tagline?: string;
+  image?: string;
+  accent?: string;
+  body?: string;
+  stat?: string;
+  statLabel?: string;
+  skill?: string;
+  icon?: React.ReactNode;
+  features?: string[];
+  quote?: string;
+  author?: string;
+  steps?: { id: string; text: string }[];
+  cta?: string;
+  handle?: string;
+  url?: string;
+}
+
+function SlideContent({ slide }: { slide: Slide }) {
   switch (slide.type) {
     case 'cover':
       return (

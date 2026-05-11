@@ -61,7 +61,13 @@ export default function InstagramPostPage() {
   );
 }
 
-function StrategyItem({ number, title, desc }) {
+interface StrategyItemProps {
+  number: string;
+  title: string;
+  desc: string;
+}
+
+function StrategyItem({ number, title, desc }: StrategyItemProps) {
   return (
     <div className="flex gap-6 items-start">
       <div className="text-3xl font-black italic text-zinc-800">{number}</div>
