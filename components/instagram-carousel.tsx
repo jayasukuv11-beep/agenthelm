@@ -263,7 +263,7 @@ function SlideContent({ slide }: { slide: Slide }) {
                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                className="p-4 bg-[#FF4F00] rounded-2xl shadow-[0_0_30px_rgba(255,79,0,0.4)]"
              >
-               {slide.icon && React.cloneElement(slide.icon as React.ReactElement, { className: "w-8 h-8 text-black" })}
+                {slide.icon && React.cloneElement(slide.icon as React.ReactElement<any>, { className: "w-8 h-8 text-black" })}
              </motion.div>
              <div>
                <div className="text-[#FF4F00] text-[10px] font-black uppercase tracking-[0.4em] mb-1">Skill Module</div>
