@@ -1,5 +1,11 @@
 import React from "react"
 import { LegalPage } from "@/components/legal/LegalPage"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Terms of Service | AgentHelm",
+  description: "Read the terms and conditions for using the AgentHelm platform and services.",
+}
 
 export default function TermsOfServicePage() {
   return (

@@ -1,5 +1,11 @@
 import React from "react"
 import { LegalPage } from "@/components/legal/LegalPage"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Refund Policy | AgentHelm",
+  description: "Learn about our 7-day technical refund window and conditions for refunds at AgentHelm.",
+}
 
 export default function RefundPolicyPage() {
   return (

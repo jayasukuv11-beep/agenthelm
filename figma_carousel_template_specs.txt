@@ -1,0 +1,31 @@
+# AgentHelm Figma Carousel Template Specs
+
+## Dimensions
+- **Frame**: 1080 x 1350 pixels (4:5 Portrait Ratio)
+- **Safe Zone**: 150px padding on top/bottom to avoid UI overlap.
+
+## Color Palette
+- **Primary**: #FF4F00 (Industrial Signal Orange)
+- **Background**: #0A0A0A (Pure Dark)
+- **Surface**: #1A1A1A (Graphite Dark)
+- **Accent**: #222222 (Border/Grid)
+
+## Typography
+- **Headlines**: Roboto Black Italic (Tracking: -0.05em, Line height: 0.9)
+- **Body**: Inter Regular (Tracking: 0.01em, Line height: 1.5)
+- **Labels**: Inter Bold (Uppercase, Tracking: 0.4em)
+
+## Components
+1. **Glass Card**: 
+   - Fill: #FFFFFF (5% Opacity)
+   - Background Blur: 20px
+   - Border: 1px Stroke #FFFFFF (10% Opacity)
+2. **Orange Glow**: 
+   - Effect: Layer Blur 80px
+   - Opacity: 30%
+3. **Grain Texture**:
+   - Overlay on top of all slides at 2% opacity for that "premium" noise.
+
+## Export Instructions
+- Format: PNG or JPG (High Quality)
+- Sequence: Rename slides 01 to 08 for easy upload.
