@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -7,52 +7,135 @@ import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
-import { Viewport } from "next";
-
 export const viewport: Viewport = {
-  themeColor: "#ff5722", // Industrial Signal Orange
+  themeColor: "#ff5722",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: "AgentHelm | The Industrial Standard for AI Agent Governance",
-  description: "Enterprise-grade mission control for AI agents. Implement safety boundaries, monitor execution, and prevent token loops with mission-critical precision.",
-  keywords: ["AI agent governance", "agent observability", "human-in-the-loop AI", "agent safety SDK", "AI budget protection"],
+  metadataBase: new URL("https://agenthelm.online"),
+  title: {
+    default: "AgentHelm | Mission Control for AI Agents",
+    template: "%s | AgentHelm",
+  },
+  description:
+    "Enterprise-grade SDK and dashboard for governing AI agents in production. Implement safety boundaries, monitor execution in real-time, and prevent token loops with mission-critical precision. Free to start.",
+  keywords: [
+    "AI agent governance",
+    "AI agent observability",
+    "human-in-the-loop AI",
+    "agent safety SDK",
+    "AI budget protection",
+    "fail-closed AI",
+    "LLM agent monitoring",
+    "agent execution traces",
+    "autonomous agent control",
+    "Telegram agent control",
+    "agenthelm",
+    "AI governance platform",
+    "LangGraph alternative",
+    "LangSmith alternative",
+  ],
   authors: [{ name: "AgentHelm Research Team", url: "https://agenthelm.online" }],
+  creator: "AgentHelm Research Team",
+  publisher: "AgentHelm",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
-    title: "AgentHelm | AI Agent Mission Control",
-    description: "Professional-grade observability and control for autonomous agents. Fail-closed security and real-time intervention.",
+    title: "AgentHelm | Mission Control for AI Agents",
+    description:
+      "Stop agent loops, prevent budget hemorrhage, and take remote control via Telegram. The governance SDK that wraps around any AI framework.",
     type: "website",
     url: "https://agenthelm.online",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "AgentHelm Mission Control" }],
+    siteName: "AgentHelm",
+    locale: "en_US",
+    images: [
+      {
+        url: "/agenthelm_cover_1777099941437.png",
+        width: 1200,
+        height: 630,
+        alt: "AgentHelm — Mission Control for Autonomous Agents",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "AgentHelm | AI Agent Governance",
-    description: "Stop agent loops and secure your API budget with one line of code.",
-    images: ["/og-image.png"],
+    description:
+      "Stop agent loops and secure your API budget with one line of code. Fail-closed by default.",
+    images: ["/agenthelm_cover_1777099941437.png"],
+    creator: "@agenthelm",
+    site: "@agenthelm",
   },
   alternates: {
     canonical: "https://agenthelm.online",
   },
+  category: "technology",
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "AgentHelm",
-  "operatingSystem": "Independent",
-  "applicationCategory": "DeveloperApplication",
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "USD"
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AgentHelm",
+    "operatingSystem": "Any",
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "AI Agent Governance",
+    "url": "https://agenthelm.online",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free tier — 3 agents, 100K traces/month"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "AgentHelm",
+      "url": "https://agenthelm.online"
+    },
+    "description": "Enterprise-grade SDK and dashboard for governing AI agents in production. Provides safety boundaries, real-time observability, fault-tolerant checkpointing, and human-in-the-loop controls via Telegram.",
+    "featureList": [
+      "Classification-First safety boundaries",
+      "Real-time execution traces",
+      "Telegram remote control",
+      "Fail-closed mode",
+      "Budget protection guardrails",
+      "SHA256 state integrity checkpointing",
+      "LLM-as-a-Judge evaluation pipeline"
+    ],
+    "screenshot": "https://agenthelm.online/agenthelm_moat_security_1777100006182.png",
+    "softwareVersion": "1.0.0",
+    "releaseNotes": "https://agenthelm.online/#how-it-works"
   },
-  "author": {
+  {
+    "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "AgentHelm"
-  },
-  "description": "The mission control SDK for AI agents."
-};
+    "name": "AgentHelm",
+    "url": "https://agenthelm.online",
+    "logo": "https://agenthelm.online/agenthelm_cover_1777099941437.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": "tharagesharumugam@gmail.com",
+      "contactType": "Customer Support"
+    },
+    "sameAs": [
+      "https://github.com/jayasukuv11-beep/agenthelm",
+      "https://pypi.org/project/agenthelm-sdk",
+      "https://www.npmjs.com/package/agenthelm-node-sdk"
+    ]
+  }
+];
 
 export default function RootLayout({
   children,
@@ -62,10 +145,26 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark scroll-smooth">
       <head>
+        {/* Google Analytics */}
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-B6S8E90CHW"></script>
         <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-B6S8E90CHW');
+            `,
+          }}
         />
+        {jsonLd.map((schema, i) => (
+          <script
+            key={i}
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
       </head>
       <body className={`${inter.className} bg-[#0a0a0a] text-zinc-100 antialiased selection:bg-[#ff5722] selection:text-white`}>
         {children}

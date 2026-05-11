@@ -1,5 +1,11 @@
 import React from "react"
 import { LegalPage } from "@/components/legal/LegalPage"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | AgentHelm",
+  description: "Read our privacy policy to understand how we collect, use, and protect your personal data at AgentHelm.",
+}
 
 export default function PrivacyPolicyPage() {
   return (
