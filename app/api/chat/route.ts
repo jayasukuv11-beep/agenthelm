@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 export const dynamic = "force-dynamic"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/app/lib/supabase"
 
 async function callNvidia(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
   const model = fast
@@ -57,7 +57,7 @@ function isBody(x: unknown): x is Body {
 export async function POST(request: Request) {
   try {
     // 1. Auth check
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData.session
 

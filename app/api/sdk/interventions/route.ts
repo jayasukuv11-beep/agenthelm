@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
-import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { createClient as createServerSupabase } from '@/app/lib/supabase'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     // Dashboard UI call
-    const supabase = createServerSupabase()
+    const supabase = await createServerSupabase()
     const { data: authData, error: authErr } = await supabase.auth.getUser()
     if (authErr || !authData.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
