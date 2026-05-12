@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 export const dynamic = "force-dynamic"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/app/lib/supabase"
 
 async function callNvidia(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
   const model = fast
@@ -56,7 +56,7 @@ function isExplainBody(x: unknown): x is ExplainBody {
 
 export async function POST(req: Request) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: authData, error: authErr } = await supabase.auth.getUser()
     if (authErr || !authData.user) {
       return NextResponse.json({ error: "unauthorized", message: "Unauthorized" }, { status: 401 })
