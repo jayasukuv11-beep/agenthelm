@@ -6,7 +6,9 @@ import { StatsRow } from "@/components/dashboard/StatsRow";
 import { AgentCard, type AgentCardProps } from "@/components/dashboard/AgentCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Plus, Inbox, Check } from "lucide-react";
+import { Copy, Plus, Inbox, Check, Zap, Loader2 } from "lucide-react";
+import { loadDemoData } from "@/app/actions/demo";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,29 @@ export default function DashboardPage() {
   const [connectKey, setConnectKey] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const { toast } = useToast();
+  
+  const handleLoadDemo = async () => {
+    setDemoLoading(true);
+    try {
+      await loadDemoData();
+      toast({
+        title: "SUCCESS",
+        description: "Demo data loaded. Welcome to AgentHelm!",
+      });
+      // In a real app we might re-fetch, but here we reload to ensure all state is consistent
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: "ERROR",
+        description: "Failed to load demo data.",
+        variant: "destructive",
+      });
+    } finally {
+      setDemoLoading(false);
+    }
+  };
   
   const supabase = createClient();
   const testMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
@@ -188,43 +213,56 @@ export default function DashboardPage() {
           <p className="text-zinc-500 mt-1 font-mono text-sm">Monitor the pulse of your AI fleet.</p>
         </div>
 
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold rounded-none shadow-[0_0_20px_-5px_rgba(255,87,34,0.4)]">
-              <Plus className="w-4 h-4 mr-2" />
-              CONNECT AGENT
+        <div className="flex items-center gap-2">
+          {!loading && agents.length === 0 && (
+            <Button 
+              variant="outline" 
+              onClick={handleLoadDemo} 
+              disabled={demoLoading}
+              className="hidden sm:flex border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 font-mono text-[12px] uppercase rounded-none gap-2"
+            >
+              {demoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+              LOAD DEMO
             </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-md rounded-none">
-            <DialogHeader>
-              <DialogTitle className="font-mono uppercase tracking-widest text-lg">Connect a new agent</DialogTitle>
-              <DialogDescription className="text-zinc-500 font-mono text-sm">
-                Install the SDK and use this key to authenticate your agent.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                 <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">1. Install SDK</p>
-                 <div className="bg-black/50 p-3 border border-zinc-800 flex items-center justify-between">
-                    <code className="text-[13px] font-mono text-zinc-300">pip install agenthelm-sdk</code>
-                 </div>
+          )}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold rounded-none shadow-[0_0_20px_-5px_rgba(255,87,34,0.4)]">
+                <Plus className="w-4 h-4 mr-2" />
+                CONNECT AGENT
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-md rounded-none">
+              <DialogHeader>
+                <DialogTitle className="font-mono uppercase tracking-widest text-lg">Connect a new agent</DialogTitle>
+                <DialogDescription className="text-zinc-500 font-mono text-sm">
+                  Install the SDK and use this key to authenticate your agent.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                   <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">1. Install SDK</p>
+                   <div className="bg-black/50 p-3 border border-zinc-800 flex items-center justify-between">
+                      <code className="text-[13px] font-mono text-zinc-300">pip install agenthelm-sdk</code>
+                   </div>
+                </div>
+                <div className="space-y-2">
+                   <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">2. Authenticate with your key</p>
+                   <div className="flex space-x-2">
+                      <Input 
+                        value={connectKey || "Loading..."} 
+                        readOnly 
+                        className="bg-[#0a0a0a] border-zinc-800 font-mono text-orange-500 rounded-none focus-visible:ring-orange-500/50 text-[13px]" 
+                      />
+                      <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0 border-zinc-800 bg-[#0a0a0a] hover:bg-zinc-800 hover:text-white rounded-none">
+                        {copied ? <Check className="h-4 w-4 text-orange-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                   </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                 <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">2. Authenticate with your key</p>
-                 <div className="flex space-x-2">
-                    <Input 
-                      value={connectKey || "Loading..."} 
-                      readOnly 
-                      className="bg-[#0a0a0a] border-zinc-800 font-mono text-orange-500 rounded-none focus-visible:ring-orange-500/50 text-[13px]" 
-                    />
-                    <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0 border-zinc-800 bg-[#0a0a0a] hover:bg-zinc-800 hover:text-white rounded-none">
-                      {copied ? <Check className="h-4 w-4 text-orange-500" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                 </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <StatsRow 
@@ -241,24 +279,66 @@ export default function DashboardPage() {
         </h2>
         
         {agents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-[#111] border border-zinc-800 border-dashed text-center">
-            <div className="w-16 h-16 bg-[#0a0a0a] border border-zinc-800 flex items-center justify-center mb-4 text-zinc-600">
-              <Inbox className="w-6 h-6" />
+          <div className="flex flex-col items-center justify-center py-20 px-6 bg-[#111] border border-zinc-800 border-dashed text-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            
+            <div className="mx-auto w-20 h-20 bg-orange-500/10 rounded-none border border-orange-500/20 flex items-center justify-center mb-8 relative">
+              <Zap className="w-10 h-10 text-orange-500" />
+              <div className="absolute -inset-1 bg-orange-500/20 blur-xl opacity-50 animate-pulse" />
             </div>
-            <h3 className="text-base font-mono font-bold text-white mb-2 uppercase tracking-wide">No agents connected</h3>
-            <p className="text-zinc-500 font-mono text-sm max-w-sm mb-6 leading-relaxed">
-              You haven't connected any agents yet. Install the SDK and connect your first agent to see it here.
+            
+            <h2 className="text-2xl font-black font-mono text-white mb-3 uppercase tracking-tight">Your agents are safe... but quiet</h2>
+            <p className="text-zinc-500 font-mono text-sm max-w-md mx-auto mb-10 leading-relaxed uppercase tracking-wider">
+              No traces yet. Run your first agent with the SDK or load sample data to explore the control plane.
             </p>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="border-orange-500/30 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400 bg-transparent rounded-none font-mono text-[12px] uppercase">
-                  GET CONNECTION KEY
-                </Button>
-              </DialogTrigger>
-              {/* Inherits dialog content from above via modal portal in practice, 
-                 but for simplicity we just rely on the first button. 
-                 Since this is an empty state, we can duplicate the trigger content if desired. */}
-            </Dialog>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400 bg-transparent rounded-none font-mono text-[13px] uppercase px-8 h-12 tracking-widest">
+                    GET CONNECTION KEY
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-md rounded-none">
+                  <DialogHeader>
+                    <DialogTitle className="font-mono uppercase tracking-widest text-lg">Connect a new agent</DialogTitle>
+                    <DialogDescription className="text-zinc-500 font-mono text-sm">
+                      Install the SDK and use this key to authenticate your agent.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                       <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">1. Install SDK</p>
+                       <div className="bg-black/50 p-3 border border-zinc-800 flex items-center justify-between">
+                          <code className="text-[13px] font-mono text-zinc-300">pip install agenthelm-sdk</code>
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <p className="text-[11px] uppercase tracking-widest font-mono text-zinc-400 font-bold">2. Authenticate with your key</p>
+                       <div className="flex space-x-2">
+                          <Input 
+                            value={connectKey || "Loading..."} 
+                            readOnly 
+                            className="bg-[#0a0a0a] border-zinc-800 font-mono text-orange-500 rounded-none focus-visible:ring-orange-500/50 text-[13px]" 
+                          />
+                          <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0 border-zinc-800 bg-[#0a0a0a] hover:bg-zinc-800 hover:text-white rounded-none">
+                            {copied ? <Check className="h-4 w-4 text-orange-500" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                       </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button 
+                onClick={handleLoadDemo} 
+                disabled={demoLoading}
+                className="bg-white text-black hover:bg-zinc-200 rounded-none font-mono text-[13px] uppercase px-8 h-12 tracking-widest gap-2"
+              >
+                {demoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                LOAD SAMPLE TRACES
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
