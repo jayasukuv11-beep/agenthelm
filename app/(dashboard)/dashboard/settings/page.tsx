@@ -17,6 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { 
+  MULTI_CURRENCY_PLANS, 
+  getCurrencyForCountry, 
+  type CurrencyCode, 
+  formatCurrency 
+} from "@/lib/currency";
+import { 
   Copy, 
   RefreshCcw, 
   Check, 
@@ -56,6 +62,7 @@ type Profile = {
     credits_warning: boolean;
   };
   plan_expires_at: string | null;
+  preferred_currency: CurrencyCode;
 };
 
 export default function SettingsPage() {
@@ -97,6 +104,7 @@ export default function SettingsPage() {
             credits_warning: true,
           },
           plan_expires_at: null,
+          preferred_currency: "INR",
         };
         setProfile(mockProfile);
         setFullName(mockProfile.full_name || "");
@@ -268,6 +276,26 @@ export default function SettingsPage() {
     if (!profileErr) {
       await supabase.auth.signOut();
       window.location.href = "/?deleted=true";
+    }
+  };
+
+  const handleUpdateCurrency = async (newCurrency: CurrencyCode) => {
+    if (!profile) return;
+    
+    if (testMode) {
+      setProfile({ ...profile, preferred_currency: newCurrency });
+      toast({ title: "Currency updated", description: `Billing currency set to ${newCurrency} (Test Mode)` });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ preferred_currency: newCurrency })
+      .eq("id", profile.id);
+
+    if (!error) {
+      setProfile({ ...profile, preferred_currency: newCurrency });
+      toast({ title: "Currency updated", description: `Billing currency set to ${newCurrency}` });
     }
   };
 
@@ -478,6 +506,32 @@ export default function SettingsPage() {
             <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Email cannot be changed.</p>
           </div>
           <div className="space-y-3">
+            <Label className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">Preferred Currency</Label>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => handleUpdateCurrency('INR')}
+                className={cn(
+                  "border-zinc-800 rounded-none bg-[#111] font-mono text-[11px] uppercase tracking-wider px-6 h-9",
+                  profile.preferred_currency === 'INR' ? "border-orange-500 text-orange-500 bg-orange-500/5" : "text-zinc-500"
+                )}
+              >
+                ₹ INR
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => handleUpdateCurrency('USD')}
+                className={cn(
+                  "border-zinc-800 rounded-none bg-[#111] font-mono text-[11px] uppercase tracking-wider px-6 h-9",
+                  profile.preferred_currency === 'USD' ? "border-orange-500 text-orange-500 bg-orange-500/5" : "text-zinc-500"
+                )}
+              >
+                $ USD
+              </Button>
+            </div>
+            <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest pt-1">Changes affect price display on dashboard.</p>
+          </div>
+          <div className="space-y-3">
             <Label className="text-[12px] font-mono font-bold text-white uppercase tracking-widest block">Current Plan</Label>
             <div className="flex items-center gap-3">
               <Badge className={cn(
@@ -550,7 +604,13 @@ export default function SettingsPage() {
                   <div className="h-px bg-zinc-800 w-full" />
                   <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                     <div>
-                      <p className="text-[20px] font-mono font-bold text-white">₹399<span className="text-[11px] uppercase tracking-widest text-zinc-500">/month</span></p>
+                      <p className="text-[20px] font-mono font-bold text-white">
+                        {formatCurrency(
+                          MULTI_CURRENCY_PLANS[profile.preferred_currency || 'INR'].indie.amount, 
+                          profile.preferred_currency || 'INR'
+                        )}
+                        <span className="text-[11px] uppercase tracking-widest text-zinc-500">/month</span>
+                      </p>
                       <p className="text-[11px] font-mono uppercase tracking-widest text-orange-500 mt-1">Indie Plan</p>
                     </div>
                     <UpgradeButton 
