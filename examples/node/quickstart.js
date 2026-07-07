@@ -1,4 +1,4 @@
-import { AgentHelm } from '../../sdk/node/dist/index.js';
+const { AgentHelm } = require('../../sdk/node');
 
 console.log("Testing AgentHelm Node SDK compatibility...");
 
