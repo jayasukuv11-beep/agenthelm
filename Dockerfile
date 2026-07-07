@@ -1,13 +1,12 @@
 # Stage 1: Install dependencies
-FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat
+FROM node:18-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
 
 # Stage 2: Rebuild the source code only when needed
-FROM node:18-alpine AS builder
+FROM node:18-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -20,15 +19,15 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 3: Runner
-FROM node:18-alpine AS runner
+FROM node:18-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1002 nextjs
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1002 nextjs
 
 COPY --from=builder /app/public ./public
 
