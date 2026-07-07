@@ -8,12 +8,11 @@ export const dynamic = "force-dynamic";
 
 import { MULTI_CURRENCY_PLANS, type CurrencyCode } from "@/lib/currency";
  
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function POST(req: Request) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   try {
     const rawBody = await req.text();
     const timestamp = req.headers.get("x-webhook-timestamp") || "";

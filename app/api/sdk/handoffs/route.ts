@@ -3,9 +3,21 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { SupabaseClient } from '@supabase/supabase-js'
+
+let _supabase: SupabaseClient | null = null
+const supabase = new Proxy({} as any, {
+  get(target, prop) {
+    if (!_supabase) {
+      _supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+    }
+    const value = Reflect.get(_supabase, prop)
+    return typeof value === 'function' ? value.bind(_supabase) : value
+  }
+}) as SupabaseClient
 
 export async function POST(req: Request) {
   try {
