@@ -1,13 +1,14 @@
 # Stage 1: Install dependencies
-FROM node:18-slim AS deps
+FROM node:20-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
-RUN npm install --legacy-peer-deps @tailwindcss/oxide-linux-x64-gnu @tailwindcss/oxide-linux-x64-musl @tailwindcss/oxide-linux-arm64-gnu @tailwindcss/oxide-linux-arm64-musl
+# Use npm install instead of npm ci to dynamically resolve and install
+# the correct precompiled native bindings for the container's platform
+RUN npm install --legacy-peer-deps
 
 # Stage 2: Rebuild the source code only when needed
-FROM node:18-slim AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -20,7 +21,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 3: Runner
-FROM node:18-slim AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
