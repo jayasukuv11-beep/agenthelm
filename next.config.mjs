@@ -2,6 +2,7 @@
 import withPWA from "next-pwa"
 
 const nextConfig = {
+  output: "standalone",
   images: {
     domains: ["zuiceudkenboukonzdsu.supabase.co"],
   },
