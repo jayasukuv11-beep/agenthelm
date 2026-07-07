@@ -18,7 +18,7 @@ export interface AgentCardProps {
 }
 
 export function AgentCard({ agent }: { agent: AgentCardProps }) {
-  
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'running': return 'bg-orange-500 text-black border-orange-500';
@@ -30,11 +30,11 @@ export function AgentCard({ agent }: { agent: AgentCardProps }) {
   };
 
   return (
-    <Card className="bg-[#111] border-zinc-800 rounded-none shadow-sm flex flex-col hover:border-zinc-600 transition-colors">
+    <Card className="bg-[#111] border border-zinc-800 rounded-xl overflow-hidden shadow-sm flex flex-col hover:border-zinc-600 transition-colors hover:shadow-[0_0_20px_-5px_rgba(255,87,34,0.3)]">
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-none bg-[#0a0a0a] border border-zinc-800 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[#0a0a0a] border border-zinc-800 flex items-center justify-center">
               <Bot className="w-5 h-5 text-zinc-500" />
             </div>
             <div>
@@ -51,7 +51,7 @@ export function AgentCard({ agent }: { agent: AgentCardProps }) {
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="flex-1 pb-4">
         <div className="space-y-3 font-mono text-[11px] uppercase tracking-widest">
           <div className="flex justify-between">
@@ -64,9 +64,9 @@ export function AgentCard({ agent }: { agent: AgentCardProps }) {
               {agent.lastPing ? formatDistanceToNow(new Date(agent.lastPing), { addSuffix: true }) : 'Never'}
             </span>
           </div>
-          
+
           {agent.status === 'error' && agent.errorMessage && (
-            <div className="mt-4 p-3 rounded-none bg-red-500/10 border border-red-500/30 flex items-start gap-2">
+            <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <span className="text-[10px] font-mono text-red-400 break-all leading-relaxed">{agent.errorMessage}</span>
             </div>

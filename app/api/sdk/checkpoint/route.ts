@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
 import crypto from 'crypto'
 
 // Handle CORS preflight
@@ -44,14 +44,14 @@ export async function POST(req: Request) {
       )
     }
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+    const auth: AuthResult = await validateConnectKey(key)
+    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
+    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
 
     // Verify agent belongs to user
     if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin!
+      const { data: agent } = await supabaseAdmin
         .from('agents')
         .select('id')
         .eq('id', agent_id)
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     }
 
     // Ensure task exists
-    const { data: taskExists } = await supabaseAdmin!
+    const { data: taskExists } = await supabaseAdmin
       .from('agent_tasks')
       .select('id')
       .eq('id', task_id)
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
 
     if (!taskExists) {
       // Create a transient task for local execution tracking
-      const { error: taskError } = await supabaseAdmin!
+      const { error: taskError } = await supabaseAdmin
         .from('agent_tasks')
         .insert({
           id: task_id,
@@ -135,7 +135,7 @@ export async function POST(req: Request) {
 
     if (existing && existing.length > 0) {
       // Update existing checkpoint
-      const { error } = await supabaseAdmin!
+      const { error } = await supabaseAdmin
         .from('agent_checkpoints')
         .update(row)
         .eq('id', (existing[0] as any).id)
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
       }
     } else {
       // Insert new checkpoint
-      const { error } = await supabaseAdmin!
+      const { error } = await supabaseAdmin
         .from('agent_checkpoints')
         .insert(row)
 
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
 
     // If checkpoint status is 'running', mark the task as running too
     if (status === 'running') {
-      await supabaseAdmin!
+      await supabaseAdmin
         .from('agent_tasks')
         .update({ status: 'running', started_at: new Date().toISOString() })
         .eq('id', task_id)
@@ -167,7 +167,7 @@ export async function POST(req: Request) {
 
     // If checkpoint failed, mark the task as failed
     if (status === 'failed') {
-      await supabaseAdmin!
+      await supabaseAdmin
         .from('agent_tasks')
         .update({ status: 'failed', completed_at: new Date().toISOString() })
         .eq('id', task_id)
@@ -194,12 +194,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'task_id is required' }, { status: 400 })
     }
 
-    const auth = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+    const auth: AuthResult = await validateConnectKey(key)
+    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { supabaseAdmin } = auth as any
+    const { supabaseAdmin } = auth
 
-    let query = supabaseAdmin!
+    let query = supabaseAdmin
       .from('agent_checkpoints')
       .select('*')
       .eq('task_id', task_id)

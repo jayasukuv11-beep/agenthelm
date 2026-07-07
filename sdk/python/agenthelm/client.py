@@ -16,12 +16,14 @@ from typing import Optional, Callable, Any, Dict, List
 
 import requests
 
-from collections import deque
-
 from .queue import OfflineQueue
 from .memory import MemoryEngine
 from .swarms import SwarmCoordinator
 from .otel import OTELExporter
+
+# Phase 1: MVP Brain Modules
+from .proposals import ProposalPublisher
+from .injection import ContextInjector
 
 # Default API URL — can be overridden for self-hosted
 DEFAULT_BASE_URL = "https://agenthelm.online"
@@ -91,6 +93,10 @@ class Agent:
         verbose: bool = True,
         timeout: int = 10,
         burn_rate_threshold: int = 10000,
+        # MVP Project Brain Configs
+        project: Optional[str] = None,
+        auto_inject: bool = False,
+        task_hint: Optional[str] = None,
         # Phase 1 Configs
         max_iterations: Optional[int] = None,
         max_tokens_per_run: Optional[int] = None,
@@ -141,6 +147,9 @@ class Agent:
         self._base_url = base_url.rstrip("/")
         self._verbose = verbose
         self._fail_closed = fail_closed
+        self._project = project
+        self._auto_inject = auto_inject
+        self._task_hint = task_hint
         
         # Professional Grade Stats & Observability
         self.stats = Stats()
@@ -239,8 +248,19 @@ class Agent:
         self._tool_execution_history: List[dict] = []  # recent executions for dedup
         self._irreversible_timeout: int = 60  # seconds to wait for human approval
         
+        # Initialize MVP Modules
+        self.proposals = ProposalPublisher(self)
+        self.contracts = self.proposals  # Backwards compat alias
+        self.injector = ContextInjector(self)
+        
         # Register agent on startup
         self._register()
+        
+        # Auto-inject context if requested
+        if self._auto_inject and self._project:
+            self.context = self.injector.get_context(self._project, self._task_hint)
+        else:
+            self.context = None
         
         # Start background threads (all daemon=True)
         if auto_ping:
@@ -2065,6 +2085,74 @@ class Agent:
         except Exception as e:
             return {"error": str(e)}
     
+    # ─── PROJECT BRAIN & COLLABORATION ────────────────────
+    
+    def claim_file(self, file_path: str) -> bool:
+        """
+        Claim ownership of a file to prevent conflicts with other agents.
+        Sends a lock request to the presence engine.
+        Returns True if claimed successfully, False if already locked by another agent.
+        """
+        try:
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "file": file_path,
+                "timestamp": self._now()
+            }
+            # This would hit a specialized /api/sdk/presence/claim endpoint
+            response = requests.post(
+                f"{self._base_url}/api/sdk/presence/claim",
+                json=payload,
+                timeout=self._timeout
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if not data.get("claimed"):
+                    self.warn(f"Conflict: File {file_path} is locked by {data.get('owner')}")
+                return data.get("claimed", False)
+            return False
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to claim file {file_path}: {e}")
+            return False
+
+    def update_presence(self, status: str, file: Optional[str] = None) -> None:
+        """
+        Update the agent's real-time presence status and current file context.
+        """
+        try:
+            payload = {
+                "key": self.auth_key,
+                "agent_id": self._agent_id,
+                "status": status,
+                "current_file": file,
+                "timestamp": self._now()
+            }
+            self._send_async("/api/sdk/state", payload)
+        except Exception as e:
+            if self._verbose:
+                print(f"[AgentHelm] ⚠️ Failed to update presence: {e}")
+
+    def publish_proposal(self, **kwargs) -> str:
+        """
+        Publish a Knowledge Proposal to the Brain Compiler.
+        
+        Agents do NOT publish truth — they publish proposed knowledge.
+        The Brain Compiler detects conflicts and decides what to merge.
+        """
+        return self.proposals.publish(**kwargs)
+
+    def publish_contract(self, **kwargs) -> str:
+        """Backwards-compatible alias for publish_proposal()."""
+        if "confidence" in kwargs:
+            kwargs.pop("confidence")
+            self.warn("publish_contract(confidence=...) is deprecated; proposal evidence is calculated server-side.")
+        if "human_reviewed" in kwargs:
+            kwargs.pop("human_reviewed")
+            self.warn("publish_contract(human_reviewed=...) is ignored; reviewers approve proposals through AgentHelm.")
+        return self.publish_proposal(**kwargs)
+
     # ─── STATIC / DUNDER ──────────────────────────────────
     
     def __repr__(self) -> str:

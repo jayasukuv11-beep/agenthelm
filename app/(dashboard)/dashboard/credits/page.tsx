@@ -20,7 +20,6 @@ import { Zap, DollarSign, Cpu, Calendar, ChevronDown, ChevronUp, Activity, India
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { formatCurrency, getCurrencySymbol, type CurrencyCode } from "@/lib/currency";
-import { StatsRow } from "@/components/dashboard/StatsRow";
 
 type CreditUsageRow = {
   tokens_used: number;
@@ -256,13 +255,59 @@ export default function CreditsPage() {
           {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-[#111] rounded-none border border-zinc-800" />)}
         </div>
       ) : (
-        <StatsRow 
-          totalAgents={monthly?.total_calls ?? 0}
-          runningAgents={0}
-          tokensUsed={monthly?.total_tokens ?? 0}
-          cost={monthly?.total_cost ?? 0}
-          currency={currency}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          {/* Total Requests */}
+          <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold text-white uppercase tracking-wider">
+                Total Requests
+              </h3>
+              <Zap className="w-4 h-4 text-orange-500" />
+            </div>
+            <div className="text-2xl font-mono font-black text-white">
+              {monthly?.total_calls?.toLocaleString() ?? '0'}
+            </div>
+          </div>
+
+          {/* Tokens Used */}
+          <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold text-white uppercase tracking-wider">
+                Tokens Used
+              </h3>
+              <Cpu className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-2xl font-mono font-black text-white">
+              {formatTokensShort(monthly?.total_tokens ?? 0)}
+            </div>
+          </div>
+
+          {/* Cost */}
+          <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold text-white uppercase tracking-wider">
+                Cost ({currency})
+              </h3>
+              <DollarSign className="w-4 h-4 text-green-500" />
+            </div>
+            <div className="text-2xl font-mono font-black text-white">
+              {formatCurrency(monthly?.total_cost ?? 0, currency as any)}
+            </div>
+          </div>
+
+          {/* Avg Cost/Request */}
+          <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm font-bold text-white uppercase tracking-wider">
+                Avg Cost/Request
+              </h3>
+              <TrendingUp className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="text-2xl font-mono font-black text-white">
+              {monthly?.total_calls ? formatCurrency((monthly.total_cost ?? 0) / monthly.total_calls, currency as any) : '$0.00'}
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

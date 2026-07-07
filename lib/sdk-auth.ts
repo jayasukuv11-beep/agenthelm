@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import * as jose from 'jose'
 
 const secretSource = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -10,18 +10,35 @@ if (!secretSource) {
 }
 const JWT_SECRET = new TextEncoder().encode(secretSource)
 
+export interface AuthSuccess {
+  userId: string
+  plan: string
+  supabaseAdmin: SupabaseClient
+  agentId?: string
+}
+
+export interface AuthError {
+  error: string
+  status: number
+}
+
+export type AuthResult = AuthSuccess | AuthError
+
+export function hasError(result: AuthResult): result is AuthError {
+  return 'error' in result
+}
+
 export async function issueAgentToken(userId: string, agentId: string, plan: string) {
-  // Issue a short-lived (12 hour) token for this specific agent
   const jwt = await new jose.SignJWT({ userId, plan, agentId })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('12h')
     .sign(JWT_SECRET)
-  
+
   return jwt
 }
 
-export async function validateAgentToken(token: string) {
+export async function validateAgentToken(token: string): Promise<AuthResult> {
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET)
     return {
@@ -40,7 +57,7 @@ export async function validateAgentToken(token: string) {
 }
 
 
-export async function validateConnectKey(keyOrToken: string | null) {
+export async function validateConnectKey(keyOrToken: string | null): Promise<AuthResult> {
   if (!keyOrToken) {
     return { error: 'Missing authentication key', status: 401 }
   }
@@ -91,10 +108,10 @@ export async function validateConnectKey(keyOrToken: string | null) {
       return { error: 'Invalid connect key', status: 401 }
     }
 
-    return { 
-      userId: profile.id, 
+    return {
+      userId: profile.id,
       plan: profile.plan,
-      supabaseAdmin // Need to return this or instances to share the connection
+      supabaseAdmin
     }
   } catch (err: unknown) {
     console.error('validateConnectKey error:', err instanceof Error ? err.message : String(err))

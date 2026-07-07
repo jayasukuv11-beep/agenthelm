@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
 import { createClient as createServerSupabase } from '@/app/lib/supabase'
 
 // Handle CORS preflight
@@ -21,14 +21,14 @@ export async function GET(req: Request) {
     const key = searchParams.get('key')
     const agent_id = searchParams.get('agent_id')
 
-    const auth = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+    const auth: AuthResult = await validateConnectKey(key)
+    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
+    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
 
     // Verify agent belongs to user (skip DB hit if valid JWT connects them)
     if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin!
+      const { data: agent } = await supabaseAdmin
         .from('agents')
         .select('id')
         .eq('id', agent_id)
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     }
 
     // Fetch pending commands
-    const { data: commands, error } = await supabaseAdmin!
+    const { data: commands, error } = await supabaseAdmin
       .from('agent_commands')
       .select('*')
       .eq('agent_id', agent_id)
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
     // Mark as delivering
     if (commands && commands.length > 0) {
       const commandIds = (commands as any[]).map(c => c.id)
-      await supabaseAdmin!
+      await supabaseAdmin
         .from('agent_commands')
         .update({ status: 'delivering' })
         .in('id', commandIds)
@@ -75,14 +75,14 @@ export async function POST(req: Request) {
 
     // If called from SDK (connect_key auth), keep existing behavior
     if (key) {
-      const auth = await validateConnectKey(key)
-      if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+      const auth: AuthResult = await validateConnectKey(key)
+      if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-      const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
+      const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
 
       // Ensure agent belongs to user (skip DB hit if valid JWT connects them)
       if (!jwtAgentId || jwtAgentId !== agent_id) {
-        const { data: agent } = await supabaseAdmin!
+        const { data: agent } = await supabaseAdmin
           .from('agents')
           .select('id')
           .eq('id', agent_id)
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         }
       }
 
-      const { data: command, error } = await supabaseAdmin!
+      const { data: command, error } = await supabaseAdmin
         .from('agent_commands')
         .insert({
           agent_id,
@@ -158,8 +158,8 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) {
+    const auth: AuthResult = await validateConnectKey(key)
+    if (hasError(auth)) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
@@ -168,7 +168,7 @@ export async function PATCH(req: Request) {
     // Acknowledge command delivery
     const { error } = await supabaseAdmin
       .from('agent_commands')
-      .update({ 
+      .update({
         status: 'delivered',
         delivered_at: new Date().toISOString()
       })

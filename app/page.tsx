@@ -3,16 +3,16 @@ import LandingPageClient from "./page-client";
 
 // ── Page-level metadata (overrides layout defaults) ────────────────────────
 export const metadata: Metadata = {
-  title: "AgentHelm | Mission Control for AI Agents",
+  title: "AgentHelm | The Project Brain for AI Engineering",
   description:
-    "Enterprise-grade SDK and dashboard for governing AI agents in production. Safety boundaries, live traces, Telegram control. Fail-closed by default. Free to start.",
+    "AgentHelm gives every AI coding agent a shared Project Brain so they remember architecture, APIs, decisions, and project knowledge instead of starting from scratch. One Project. One Brain. Unlimited AI Agents.",
   alternates: {
     canonical: "https://agenthelm.online",
   },
   openGraph: {
-    title: "AgentHelm | Mission Control for AI Agents",
+    title: "AgentHelm | The Project Brain for AI Engineering",
     description:
-      "Stop agent loops, prevent budget hemorrhage, and take remote control via Telegram. The governance SDK that wraps around any AI framework.",
+      "One Project. One Brain. Unlimited AI Agents. AgentHelm gives every AI coding agent a shared Project Brain so they remember architecture, APIs, decisions, and project knowledge instead of starting from scratch.",
     url: "https://agenthelm.online",
     type: "website",
     videos: [
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
         url: "/agenthelm_cover_1777099941437.png",
         width: 1200,
         height: 630,
-        alt: "AgentHelm — Mission Control for Autonomous Agents",
+        alt: "AgentHelm — The Project Brain for AI Engineering",
       },
     ],
   },
@@ -38,9 +38,9 @@ export const metadata: Metadata = {
 const videoJsonLd = {
   "@context": "https://schema.org",
   "@type": "VideoObject",
-  name: "AgentHelm — AI Agent Mission Control Demo",
+  name: "AgentHelm — The Project Brain for AI Engineering Demo",
   description:
-    "See AgentHelm in action: real-time agent traces, safety boundaries, Telegram remote control, and fail-closed mode for production AI agents.",
+    "See AgentHelm in action: project brain pipeline, context injection, knowledge proposals, security pipeline, and observability for production AI engineering.",
   thumbnailUrl: "https://agenthelm.online/agenthelm_cover_1777099941437.png",
   uploadDate: "2026-05-11",
   contentUrl: "https://agenthelm.online/agenthelm-demo.mp4",
@@ -54,7 +54,7 @@ const videoJsonLd = {
     },
   },
   keywords:
-    "AI agent governance, agent observability, human-in-the-loop AI, fail-closed AI, Telegram agent control",
+    "AI engineering, project brain, context injection, knowledge proposals, brain pipeline, agent observability, AI infrastructure",
 };
 
 export default function LandingPage() {
