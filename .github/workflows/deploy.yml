@@ -1,0 +1,89 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    name: Build & Test Web Application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-size: 18
+          cache: 'npm'
+
+      - name: Install Web Dependencies
+        run: npm ci
+
+      - name: Lint Codebase
+        run: npm run lint
+
+      - name: Verify Web Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          ENCRYPTION_KEY: placeholder1234567890123456789012
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+      - name: Run Web Unit Tests (Vitest)
+        run: npm test
+
+  test-python-sdk:
+    name: Test & Verify Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Python SDK Dependencies
+        run: |
+          pip install pytest requests
+          cd sdk/python
+          pip install -e .
+
+      - name: Run Python SDK Unit Tests
+        run: pytest sdk/python/tests/
+
+      - name: Run Python Compatibility Example
+        run: python examples/python/quickstart.py
+
+  test-node-sdk:
+    name: Test & Verify Node.js SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Node SDK Dependencies
+        run: |
+          cd sdk/node
+          npm install
+
+      - name: Run Node SDK Unit Tests
+        run: |
+          cd sdk/node
+          npm test
+
+      - name: Run Node Compatibility Example
+        run: npx -y ts-node examples/node/quickstart.ts

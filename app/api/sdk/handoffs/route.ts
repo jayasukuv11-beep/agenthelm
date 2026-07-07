@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -9,9 +9,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function POST(req: Request) {
   try {
-    const { 
-      key, 
-      agent_id, 
+    const {
+      key,
+      agent_id,
       task_id,
       to_agent_id,
       payload,
@@ -22,9 +22,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const authResult = await validateConnectKey(key)
+    const authResult: AuthResult = await validateConnectKey(key)
 
-    if (authResult.error) {
+    if (hasError(authResult)) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status || 401 })
     }
 
@@ -66,9 +66,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing key or agent_id' }, { status: 400 })
     }
 
-    const authResult = await validateConnectKey(key)
+    const authResult: AuthResult = await validateConnectKey(key)
 
-    if (authResult.error) {
+    if (hasError(authResult)) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status || 401 })
     }
 

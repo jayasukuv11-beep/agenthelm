@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Determine currency: 1. Profile preference, 2. Geo-IP header, 3. Default USD
     const { data: profile } = await supabaseAdmin.from('profiles').select('preferred_currency').eq('id', userId).single();
     
-    let currency: CurrencyCode = (profile?.preferred_currency as CurrencyCode) || 
+    const currency: CurrencyCode = (profile?.preferred_currency as CurrencyCode) || 
       getCurrencyForCountry(req.headers.get('x-vercel-ip-country'));
 
     const planData = MULTI_CURRENCY_PLANS[currency]?.[plan];

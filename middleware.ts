@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import '@/lib/env-validation'
 
 export async function middleware(request: NextRequest) {
   return await updateSession(request)

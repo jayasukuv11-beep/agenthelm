@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, hasError } from '@/lib/sdk-auth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -37,8 +37,8 @@ export async function POST(req: Request) {
 
     const authResult = await validateConnectKey(key)
 
-    if (authResult.error) {
-      return NextResponse.json({ error: authResult.error }, { status: authResult.status || 401 })
+    if (hasError(authResult)) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
     
     // If it's a JWT from an agent, agentId must match the payload

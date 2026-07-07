@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { metrics } from "../../../lib/observability"
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +31,8 @@ export async function GET() {
       members: profilesCount || 0,
       interventions: interventionsCount || 0,
       uptime: 99.9, // Static SLA but could be heartbeat driven in future
-      sdks: 2
+      sdks: 2,
+      pipeline_metrics: metrics.getAggregates()
     })
   } catch (error) {
     console.error('Stats API Error:', error)

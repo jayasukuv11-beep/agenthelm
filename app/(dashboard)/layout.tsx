@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle, Network, Shield } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle, Network, Shield, Folder, Brain, BookOpen, Zap, GitBranch, Activity } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
+  { href: "/dashboard/projects", icon: Folder, label: "Projects" },
+  { href: "/dashboard/brain", icon: Brain, label: "Project Brain" },
+  { href: "/dashboard/knowledge", icon: BookOpen, label: "Knowledge" },
+  { href: "/dashboard/pipeline", icon: Zap, label: "Pipeline" },
+  { href: "/dashboard/versions", icon: GitBranch, label: "Versions" },
   { href: "/dashboard/agents", icon: Users, label: "Agents" },
-  { href: "/dashboard/swarms", icon: Network, label: "Swarms" },
-  { href: "/dashboard/credits", icon: CreditCard, label: "Credits" },
-  { href: "/dashboard/guide", icon: HelpCircle, label: "Guide" },
+  { href: "/dashboard/security", icon: Shield, label: "Security" },
+  { href: "/dashboard/observability", icon: Activity, label: "Observability" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
