@@ -24,5 +24,7 @@ export function validateEnv() {
   }
 }
 
-// Auto-run validation when this file is imported
-validateEnv();
+// Auto-run validation when this file is imported, except during build time
+if (process.env.NEXT_PHASE !== 'phase-production-build') {
+  validateEnv();
+}
