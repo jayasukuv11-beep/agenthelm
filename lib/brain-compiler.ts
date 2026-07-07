@@ -1,12 +1,21 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import { BrainPipeline } from "./brain/pipeline"
 import { logger } from "./observability"
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+let _supabaseAdmin: SupabaseClient | null = null
+const supabaseAdmin = new Proxy({} as any, {
+  get(target, prop) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+        process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      )
+    }
+    const value = Reflect.get(_supabaseAdmin, prop)
+    return typeof value === 'function' ? value.bind(_supabaseAdmin) : value
+  }
+}) as SupabaseClient
 
 export async function compileProposal(proposalId: string) {
   try {

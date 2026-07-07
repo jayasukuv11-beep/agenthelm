@@ -4,13 +4,12 @@ import { checkSystemHealth, getReadyStatus } from "../../../lib/observability"
 
 export const dynamic = "force-dynamic"
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
-
 export async function GET() {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
   try {
     const health = await checkSystemHealth(supabaseAdmin)
     const ready = getReadyStatus(health)

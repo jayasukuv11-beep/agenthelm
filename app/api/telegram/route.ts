@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 async function callNvidia(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
   const model = fast
@@ -79,13 +79,20 @@ type AgentRow = {
   agent_type: string | null
 }
 
-// ─── Admin client (server-only) ───────────────────────────────────────────────
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+let _supabaseAdmin: SupabaseClient | null = null;
+const supabaseAdmin = new Proxy({} as any, {
+  get(target, prop) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+    }
+    const value = Reflect.get(_supabaseAdmin, prop);
+    return typeof value === 'function' ? value.bind(_supabaseAdmin) : value;
+  }
+}) as SupabaseClient;
 
 // ─── Route Handlers ───────────────────────────────────────────────────────────
 
