@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps @tailwindcss/oxide-linux-x64-gnu @tailwindcss/oxide-linux-x64-musl @tailwindcss/oxide-linux-arm64-gnu @tailwindcss/oxide-linux-arm64-musl
 
 # Stage 2: Rebuild the source code only when needed
 FROM node:18-slim AS builder
