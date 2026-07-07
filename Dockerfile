@@ -4,7 +4,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Stage 2: Rebuild the source code only when needed
 FROM node:18-alpine AS builder
