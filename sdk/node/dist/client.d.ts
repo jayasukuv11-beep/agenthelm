@@ -110,6 +110,22 @@ export declare class AgentHelm {
      */
     resumeFrom(taskId: string, checkpointId?: string, stepIndex?: number): Promise<Record<string, unknown> | null>;
     /**
+     * Convert a production trace into an eval set.
+     * Activated by Feature 9: Trace-Connected Eval Pipeline.
+     * @param taskId - The task UUID to extract trace from
+     * @param name - Optional name for the new eval set
+     */
+    evalFromTrace(taskId: string, name?: string): Promise<Record<string, unknown>>;
+    /**
+     * Check for performance regressions against a baseline version.
+     * Activated by Feature 9: Trace-Connected Eval Pipeline.
+     * @param currentVersion - Version to test
+     * @param baselineVersion - Version to compare against
+     * @param evalSetId - Eval set to run against
+     * @param threshold - Pass rate drop threshold (default 0.10)
+     */
+    regressionCheck(currentVersion: string, baselineVersion: string, evalSetId: string, threshold?: number): Promise<Record<string, unknown>>;
+    /**
      * Register a handler for dispatched tasks from the dashboard/Telegram.
      * @param handler - Function called with task name and data object
      */

@@ -1,9 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AgentHelm = void 0;
 exports.connect = connect;
 const queue_1 = require("./queue");
 const DEFAULT_BASE_URL = 'https://agenthelm.online/api/sdk';
+// ─── TYPES ────────────────────────────────────────────
+const crypto_1 = __importDefault(require("crypto"));
 // ─── CLIENT ───────────────────────────────────────────
 class AgentHelm {
     constructor(options) {
@@ -30,9 +35,9 @@ class AgentHelm {
         this.dispatchHandler = null;
         const { key, name = 'Node Agent', agentType = 'node', version = '1.0.0', baseUrl = DEFAULT_BASE_URL, autoPing = true, pingInterval = 30000, commandPollInterval = 5000, verbose = true, timeout = 5000, burnRateThreshold = 10000, } = options;
         this._burnRateThreshold = burnRateThreshold;
-        if (!key || !key.startsWith('ahe_')) {
+        if (!key || !key.startsWith('ahe_live_')) {
             throw new Error('Invalid AgentHelm key. ' +
-                'Keys must start with "ahe_". ' +
+                'Keys must start with "ahe_live_". ' +
                 'Get your key at agenthelm.online/dashboard/settings');
         }
         this.key = key;
@@ -157,7 +162,10 @@ class AgentHelm {
             stateDelta = this.computeDelta(this._lastCheckpointState, state);
             sendSnapshot = null; // Don't send full snapshot for deltas
         }
-        this._lastCheckpointState = state;
+        const stateHash = crypto_1.default
+            .createHash('sha256')
+            .update(JSON.stringify(state))
+            .digest('hex');
         const payload = {
             key: this.getAuthKey(),
             agent_id: this._agentId,
@@ -167,6 +175,7 @@ class AgentHelm {
             status,
             state_snapshot: sendSnapshot,
             state_delta: stateDelta,
+            state_hash: stateHash,
             input_data: inputData ?? null,
             output_data: outputData ?? null,
             latency_ms: latencyMs,
@@ -174,7 +183,15 @@ class AgentHelm {
         if (status === 'failed') {
             payload.error_data = outputData ?? null;
         }
-        this.send('/checkpoint', payload);
+        this.fetch('/checkpoint', payload)
+            .then((res) => {
+            if (res.ok) {
+                this._lastCheckpointState = state;
+            }
+        })
+            .catch(() => {
+            this.queue.push('/checkpoint', payload);
+        });
         // Phase 4: Check for user interventions (stop, pause, override)
         this.processInterventions().catch((err) => {
             if (this.verbose) {
@@ -229,6 +246,62 @@ class AgentHelm {
                 console.log('[AgentHelm] \u26A0\uFE0F Failed to resume from checkpoint');
             }
             return null;
+        }
+    }
+    /**
+     * Convert a production trace into an eval set.
+     * Activated by Feature 9: Trace-Connected Eval Pipeline.
+     * @param taskId - The task UUID to extract trace from
+     * @param name - Optional name for the new eval set
+     */
+    async evalFromTrace(taskId, name) {
+        try {
+            const res = await this.fetch('/evals/from-trace', {
+                key: this.getAuthKey(),
+                task_id: taskId,
+                name: name ?? null,
+                agent_id: this._agentId,
+            });
+            if (res.ok) {
+                return (await res.json());
+            }
+            return {
+                error: `HTTP ${res.status}`,
+                detail: await res.text(),
+            };
+        }
+        catch (err) {
+            return { error: err instanceof Error ? err.message : String(err) };
+        }
+    }
+    /**
+     * Check for performance regressions against a baseline version.
+     * Activated by Feature 9: Trace-Connected Eval Pipeline.
+     * @param currentVersion - Version to test
+     * @param baselineVersion - Version to compare against
+     * @param evalSetId - Eval set to run against
+     * @param threshold - Pass rate drop threshold (default 0.10)
+     */
+    async regressionCheck(currentVersion, baselineVersion, evalSetId, threshold = 0.10) {
+        try {
+            const res = await this.fetch('/evals/regression', {
+                key: this.getAuthKey(),
+                eval_set_id: evalSetId,
+                agent_id: this._agentId,
+                current_version: currentVersion,
+                baseline_version: baselineVersion,
+                threshold,
+            });
+            if (res.ok) {
+                return (await res.json());
+            }
+            return {
+                error: `HTTP ${res.status}`,
+                detail: await res.text(),
+            };
+        }
+        catch (err) {
+            return { error: err instanceof Error ? err.message : String(err) };
         }
     }
     /**

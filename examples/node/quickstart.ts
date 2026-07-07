@@ -1,4 +1,4 @@
-import { AgentHelm } from '../../sdk/node/src/index';
+import { AgentHelm } from '../../sdk/node/dist/index.js';
 
 console.log("Testing AgentHelm Node SDK compatibility...");
 
