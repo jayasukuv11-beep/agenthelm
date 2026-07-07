@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { AgentHelm } = require('../../sdk/node');
 
 console.log("Testing AgentHelm Node SDK compatibility...");
