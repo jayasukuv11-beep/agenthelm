@@ -89,4 +89,4 @@ jobs:
           npm test
 
       - name: Run Node Compatibility Example
-        run: npx -y ts-node examples/node/quickstart.ts
+        run: node examples/node/quickstart.js

@@ -26,7 +26,6 @@ def main():
         auto_ping=False
     )
     print(f"Modern Agent name: {agent_modern.name}")
-    print(f"Modern Agent version: {agent_modern.version}")
     
     # 2. Test using the deprecated AgentHelm class alias
     print("\nInitializing using deprecated AgentHelm...")
