@@ -45,7 +45,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   
   // Default limits based on plan if not specified in profile
   const tokensLimit = profile?.tokens_limit_monthly || (plan === 'free' ? 100000 : 2000000)
-  const agentLimit = plan === 'free' ? 3 : plan === 'indie' ? 10 : 1000
+  const agentLimit = plan === 'free' ? 10 : plan === 'indie' ? 10 : 1000
 
   return {
     agentCount: agentCount || 0,
