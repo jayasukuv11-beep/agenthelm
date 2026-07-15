@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from "vitest"
 import { BrainPipeline, StageName, PipelineResult } from "./pipeline"
 import type { KnowledgeProposal } from "./types"
+import { classifyObservation } from "./providers/sarvam-promotion"
+
+vi.mock("./providers/sarvam-promotion", () => ({
+  classifyObservation: vi.fn().mockResolvedValue({ promote: true, reason: "mocked promote" })
+}))
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -205,6 +210,83 @@ describe("BrainPipeline", () => {
       // Should have run: intake, verify, validate (fails)
       expect(result.stages).toHaveLength(3)
       expect(result.stages[result.stages.length - 1].ok).toBe(false)
+    })
+  })
+
+  describe("Sarvam Pre-filtering", () => {
+    it("continues pipeline normally when promote is true", async () => {
+      vi.mocked(classifyObservation).mockResolvedValueOnce({
+        promote: true,
+        reason: "Important architectural change"
+      })
+
+      const proposal = makeProposal()
+      const supabase = createMockSupabase({ knowledge_proposals: proposal })
+      const pipeline = new BrainPipeline(supabase)
+      const result = await pipeline.compile("prop-1")
+
+      expect(result.stages[0].stage).toBe("intake")
+      expect(result.stages[0].ok).toBe(true)
+      // Pipeline continues beyond intake
+      expect(result.stages.length).toBeGreaterThan(1)
+    })
+
+    it("short-circuits at intake when promote is false", async () => {
+      vi.mocked(classifyObservation).mockResolvedValueOnce({
+        promote: false,
+        reason: "Routine noise: minor readme update"
+      })
+
+      const proposal = makeProposal()
+      const updateMock = vi.fn().mockReturnThis()
+      const eqMock = vi.fn().mockReturnThis()
+      
+      const supabase = {
+        from: (table: string) => ({
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({
+                data: { ...proposal, build_status: "pending" },
+                error: null
+              })
+            })
+          }),
+          update: updateMock,
+          eq: eqMock,
+          insert: () => ({ eq: () => Promise.resolve() })
+        }),
+        channel: () => ({ send: () => Promise.resolve() })
+      } as any
+
+      const pipeline = new BrainPipeline(supabase)
+      const result = await pipeline.compile("prop-1")
+
+      expect(result.stages).toHaveLength(1)
+      expect(result.stages[0].stage).toBe("intake")
+      expect(result.stages[0].ok).toBe(false)
+      expect(result.outcome).toBe("rejected")
+
+      expect(updateMock).toHaveBeenCalledWith({
+        build_status: "rejected",
+        review_notes: "Ignored: Routine noise: minor readme update"
+      })
+    })
+
+    it("falls back to promote: true when classification throws/fails", async () => {
+      // Simulate classifyObservation falling back due to internal fetch error
+      vi.mocked(classifyObservation).mockResolvedValueOnce({
+        promote: true,
+        reason: "fallback: sarvam unavailable"
+      })
+
+      const proposal = makeProposal()
+      const supabase = createMockSupabase({ knowledge_proposals: proposal })
+      const pipeline = new BrainPipeline(supabase)
+      const result = await pipeline.compile("prop-1")
+
+      expect(result.stages[0].stage).toBe("intake")
+      expect(result.stages[0].ok).toBe(true)
+      expect(result.stages.length).toBeGreaterThan(1)
     })
   })
 })

@@ -12,6 +12,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "bin": {
+    "agenthelm": "./dist/cli.js"
+  },
   "files": [
     "dist",
     "README.md"
@@ -21,6 +24,9 @@
     "dev": "tsc --watch",
     "test": "jest",
     "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.1"
   },
   "keywords": [
     "ai",

@@ -1,8 +1,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import * as jose from 'jose'
 
-const secretSource = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'temporary-build-secret-key-123456789'
-const JWT_SECRET = new TextEncoder().encode(secretSource)
+const secretSource = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!secretSource && process.env.NEXT_PHASE !== 'phase-production-build') {
+  throw new Error('FATAL: ENCRYPTION_KEY or SUPABASE_SERVICE_ROLE_KEY is required but not set.');
+}
+const JWT_SECRET = new TextEncoder().encode(secretSource || 'temporary-build-secret-key-for-nextjs-build-phase')
 
 export interface AuthSuccess {
   userId: string
@@ -35,13 +38,18 @@ export async function issueAgentToken(userId: string, agentId: string, plan: str
 export async function validateAgentToken(token: string): Promise<AuthResult> {
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if ((!supabaseUrl || !supabaseKey) && process.env.NEXT_PHASE !== 'phase-production-build') {
+      throw new Error('FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.');
+    }
     return {
       userId: payload.userId as string,
       agentId: payload.agentId as string,
       plan: payload.plan as string,
       supabaseAdmin: createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-        process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder',
+        supabaseUrl || 'https://placeholder.supabase.co',
+        supabaseKey || 'placeholder',
         { auth: { autoRefreshToken: false, persistSession: false } }
       )
     }
@@ -68,21 +76,32 @@ export async function validateConnectKey(keyOrToken: string | null): Promise<Aut
 
   // Bypass for local testing ONLY in development mode
   if (process.env.NODE_ENV === 'development' && process.env.TEST_MODE === 'true' && key === 'ahe_live_testkey12345') {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if ((!supabaseUrl || !supabaseKey) && process.env.NEXT_PHASE !== 'phase-production-build') {
+      throw new Error('FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.');
+    }
     return {
       userId: '00000000-0000-0000-0000-000000000000',
       plan: 'studio',
       supabaseAdmin: createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-        process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder',
+        supabaseUrl || 'https://placeholder.supabase.co',
+        supabaseKey || 'placeholder',
         { auth: { autoRefreshToken: false, persistSession: false } }
       )
     }
   }
 
   // Using service role key for SDK API routes bypassing RLS
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if ((!supabaseUrl || !supabaseKey) && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error('FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.');
+  }
+
   const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder',
+    supabaseUrl || 'https://placeholder.supabase.co',
+    supabaseKey || 'placeholder',
     {
       auth: {
         autoRefreshToken: false,

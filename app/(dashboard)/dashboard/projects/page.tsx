@@ -3,10 +3,20 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2, Inbox, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Brain, Loader2, Inbox, Zap, Trash2, AlertTriangle } from "lucide-react";
 import { loadDemoData } from "@/app/actions/demo";
+import { deleteProject } from "@/app/actions/project";
 import { useToast } from "@/components/ui/use-toast";
 import { StatCard } from "@/components/dashboard/StatCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Project {
   id: string;
@@ -29,6 +39,12 @@ export default function ProjectsPage() {
   const [demoLoading, setDemoLoading] = useState(false);
   const { toast } = useToast();
 
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const handleLoadDemo = async () => {
     setDemoLoading(true);
     try {
@@ -49,24 +65,57 @@ export default function ProjectsPage() {
     }
   };
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/projects");
-        if (res.ok) {
-          const data = await res.json();
-          setProjects(data.projects || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch projects:", err);
-      } finally {
-        setLoading(false);
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/projects");
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data.projects || []);
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch projects:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProjects();
   }, []);
+
+  const handleDeleteProject = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const result = await deleteProject(deleteTarget.id);
+      if (result.success) {
+        toast({
+          title: "PROJECT DELETED",
+          description: `"${deleteTarget.name}" and all associated data have been permanently removed.`,
+        });
+        setDeleteModalOpen(false);
+        setDeleteTarget(null);
+        setDeleteConfirmText("");
+        // Remove from local state immediately
+        setProjects((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      } else {
+        toast({
+          title: "DELETION FAILED",
+          description: result.error || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "ERROR",
+        description: err.message || "Failed to delete project.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -186,14 +235,26 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-zinc-800">
+                  <div className="mt-4 pt-3 border-t border-zinc-800 flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => window.location.href = `/dashboard/brain?project=${project.id}`}
-                      className="w-full text-zinc-400 hover:text-white hover:bg-zinc-800/50 font-mono text-xs uppercase"
+                      className="flex-1 text-zinc-400 hover:text-white hover:bg-zinc-800/50 font-mono text-xs uppercase"
                     >
                       Open Project
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDeleteTarget(project);
+                        setDeleteConfirmText("");
+                        setDeleteModalOpen(true);
+                      }}
+                      className="text-red-500/60 hover:text-red-500 hover:bg-red-500/10 border-zinc-800 hover:border-red-500/30 font-mono text-xs uppercase px-3"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -202,6 +263,57 @@ export default function ProjectsPage() {
           </div>
         </>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-md rounded-none border-t-2 border-t-red-600">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-base uppercase tracking-widest text-red-500 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Project Permanently
+            </DialogTitle>
+            <DialogDescription className="font-mono text-xs uppercase tracking-wider text-zinc-500 pt-1">
+              This action is irreversible. All brain versions, knowledge entries, proposals, and timeline events will be permanently destroyed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-4 font-mono text-xs">
+            <div className="bg-red-500/5 border border-red-500/20 p-4 text-red-400/80 uppercase tracking-wider leading-relaxed">
+              You are about to delete <span className="font-bold text-red-400">&quot;{deleteTarget?.name}&quot;</span> and all of its associated data. This cannot be undone.
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
+                Type the project name to confirm:
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={deleteTarget?.name || ""}
+                className="bg-[#0a0a0a] border-zinc-800 text-white font-mono text-xs rounded-none focus:border-red-500 h-10"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4 gap-2 flex-col sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModalOpen(false)}
+              className="bg-transparent border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-widest rounded-none h-10"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteProject}
+              disabled={deleteConfirmText !== deleteTarget?.name || deleteLoading}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-mono text-xs uppercase tracking-widest rounded-none h-10 gap-2"
+            >
+              {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Permanently Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

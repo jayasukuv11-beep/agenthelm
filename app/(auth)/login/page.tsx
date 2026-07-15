@@ -166,10 +166,17 @@ export default function LoginPage() {
             Google
           </Button>
         </CardContent>
-        <CardFooter className="flex justify-center pt-2 pb-6">
+        <CardFooter className="flex flex-col items-center gap-4 pt-2 pb-6">
           <p className="text-[10px] uppercase tracking-widest font-mono text-zinc-600">
             New here? Account created automatically
           </p>
+          <div className="flex justify-center gap-4 text-[9px] uppercase tracking-wider font-mono text-zinc-500">
+            <a href="/privacy-policy" className="hover:text-orange-500 transition-colors">Privacy</a>
+            <span>·</span>
+            <a href="/terms-of-service" className="hover:text-orange-500 transition-colors">Terms</a>
+            <span>·</span>
+            <a href="/refund-policy" className="hover:text-orange-500 transition-colors">Refunds</a>
+          </div>
         </CardFooter>
       </Card>
     </div>

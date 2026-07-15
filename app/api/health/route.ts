@@ -5,9 +5,16 @@ import { checkSystemHealth } from "../../../lib/observability"
 export const dynamic = "force-dynamic"
 
 export async function GET() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if ((!supabaseUrl || !supabaseKey) && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error("FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.");
+  }
+
   const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
+    supabaseUrl || "https://placeholder.supabase.co",
+    supabaseKey || "placeholder",
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
   try {

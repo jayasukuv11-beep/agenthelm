@@ -86,7 +86,7 @@ export default function SwarmsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-4">
-            <UpgradeButton plan={profile?.plan} label="Upgrade to Studio" className="w-[200px]" />
+            <UpgradeButton plan="studio" label="Upgrade to Studio" className="w-[200px]" />
             <div className="mt-8 opacity-20 relative pointer-events-none filter blur-[2px] transition-all">
                <div className="flex items-center gap-8 justify-center py-12 border border-zinc-800 rounded-none bg-[#0a0a0a]">
                 <Bot className="w-16 h-16 text-zinc-500" />

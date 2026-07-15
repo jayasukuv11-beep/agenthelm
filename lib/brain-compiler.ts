@@ -6,9 +6,14 @@ let _supabaseAdmin: SupabaseClient | null = null
 const supabaseAdmin = new Proxy({} as any, {
   get(target, prop) {
     if (!_supabaseAdmin) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if ((!url || !key) && process.env.NEXT_PHASE !== 'phase-production-build') {
+        throw new Error("FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.");
+      }
       _supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-        process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
+        url || "https://placeholder.supabase.co",
+        key || "placeholder",
         { auth: { autoRefreshToken: false, persistSession: false } }
       )
     }
@@ -29,6 +34,16 @@ export async function compileProposal(proposalId: string) {
         errorCode: result.errorCode,
         meta: { outcome: result.outcome, error: result.error },
       })
+
+      await supabaseAdmin
+        .from("knowledge_proposals")
+        .update({
+          build_status: "rejected",
+          review_notes: result.outcome === "error"
+            ? `System Compiler Error: ${result.error || 'Unknown compiler error'}`
+            : `Conflict Detected: ${result.error || 'Compiler validation rejected the proposal'}`
+        })
+        .eq("id", proposalId)
     }
 
     return result
@@ -43,7 +58,7 @@ export async function compileProposal(proposalId: string) {
       .from("knowledge_proposals")
       .update({
         build_status: "rejected",
-        review_notes: error instanceof Error ? error.message : "Compiler error"
+        review_notes: `System Compiler Exception: ${error instanceof Error ? error.message : "Compiler crashed"}`
       })
       .eq("id", proposalId)
   }

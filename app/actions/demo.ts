@@ -15,7 +15,7 @@ export async function loadDemoData() {
     .from('projects')
     .select('id')
     .eq('user_id', user.id)
-    .eq('name', 'AgentHelm Platform')
+    .eq('name', 'Demo Project (AgentHelm Platform)')
     .limit(1)
     .single()
 
@@ -27,7 +27,7 @@ export async function loadDemoData() {
       .from('projects')
       .insert({
         user_id: user.id,
-        name: 'AgentHelm Platform',
+        name: 'Demo Project (AgentHelm Platform)',
         description: 'Main development project for AgentHelm platform and Project Brain',
         repo_url: 'github.com/agenthelm/agentdock',
         brain_version: 1

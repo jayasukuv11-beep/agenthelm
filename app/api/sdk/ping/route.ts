@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey, issueAgentToken } from '@/lib/sdk-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -14,28 +15,6 @@ export async function OPTIONS() {
   })
 }
 
-// In-memory rate limiting map for MVP (store key -> { count, windowStart })
-const RATE_LIMITS = new Map<string, { count: number, start: number }>()
-
-function checkRateLimit(key: string) {
-  const now = Date.now()
-  const current = RATE_LIMITS.get(key)
-  
-  if (!current || now - current.start > 60000) {
-    // Reset window
-    RATE_LIMITS.set(key, { count: 1, start: now })
-    return true
-  }
-  
-  if (current.count >= 6) {
-    return false // Max 6 requests per min
-  }
-  
-  current.count++
-  RATE_LIMITS.set(key, current)
-  return true
-}
-
 export async function POST(req: Request) {
   try {
     let body: any = {}
@@ -47,7 +26,7 @@ export async function POST(req: Request) {
 
     const { key, name, agent_type, version, status, error_message } = body
 
-    if (!checkRateLimit(key)) {
+    if (!await checkRateLimit(key, 6, 60)) {
       return NextResponse.json({ error: 'Rate limit exceeded (6 per min)' }, { status: 429 })
     }
 

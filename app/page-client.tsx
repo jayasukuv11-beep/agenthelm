@@ -36,7 +36,7 @@ export default function LandingPage() {
             <a href="/docs" className="border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800/50 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2">
               Read Documentation <span className="w-4 h-4">→</span>
             </a>
-            <a href="https://github.com/agenthelm/agenthelm" className="border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800/50 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2">
+            <a href="https://github.com/jayasukuv11-beep/agenthelm" className="border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800/50 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2">
               GitHub <span className="w-4 h-4">→</span>
             </a>
           </div>
@@ -115,7 +115,12 @@ export default function LandingPage() {
           <p className="text-zinc-600 text-xs font-mono">
             © {new Date().getFullYear()} AgentHelm · The AgentHelm Research Team
           </p>
-          <p className="text-zinc-600 text-xs font-mono mt-2">
+          <div className="mt-4 flex justify-center gap-6 text-zinc-500 text-[11px] font-mono">
+            <a href="/privacy-policy" className="hover:text-orange-500 transition-colors">Privacy Policy</a>
+            <a href="/terms-of-service" className="hover:text-orange-500 transition-colors">Terms of Service</a>
+            <a href="/refund-policy" className="hover:text-orange-500 transition-colors">Refund Policy</a>
+          </div>
+          <p className="text-zinc-600 text-[10px] font-mono mt-4">
             Built in India 🇮🇳 · Engineered for global scale
           </p>
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { BookOpen, Search, FileText, CheckCircle, Clock, User, Copy, GitBranch, Brain, Inbox, Zap, Loader2 } from "lucide-react";
+import { BookOpen, Search, FileText, CheckCircle, Clock, User, Copy, GitBranch, Brain, Inbox, Zap, Loader2, GitCommit } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,15 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import KnowledgeProposalsPanel from "@/components/dashboard/KnowledgeProposalsPanel";
 import { loadDemoData } from "@/app/actions/demo";
 import { useToast } from "@/components/ui/use-toast";
+import { createClient } from "@/lib/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Project {
   id: string;
@@ -37,6 +46,7 @@ function KnowledgeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const supabase = React.useMemo(() => createClient(), []);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
@@ -45,6 +55,31 @@ function KnowledgeContent() {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+
+  // Blame history states
+  const [connectKey, setConnectKey] = useState<string>("");
+  const [blameModalOpen, setBlameModalOpen] = useState(false);
+  const [blameLoading, setBlameLoading] = useState(false);
+  const [blameEntryTitle, setBlameEntryTitle] = useState("");
+  const [blameEntryCategory, setBlameEntryCategory] = useState("");
+  const [blameHistory, setBlameHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('connect_key')
+          .eq('id', session.user.id)
+          .single();
+        if (profile?.connect_key) {
+          setConnectKey(profile.connect_key);
+        }
+      }
+    }
+    loadProfile();
+  }, [supabase]);
 
   // Load all projects on mount
   const fetchProjects = async () => {
@@ -119,6 +154,47 @@ function KnowledgeContent() {
       });
     } finally {
       setDemoLoading(false);
+    }
+  };
+
+  const handleViewBlame = async (category: string, title: string) => {
+    setBlameEntryTitle(title);
+    setBlameEntryCategory(category);
+    setBlameModalOpen(true);
+    setBlameLoading(true);
+    setBlameHistory([]);
+    try {
+      const res = await fetch("/api/sdk/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "blame",
+          project: selectedProjectId,
+          category,
+          title,
+          key: connectKey
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBlameHistory(data.entries || []);
+      } else {
+        const err = await res.json();
+        toast({
+          title: "Error",
+          description: err.error || "Failed to fetch blame timeline",
+          variant: "destructive"
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to query history",
+        variant: "destructive"
+      });
+    } finally {
+      setBlameLoading(false);
     }
   };
 
@@ -267,8 +343,24 @@ function KnowledgeContent() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <Copy className="w-4 h-4 text-zinc-500 hover:text-white cursor-pointer" />
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(JSON.stringify(entry.content, null, 2));
+                              toast({ title: "Copied", description: "Entry content copied to clipboard" });
+                            }}
+                            aria-label="Copy Entry Content"
+                            className="p-1.5 bg-[#111] hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-colors rounded"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleViewBlame(entry.category, entry.title)}
+                            aria-label="View Version Blame History"
+                            className="p-1.5 bg-[#111] hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-colors flex items-center gap-1 font-mono text-[10px] uppercase font-bold rounded"
+                          >
+                            <GitCommit className="w-3.5 h-3.5" /> Blame
+                          </button>
                         </div>
                       </div>
                       <div className="px-4 py-3 bg-[#111]">
@@ -337,6 +429,81 @@ function KnowledgeContent() {
           </div>
         </div>
       )}
+      {/* Blame History Modal */}
+      <Dialog open={blameModalOpen} onOpenChange={setBlameModalOpen}>
+        <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-2xl rounded-none border-t-2 border-t-orange-500 overflow-y-auto max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-base uppercase tracking-widest text-white flex items-center gap-2">
+              <GitCommit className="w-5 h-5 text-orange-500" />
+              Lineage Blame: [{blameEntryCategory}] {blameEntryTitle}
+            </DialogTitle>
+            <DialogDescription className="font-mono text-xs uppercase tracking-wider text-zinc-500 pt-1">
+              Historical lineage and compiler trace for this entry
+            </DialogDescription>
+          </DialogHeader>
+
+          {blameLoading ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+              <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Tracing version lineage...</span>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4 font-mono text-xs">
+              {blameHistory.length === 0 ? (
+                <div className="text-center py-6 border border-zinc-800 text-zinc-500 uppercase tracking-wider">
+                  No blame timeline history found.
+                </div>
+              ) : (
+                <div className="relative border-l border-zinc-800 ml-4 pl-6 space-y-8">
+                  {blameHistory.map((item: any, i: number) => (
+                    <div key={i} className="relative">
+                      {/* Timeline Dot */}
+                      <span className="absolute -left-[34px] top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-orange-500/10 border border-orange-500 text-[10px] text-orange-500 font-bold">
+                        {i + 1}
+                      </span>
+                      
+                      <div className="bg-[#0a0a0a] border border-zinc-800 p-4 rounded-lg space-y-3">
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <span className="text-[11px] font-bold text-orange-500 uppercase">Version v{item.brain_versions?.version || i + 1}</span>
+                            <span className="mx-2 text-zinc-700">|</span>
+                            <span className="text-[10px] text-zinc-500 uppercase">{new Date(item.created_at).toLocaleString()}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 text-[10px] rounded uppercase font-bold ${
+                            item.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                          }`}>{item.status}</span>
+                        </div>
+                        
+                        <div className="text-[11px] text-zinc-400 uppercase tracking-wider">
+                          <span className="text-zinc-600 font-bold">Evolution:</span> {item.brain_versions?.evolution_reason || "Initial proposal merge"}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[10px] text-zinc-500 uppercase">
+                          <div>Source: <span className="text-zinc-400">{item.source_path || "Unknown"}</span></div>
+                          <div>Agent Type: <span className="text-zinc-400">{item.source_type}</span></div>
+                        </div>
+
+                        <pre className="text-[10px] text-zinc-400 bg-black/50 p-3 overflow-x-auto whitespace-pre-wrap rounded">
+                          {JSON.stringify(item.content, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="border-t border-zinc-800 pt-4">
+            <Button 
+              onClick={() => setBlameModalOpen(false)}
+              className="bg-zinc-800 hover:bg-zinc-700 text-white font-mono text-xs uppercase tracking-widest rounded-none h-10 px-6"
+            >
+              Close Blame
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

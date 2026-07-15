@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (!token && body.key) token = body.key
 
     if (token) {
-      if (!checkRateLimit(token, 60, 60)) {
+      if (!await checkRateLimit(token, 60, 60)) {
         return NextResponse.json({ error: 'Rate limit exceeded (60 per min)' }, { status: 429 })
       }
     }
@@ -38,6 +38,8 @@ export async function POST(req: Request) {
     const { supabaseAdmin, agentId: jwtAgentId } = auth
     const { project, content_hash, payload } = body
     const agentId = jwtAgentId ?? body.agent_id
+
+    console.warn(`Deprecation Warning: /api/sdk/contracts called by agent [${agentId || 'unknown'}]. Use /api/sdk/proposals instead.`)
 
     if (!project || !content_hash || !payload) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -89,12 +91,14 @@ export async function POST(req: Request) {
           .select('id')
           .eq('content_hash', content_hash)
           .single()
-        return NextResponse.json({
+        const response = NextResponse.json({
           contract_id: existing?.id,
           proposal_id: existing?.id,
           status: 'already_exists',
           deprecated: 'Use /api/sdk/proposals and publish_proposal().'
         })
+        response.headers.set('X-Deprecation-Warning', '/api/sdk/contracts is deprecated. Use /api/sdk/proposals.')
+        return response
       }
       throw insertError
     }
@@ -115,12 +119,14 @@ export async function POST(req: Request) {
         details: { contract_id: proposal.id, proposal_id: proposal.id, hash: content_hash, legacy_endpoint: true }
       })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       contract_id: proposal.id,
       proposal_id: proposal.id,
       status: 'submitted',
       deprecated: 'Use /api/sdk/proposals and publish_proposal().'
     })
+    response.headers.set('X-Deprecation-Warning', '/api/sdk/contracts is deprecated. Use /api/sdk/proposals.')
+    return response
 
   } catch (err) {
     console.error('Contract publish error:', err)

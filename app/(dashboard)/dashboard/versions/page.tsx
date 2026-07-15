@@ -10,6 +10,15 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
 import { loadDemoData } from "@/app/actions/demo";
 import { useToast } from "@/components/ui/use-toast";
+import { createClient } from "@/lib/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Project {
   id: string;
@@ -34,6 +43,7 @@ function VersionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const supabase = React.useMemo(() => createClient(), []);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
@@ -42,9 +52,37 @@ function VersionsContent() {
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
 
+  // Connection auth and diff modals
+  const [connectKey, setConnectKey] = useState<string>("");
+  const [diffModalOpen, setDiffModalOpen] = useState(false);
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffVersionA, setDiffVersionA] = useState<number | string>("");
+  const [diffVersionB, setDiffVersionB] = useState<number | string>("");
+  const [diffData, setDiffData] = useState<{ added: any[]; modified: any[]; removed: any[] }>({ added: [], modified: [], removed: [] });
+
+  const [rollbackModalOpen, setRollbackModalOpen] = useState(false);
+  const [rollbackTarget, setRollbackTarget] = useState<number | null>(null);
+
   // Comparison State
   const [vBaseline, setVBaseline] = useState<string>("");
   const [vComparison, setVComparison] = useState<string>("");
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('connect_key')
+          .eq('id', session.user.id)
+          .single();
+        if (profile?.connect_key) {
+          setConnectKey(profile.connect_key);
+        }
+      }
+    }
+    loadProfile();
+  }, [supabase]);
 
   // Load projects on mount
   const fetchProjects = async () => {
@@ -129,6 +167,73 @@ function VersionsContent() {
       });
     } finally {
       setDemoLoading(false);
+    }
+  };
+
+  const handleViewDiff = async (vB: number, vA: number | null) => {
+    const baselineVer = vA === null ? 0 : vA;
+    setDiffVersionA(baselineVer);
+    setDiffVersionB(vB);
+    setDiffModalOpen(true);
+    setDiffLoading(true);
+    setDiffData({ added: [], modified: [], removed: [] });
+    try {
+      const res = await fetch("/api/sdk/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "diff",
+          project: selectedProjectId,
+          version_a: baselineVer,
+          version_b: vB,
+          key: connectKey
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const entriesA = data.entries_a || [];
+        const entriesB = data.entries_b || [];
+
+        const mapA = new Map<string, any>(entriesA.map((e: any) => [`${e.category}:${e.title}`, e]));
+        const mapB = new Map<string, any>(entriesB.map((e: any) => [`${e.category}:${e.title}`, e]));
+
+        const addedList: any[] = [];
+        const modifiedList: any[] = [];
+        const removedList: any[] = [];
+
+        mapB.forEach((eb: any, key: string) => {
+          const ea = mapA.get(key);
+          if (!ea) {
+            addedList.push(eb);
+          } else if (ea.content_hash !== eb.content_hash || JSON.stringify(ea.content) !== JSON.stringify(eb.content)) {
+            modifiedList.push({ old: ea, new: eb });
+          }
+        });
+
+        mapA.forEach((ea: any, key: string) => {
+          if (!mapB.has(key)) {
+            removedList.push(ea);
+          }
+        });
+
+        setDiffData({ added: addedList, modified: modifiedList, removed: removedList });
+      } else {
+        const err = await res.json();
+        toast({
+          title: "Error",
+          description: err.error || "Failed to fetch version diff",
+          variant: "destructive"
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to query history",
+        variant: "destructive"
+      });
+    } finally {
+      setDiffLoading(false);
     }
   };
 
@@ -338,10 +443,19 @@ function VersionsContent() {
                         )}
 
                         <div className="flex gap-3 pt-2">
-                          <button className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg text-xs font-mono uppercase tracking-wider transition-all">
+                          <button 
+                            onClick={() => handleViewDiff(version.version, version.parent_version)}
+                            className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg text-xs font-mono uppercase tracking-wider transition-all"
+                          >
                             View Diff
                           </button>
-                          <button className="px-4 py-2 border border-zinc-800 text-zinc-500 hover:text-orange-500 hover:border-orange-500/30 rounded-lg text-xs font-mono uppercase tracking-wider transition-all">
+                          <button 
+                            onClick={() => {
+                              setRollbackTarget(version.version);
+                              setRollbackModalOpen(true);
+                            }}
+                            className="px-4 py-2 border border-zinc-800 text-zinc-500 hover:text-orange-500 hover:border-orange-500/30 rounded-lg text-xs font-mono uppercase tracking-wider transition-all"
+                          >
                             Rollback
                           </button>
                         </div>
@@ -434,6 +548,145 @@ function VersionsContent() {
               </div>
             </div>
           )}
+          {/* Diff Modal */}
+          <Dialog open={diffModalOpen} onOpenChange={setDiffModalOpen}>
+            <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-2xl rounded-none border-t-2 border-t-orange-500 overflow-y-auto max-h-[85vh]">
+              <DialogHeader>
+                <DialogTitle className="font-mono text-base uppercase tracking-widest text-white flex items-center gap-2">
+                  <GitBranch className="w-5 h-5 text-orange-500" />
+                  Diff version v{diffVersionA} → v{diffVersionB}
+                </DialogTitle>
+                <DialogDescription className="font-mono text-xs uppercase tracking-wider text-zinc-500 pt-1">
+                  Changes compiled into version {diffVersionB} from predecessor {diffVersionA}
+                </DialogDescription>
+              </DialogHeader>
+
+              {diffLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                  <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Computing changeset...</span>
+                </div>
+              ) : (
+                <div className="space-y-6 py-4 font-mono text-xs">
+                  {diffData.added.length === 0 && diffData.modified.length === 0 && diffData.removed.length === 0 ? (
+                    <div className="text-center py-6 border border-zinc-800 text-zinc-500 uppercase tracking-wider">
+                      No additions, modifications, or deprecations detected.
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Added */}
+                      {diffData.added.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-green-400 font-bold uppercase tracking-wider border-b border-green-500/20 pb-1">
+                            Added Entries ({diffData.added.length})
+                          </h4>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                            {diffData.added.map((entry: any, i: number) => (
+                              <div key={i} className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg">
+                                <div className="font-bold text-white uppercase">[ADDED] [{entry.category}] {entry.title}</div>
+                                <pre className="mt-2 text-[10px] text-green-400/80 bg-black/40 p-2 overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(entry.content, null, 2)}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Modified */}
+                      {diffData.modified.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-yellow-500 font-bold uppercase tracking-wider border-b border-yellow-500/20 pb-1">
+                            Modified Entries ({diffData.modified.length})
+                          </h4>
+                          <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                            {diffData.modified.map((mod: any, i: number) => (
+                              <div key={i} className="p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-lg space-y-2">
+                                <div className="font-bold text-white uppercase">[MODIFIED] [{mod.new.category}] {mod.new.title}</div>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                  <div>
+                                    <div className="text-[10px] text-zinc-500 uppercase mb-1">Previous:</div>
+                                    <pre className="text-[10px] text-red-400/80 bg-red-950/20 p-2 overflow-x-auto whitespace-pre-wrap">
+                                      {JSON.stringify(mod.old.content, null, 2)}
+                                    </pre>
+                                  </div>
+                                  <div>
+                                    <div className="text-[10px] text-zinc-500 uppercase mb-1">Updated:</div>
+                                    <pre className="text-[10px] text-green-400/80 bg-green-950/20 p-2 overflow-x-auto whitespace-pre-wrap">
+                                      {JSON.stringify(mod.new.content, null, 2)}
+                                    </pre>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Removed */}
+                      {diffData.removed.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-orange-500 font-bold uppercase tracking-wider border-b border-orange-500/20 pb-1">
+                            Removed / Deprecated Entries ({diffData.removed.length})
+                          </h4>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                            {diffData.removed.map((entry: any, i: number) => (
+                              <div key={i} className="p-3 bg-orange-500/5 border border-orange-500/10 rounded-lg">
+                                <div className="font-bold text-white uppercase">[DEPRECATED] [{entry.category}] {entry.title}</div>
+                                <pre className="mt-2 text-[10px] text-orange-400/80 bg-black/40 p-2 overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(entry.content, null, 2)}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter className="border-t border-zinc-800 pt-4">
+                <Button 
+                  onClick={() => setDiffModalOpen(false)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-mono text-xs uppercase tracking-widest rounded-none h-10 px-6 animate-all"
+                >
+                  Close Diff
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Rollback Modal */}
+          <Dialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen}>
+            <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-md rounded-none border-t-2 border-t-red-600">
+              <DialogHeader>
+                <DialogTitle className="font-mono text-base uppercase tracking-widest text-red-500 flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Revert to v{rollbackTarget} Restricted
+                </DialogTitle>
+              </DialogHeader>
+              <div className="font-mono text-xs uppercase tracking-wider text-zinc-400 pt-4 space-y-4 leading-relaxed">
+                <p>
+                  AgentHelm maintains strict governance auditability. Reverting the Project Brain directly is restricted to prevent state contamination and history tampering.
+                </p>
+                <p className="bg-red-500/5 border border-red-500/20 p-4 text-red-400/80">
+                  To roll back, please submit a new knowledge proposal that reinstates the entries from v{rollbackTarget} via the compiler pipeline. Reverting history directly is disabled.
+                </p>
+                <p className="text-zinc-500">
+                  An automated proposal generator that automatically builds a rollback changeset proposal will be available in a future update.
+                </p>
+              </div>
+              <DialogFooter className="pt-6">
+                <Button 
+                  onClick={() => setRollbackModalOpen(false)}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-mono text-xs uppercase tracking-widest rounded-none h-10"
+                >
+                  Acknowledge
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>
