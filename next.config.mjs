@@ -52,9 +52,11 @@ const nextConfig = {
   }
 }
 
+import { withSentryConfig } from "@sentry/nextjs"
+
 const enablePwa = process.env.ENABLE_PWA === "true"
 
-export default enablePwa
+const exportedConfig = enablePwa
   ? withPWA({
       dest: "public",
       register: true,
@@ -62,3 +64,10 @@ export default enablePwa
       disable: process.env.NODE_ENV === "development",
     })(nextConfig)
   : nextConfig
+
+export default withSentryConfig(exportedConfig, {
+  silent: true,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+})

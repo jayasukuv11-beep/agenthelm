@@ -89,6 +89,28 @@ agent.output({ score: 0.92 }, 'sentiment_results');
 
 ---
 
+## 🛰️ Model Context Protocol (MCP) Server
+
+AgentHelm includes a built-in MCP server allowing LLM clients (like Claude Desktop, Cursor, or Windsurf) to fetch context, submit proposals, and query history.
+
+### Running the MCP Server
+You can run the server directly via `npx` (make sure to set the configuration environment variables):
+
+```bash
+export AGENTHELM_CONNECT_KEY="your_connect_key"
+export AGENTHELM_PROJECT="your_project_id_or_agent_id"
+export AGENTHELM_BASE_URL="https://agenthelm.online" # Or http://localhost:3000 for local dev
+
+npx agenthelm-mcp
+```
+
+### Exposed Tools
+- **`get_context`**: Fetch versioned guidelines, decisions, and schema context.
+- **`propose_knowledge`**: Propose architectural updates and engineering decisions.
+- **`get_history`**: Query the history logs, blame, show, or diff version changes.
+
+---
+
 ## 📲 The Safety Bridge (Telegram)
 
 AgentHelm bridges the gap between your server and your pocket. When an agent hits a method decorated with `@irreversible`, you receive a rich alert on Telegram:

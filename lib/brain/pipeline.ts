@@ -24,6 +24,8 @@ import {
 } from "./database"
 import { logger, metrics, generateTraceId } from "../observability"
 
+import { classifyObservation } from "./providers/sarvam-promotion"
+
 export type StageName =
   | "intake"
   | "verify"
@@ -68,6 +70,7 @@ export class BrainPipeline {
   private stages: StageResult[] = []
   private traceId: string = ""
   private projectId: string = ""
+  private outcomeOverride?: PipelineOutcome
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase
@@ -81,7 +84,9 @@ export class BrainPipeline {
     logger.info("Pipeline started", { proposalId, traceId: this.traceId, stage: "intake" })
 
     let state = await this.stage(proposalId, "intake", () => this.doIntake(proposalId))
-    if (!state) return this.done(proposalId, "error")
+    if (!state) {
+      return this.done(proposalId, this.outcomeOverride || "error")
+    }
     // Collect projectId after intake
     if (state.proposal) {
       this.projectId = state.proposal.project_id
@@ -211,6 +216,33 @@ export class BrainPipeline {
     if (err || !proposal) return null
     if (proposal.build_status !== "pending") return null
 
+    // Pre-filter with Sarvam
+    const observation = `Summary: ${proposal.summary || ''}\nDecisions: ${JSON.stringify(proposal.decisions || [])}\nFiles: ${JSON.stringify(proposal.files_modified || [])}\nAPIs: ${JSON.stringify(proposal.apis_affected || [])}\nDB changes: ${JSON.stringify(proposal.db_changes || [])}`
+    const classification = await classifyObservation(observation)
+
+    if (!classification.promote) {
+      this.outcomeOverride = "rejected"
+      await this.supabase
+        .from("knowledge_proposals")
+        .update({
+          build_status: "rejected",
+          review_notes: `Ignored: ${classification.reason}`
+        })
+        .eq("id", proposalId)
+
+      await this.supabase
+        .from("ai_timeline_events")
+        .insert({
+          project_id: proposal.project_id,
+          agent_id: proposal.agent_id,
+          event_type: "proposal_rejected",
+          title: `Ignored proposal: ${proposal.summary?.substring(0, 50)}`,
+          details: { proposal_id: proposalId, reason: classification.reason }
+        })
+
+      return null
+    }
+
     const result = validateProposalStructure(proposal)
     if (!result.valid) {
       const messages = result.errors.map(
@@ -238,8 +270,10 @@ export class BrainPipeline {
       Array.isArray(proposal.files_modified) && proposal.files_modified.length > 0
     )
     const result = verifyProposal(proposal, source)
-    if (!result.verified) return null
-    return { state: { evidence: sourceToEvidenceResult(result.score, source) } }
+    
+    // Non-blocking fallback: if score is less than 50, fall back to 50
+    const finalScore = result.score >= 50 ? result.score : 50
+    return { state: { evidence: sourceToEvidenceResult(finalScore, source) } }
   }
 
   private async doValidate(

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (!token && body.key) token = body.key
 
     if (token) {
-      if (!checkRateLimit(token, 60, 60)) {
+      if (!await checkRateLimit(token, 60, 60)) {
         return NextResponse.json({ error: 'Rate limit exceeded (60 per min)' }, { status: 429 })
       }
     }

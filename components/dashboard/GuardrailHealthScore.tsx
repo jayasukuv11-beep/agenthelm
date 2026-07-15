@@ -89,7 +89,7 @@ export function GuardrailHealthScore({ plan, totalLogs, totalToolExecutions, inj
           <div className="absolute inset-0 top-12 z-10 backdrop-blur-[2px] bg-[#050505]/70 flex flex-col items-center justify-center pt-4">
             <Lock className="w-5 h-5 text-zinc-500 mb-2" />
             <p className="text-[11px] font-mono uppercase tracking-widest text-white font-bold">Detailed Breakdown Available on Indie+</p>
-            <UpgradeButton plan={plan as any} label="Upgrade" className="mt-3 text-[10px] h-8 rounded-none uppercase tracking-widest font-mono" />
+            <UpgradeButton plan="indie" label="Upgrade" className="mt-3 text-[10px] h-8 rounded-none uppercase tracking-widest font-mono" />
           </div>
         )}
 

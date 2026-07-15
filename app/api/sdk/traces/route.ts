@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { validateConnectKey, hasError } from '../../../../lib/sdk-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,31 +11,32 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const agent_id = searchParams.get('agent_id');
     const task_id = searchParams.get('task_id');
-    const userId = req.headers.get("x-user-id"); // In production, require Auth or a valid API key
     
-    // Quick simple init using service role to bypass RLS for API ingestion/reading,
-    // though typically you'd protect this endpoint with either an API key or session.
-    // For this dashboard endpoint, we assume it's protected by middleware or the
-    // front-end calls it with proper session. We'll use the regular client.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+    const authHeader = req.headers.get('authorization');
+    const connectKey = authHeader ? authHeader.replace('Bearer ', '') : (req.headers.get('x-connect-key') || searchParams.get('key'));
+
+    const auth = await validateConnectKey(connectKey);
+    if (hasError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { userId, supabaseAdmin } = auth;
 
     if (task_id) {
       // Return a full trace for a specific task
       const [taskReq, toolsReq, checksReq, reasoningReq] = await Promise.all([
-        supabase.from('agent_tasks').select('*').eq('id', task_id).single(),
-        supabase.from('tool_executions').select('*').eq('task_id', task_id).order('created_at', { ascending: true }),
-        supabase.from('agent_checkpoints').select('*').eq('task_id', task_id).order('step_index', { ascending: true }),
-        supabase.from('agent_reasoning_steps').select('*').eq('task_id', task_id).order('step_index', { ascending: true })
+        supabaseAdmin.from('agent_tasks').select('*').eq('id', task_id).single(),
+        supabaseAdmin.from('tool_executions').select('*').eq('task_id', task_id).order('created_at', { ascending: true }),
+        supabaseAdmin.from('agent_checkpoints').select('*').eq('task_id', task_id).order('step_index', { ascending: true }),
+        supabaseAdmin.from('agent_reasoning_steps').select('*').eq('task_id', task_id).order('step_index', { ascending: true })
       ]);
 
-      if (taskReq.error) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+      if (taskReq.error || !taskReq.data) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+
+      // Verify that the task belongs to the authenticated user
+      if (taskReq.data.user_id !== userId) {
+        return NextResponse.json({ error: 'Unauthorized task access' }, { status: 403 });
+      }
 
       // Join tool executions and checkpoints loosely by looking at timestamps or step sequence.
       // For now, we just return them all and let the client dashboard align them.
@@ -48,11 +49,26 @@ export async function GET(req: Request) {
     }
 
     if (agent_id) {
+      // Verify that the agent belongs to the authenticated user
+      const { data: agent, error: agentErr } = await supabaseAdmin
+        .from('agents')
+        .select('user_id')
+        .eq('id', agent_id)
+        .single();
+
+      if (agentErr || !agent) {
+        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      }
+
+      if (agent.user_id !== userId) {
+        return NextResponse.json({ error: 'Unauthorized agent access' }, { status: 403 });
+      }
+
       // Basic free tier limits to 5, indie to 100 for now.
       // Real implementation would look up user's plan. Assume 100 max for UI.
       const limit = Number(searchParams.get('limit') || '50');
       
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('agent_tasks')
         .select('*')
         .eq('agent_id', agent_id)

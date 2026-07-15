@@ -33,6 +33,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -61,3 +62,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 *.log
+
+# Benchmarks & Runs
+/agent_bench/
+/agent_bench_v2/
+/agent_test_run/
+/output/

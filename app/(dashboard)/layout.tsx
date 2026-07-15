@@ -1,9 +1,11 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle, Network, Shield, Folder, Brain, BookOpen, Zap, GitBranch, Activity } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle, Network, Shield, Folder, Brain, BookOpen, Zap, GitBranch, Activity, MoreHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import DashboardErrorBoundary from "@/components/dashboard/DashboardErrorBoundary";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
@@ -26,6 +28,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [showMobileMore, setShowMobileMore] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -81,14 +84,16 @@ export default function DashboardLayout({
          {/* Industrial Grid Background */}
          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
         <div className="p-6 md:p-8 max-w-7xl mx-auto relative z-10">
-          {children}
+          <DashboardErrorBoundary>
+            {children}
+          </DashboardErrorBoundary>
         </div>
       </main>
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-[#111] z-50">
         <div className="flex items-center justify-around p-2">
-          {navItems.map((item) => {
+          {navItems.slice(0, 4).map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
@@ -98,11 +103,43 @@ export default function DashboardLayout({
                   ${isActive ? "text-orange-500" : "text-zinc-500"}`}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-[9px] font-mono uppercase tracking-widest">{item.label}</span>
+                <span className="text-[9px] font-mono uppercase tracking-widest">{item.label.split(" ")[0]}</span>
               </Link>
             );
           })}
+          <button
+            onClick={() => setShowMobileMore(!showMobileMore)}
+            className={`flex flex-col items-center gap-1 p-2
+              ${showMobileMore ? "text-orange-500" : "text-zinc-500"}`}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+            <span className="text-[9px] font-mono uppercase tracking-widest">More</span>
+          </button>
         </div>
+
+        {/* Mobile More Panel */}
+        {showMobileMore && (
+          <div className="absolute bottom-16 left-0 right-0 bg-[#111] border-t border-zinc-800 p-4 grid grid-cols-2 gap-2 shadow-2xl z-40">
+            {navItems.slice(4).map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setShowMobileMore(false)}
+                  className={`flex items-center gap-3 px-3 py-3 border font-mono text-[11px] uppercase tracking-wider transition-all
+                    ${isActive 
+                      ? "bg-orange-500/10 text-orange-500 border-orange-500/30" 
+                      : "text-zinc-400 bg-black/30 border-transparent hover:text-white"
+                    }`}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
     </div>
   );
