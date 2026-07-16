@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { buildMergePlan } from "./merge-plan"
-import { MergePlanEntryInput, AnalysisResult } from "./types"
+import { buildMergePlan, MergePlanEntryInput } from "./merge-plan"
+import { AnalysisResult } from "./types"
 
 function makeEntry(category: string, title: string): MergePlanEntryInput {
   return {

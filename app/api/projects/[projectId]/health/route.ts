@@ -18,7 +18,7 @@ export async function GET(
     const projectId = params.projectId
     
     // 1. Authenticate user session
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: authData, error: authError } = await supabase.auth.getUser()
 
     if (authError || !authData.user) {

@@ -12,7 +12,7 @@ describe("sdk-auth env validation", () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY
     process.env.NEXT_PHASE = "phase-production-server"
 
-    // Dynamic import to trigger module load validation
+    // @ts-expect-error - Query parameter is used to bypass module caching in Vitest dynamic imports
     await expect(import("../lib/sdk-auth?test_uncached=1")).rejects.toThrow(
       "FATAL: ENCRYPTION_KEY or SUPABASE_SERVICE_ROLE_KEY"
     )
@@ -39,6 +39,7 @@ describe("sdk-auth env validation", () => {
     process.env.NEXT_PHASE = "phase-production-build"
 
     // Dynamic import should load successfully with fallback
+    // @ts-expect-error - Query parameter is used to bypass module caching in Vitest dynamic imports
     const auth = await import("../lib/sdk-auth?test_uncached=2")
     expect(auth).toBeDefined()
 
