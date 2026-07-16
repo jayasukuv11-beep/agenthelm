@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: { projectId: string; proposalId: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: authData, error: authError } = await supabase.auth.getUser()
 
     if (authError || !authData.user) {

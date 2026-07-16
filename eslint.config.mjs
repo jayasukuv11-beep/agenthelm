@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "sdk/node/dist/**",
+    "mcp-server/dist/**",
     "sdk/node/build-esm.js",
     "sdk/python/**",
     ".pytest_cache/**",

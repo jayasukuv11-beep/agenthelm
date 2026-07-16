@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: { projectId: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: authData, error: authError } = await supabase.auth.getUser()
 
     if (authError || !authData.user) {
