@@ -19,7 +19,16 @@ export async function updateSession(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll().map((cookie) => {
+            let value = cookie.value
+            if (value.startsWith('"') && value.endsWith('"')) {
+              value = value.slice(1, -1)
+            }
+            return {
+              name: cookie.name,
+              value,
+            }
+          })
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
