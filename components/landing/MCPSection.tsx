@@ -202,11 +202,12 @@ export default function MCPSection() {
               
               <div className="space-y-1.5 text-zinc-300">
                 {terminalText.map((line, idx) => {
-                  const isPrompt = line.startsWith("agenthelm ")
-                  const isDecision = line.startsWith("  DECISION:")
-                  const isAffected = line.startsWith("  AFFECTED:")
-                  const isReason = line.startsWith("  REASON:")
-                  const isHeader = line.startsWith("COMMIT ")
+                  const safeLine = line || ""
+                  const isPrompt = safeLine.startsWith("agenthelm ")
+                  const isDecision = safeLine.startsWith("  DECISION:")
+                  const isAffected = safeLine.startsWith("  AFFECTED:")
+                  const isReason = safeLine.startsWith("  REASON:")
+                  const isHeader = safeLine.startsWith("COMMIT ")
 
                   let className = "text-zinc-400"
                   if (isPrompt) className = "text-cyan-400 font-bold"
