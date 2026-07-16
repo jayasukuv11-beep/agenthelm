@@ -76,14 +76,14 @@ const integrations = [
 
 export default function IntegrationsSection() {
   return (
-    <section id="integrations" className="py-20 px-6 bg-[#0a0a0a] border-y border-zinc-900">
+    <section id="integrations" className="py-24 px-6 bg-[#08080a] border-y border-zinc-900">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">ECOSYSTEM</span>
           <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
             Works With Your <span className="text-orange-500">Stack</span>
           </h2>
-          <p className="text-zinc-500 font-mono text-sm max-w-xl mx-auto">
+          <p className="text-zinc-400 font-mono text-sm max-w-xl mx-auto">
             AgentHelm sits between your agents and the brain. Any framework. Any model. Any cloud.
           </p>
         </div>
@@ -137,19 +137,19 @@ export default function IntegrationsSection() {
 
         {/* Universal SDK Message */}
         <motion.div
-          className="mt-16 p-8 bg-gradient-to-r from-orange-950/30 to-purple-950/30 border border-orange-500/30 rounded-2xl text-center"
+          className="mt-16 p-8 bg-gradient-to-br from-orange-950/15 to-[#111113] border border-zinc-800 rounded-2xl text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h3 className="font-mono text-xl font-bold text-white uppercase tracking-wider mb-4">
-            One SDK. Universal Compatibility.
+          <h3 className="font-mono text-lg font-bold text-white uppercase tracking-wider mb-4">
+            Unified SDK. Universal Compatibility.
           </h3>
-          <p className="text-zinc-400 font-mono text-sm mb-6 max-w-2xl mx-auto">
+          <p className="text-zinc-400 font-mono text-xs mb-6 max-w-2xl mx-auto leading-relaxed">
             AgentHelm's SDK wraps any agent framework. No vendor lock-in. Switch frameworks without rewriting your governance layer.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            {["Python", "TypeScript", "Go", "Rust", "REST API", "Custom"].map((tech) => (
+            {["Python SDK", "Node.js SDK", "REST API"].map((tech) => (
               <span key={tech} className="px-3 py-1 bg-zinc-900/50 border border-zinc-800 rounded-lg font-mono text-xs text-zinc-400">
                 {tech}
               </span>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Brain, Zap, Terminal, GitBranch, Server, Database, Globe, Users, ArrowRight } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 
 const agents = [
   { name: "Claude Code", icon: Terminal, color: "text-orange-500", bg: "bg-orange-500/10" },
@@ -27,8 +27,16 @@ export default function HeroAnimation() {
   const [agentIndex, setAgentIndex] = useState(0)
   const [pipelineIndex, setPipelineIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const shouldReduceMotion = useReducedMotion()
 
   useEffect(() => {
+    if (shouldReduceMotion) {
+      setPhase("context")
+      setAgentIndex(agents.length - 1)
+      setPipelineIndex(pipelineStages.length - 1)
+      return
+    }
+
     const sequence = async () => {
       // Phase 1: Agents flow in
       setPhase("agents")
@@ -62,7 +70,7 @@ export default function HeroAnimation() {
 
     const timer = setTimeout(sequence, 500)
     return () => clearTimeout(timer)
-  }, [])
+  }, [shouldReduceMotion])
 
   return (
     <div
@@ -280,7 +288,7 @@ export default function HeroAnimation() {
               transition={{ delay: 0.5 }}
             >
               <p className="font-mono text-lg font-bold text-white uppercase tracking-widest">Project Brain</p>
-              <p className="font-mono text-xs text-zinc-500 uppercase tracking-wider mt-1">v3.2.1 · 1,247 entries · 94% coverage</p>
+              <p className="font-mono text-xs text-zinc-550 uppercase tracking-wider mt-1">Active Memory · Sync Active · v3.2.1</p>
             </motion.div>
           </motion.div>
         )}

@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const viewport: Viewport = {
   themeColor: "#ff5722",
@@ -179,7 +180,7 @@ export default function RootLayout({
           />
         ))}
       </head>
-      <body className={`${inter.className} bg-[#0a0a0a] text-zinc-100 antialiased selection:bg-[#ff5722] selection:text-white`}>
+      <body className={`${inter.className} ${jetbrainsMono.variable} bg-[#0a0a0a] text-zinc-100 antialiased selection:bg-[#ff5722] selection:text-white`}>
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe
