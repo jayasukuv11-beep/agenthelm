@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Terminal, Copy, Check, ShieldAlert, GitBranch, Cpu, ArrowRight } from "lucide-react"
+import { Copy, Check, GitBranch, Cpu, ArrowRight } from "lucide-react"
 
 const tabData = [
   {
