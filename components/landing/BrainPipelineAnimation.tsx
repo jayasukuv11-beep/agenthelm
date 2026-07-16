@@ -20,74 +20,65 @@ import {
 const stages = [
   {
     id: "proposal",
-    name: "Proposal",
+    name: "Proposal Ingestion",
     icon: FileText,
-    desc: "Agent submits knowledge proposal with decisions, files, APIs, DB changes",
-    duration: "~200ms",
+    desc: "Agent submits knowledge proposal containing decisions, files, APIs, DB changes",
     status: "completed" as const,
   },
   {
     id: "sanitize",
-    name: "Sanitize",
+    name: "Sanitization",
     icon: Shield,
-    desc: "Remove secrets, PII, normalize formatting, validate structure",
-    duration: "~150ms",
+    desc: "Strips secrets, PII, normalizes markdown formatting, validates schema structure",
     status: "completed" as const,
   },
   {
     id: "permissions",
-    name: "Permissions",
+    name: "Permissions Validation",
     icon: Shield,
-    desc: "Validate agent permissions, scope tools, enforce block mode",
-    duration: "~100ms",
+    desc: "Check tool scopes allowlist (@read, @side_effect, @irreversible)",
     status: "completed" as const,
   },
   {
-    id: "replay",
-    name: "Replay Protection",
+    id: "auth",
+    name: "Authenticity Check",
     icon: Shield,
-    desc: "Cryptographic nonce verification, prevent replay attacks",
-    duration: "~50ms",
+    desc: "Validate agent registration state and active JWT token signatures",
     status: "completed" as const,
   },
   {
     id: "verification",
-    name: "Verification",
+    name: "Confidence Scoring",
     icon: Search,
-    desc: "Evidence scoring, confidence calculation, cross-reference validation",
-    duration: "~500ms",
+    desc: "Heuristics-based trust scoring and project configuration validation",
     status: "running" as const,
   },
   {
     id: "analysis",
-    name: "Knowledge Analysis",
+    name: "Conflict Analysis",
     icon: Search,
-    desc: "Categorize, extract patterns, detect conflicts, compute supersession",
-    duration: "~800ms",
+    desc: "Inspect active brain entries for logical overrides and structural conflicts",
     status: "pending" as const,
   },
   {
     id: "merge",
-    name: "Merge Planning",
+    name: "Merge Execution",
     icon: GitMerge,
-    desc: "Generate merge plan, resolve conflicts, schedule supersession",
-    duration: "~300ms",
+    desc: "Execute logical additions, mark supersessions, and commit changes",
     status: "pending" as const,
   },
   {
     id: "publish",
-    name: "Publishing",
+    name: "Brain Versioning",
     icon: Package,
-    desc: "Create brain version, update entries, notify subscribers",
-    duration: "~200ms",
+    desc: "Commit update to active database state and publish version tag",
     status: "pending" as const,
   },
   {
     id: "brain",
-    name: "Project Brain",
+    name: "Project Brain Ingestion",
     icon: Brain,
-    desc: "Shared knowledge ready for context injection to all agents",
-    duration: "—",
+    desc: "Update shared brain ready for semantic context injection to active agents",
     status: "pending" as const,
   },
 ]
@@ -109,9 +100,9 @@ export default function BrainPipelineAnimation() {
       for (let i = 0; i < stages.length; i++) {
         setCurrentStage(i)
         // Add log entry
-        setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Starting ${stages[i].name}...`])
+        setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Ingesting ${stages[i].name}...`])
         await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000))
-        setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${stages[i].name} completed (${stages[i].duration})`])
+        setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Completed ${stages[i].name}`])
       }
       // Loop
       setTimeout(() => {
@@ -169,15 +160,12 @@ export default function BrainPipelineAnimation() {
                   </span>
                   {isActive && (
                     <motion.span
-                      className="font-mono text-xs text-orange-500"
+                      className="font-mono text-xs text-orange-500 uppercase tracking-widest"
                       animate={{ opacity: [0.5, 1, 0.5] }}
                       transition={{ duration: 1, repeat: Infinity }}
                     >
-                      {stage.duration}
+                      Active
                     </motion.span>
-                  )}
-                  {!isActive && !isCompleted && (
-                    <span className="font-mono text-xs text-zinc-600">{stage.duration}</span>
                   )}
                 </div>
                 <p className={`font-mono text-xs leading-relaxed ${isCompleted || isActive ? "text-zinc-400" : "text-zinc-600"}`}>
