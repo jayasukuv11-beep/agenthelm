@@ -84,6 +84,8 @@ export default function HeroAnimation() {
         {phase !== "agents" && (
           <motion.svg
             className="absolute left-1/2 top-[100px] -translate-x-1/2 w-[80%] h-[60px] pointer-events-none"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -95,7 +97,7 @@ export default function HeroAnimation() {
               </linearGradient>
             </defs>
             <path
-              d="M 50%,0 C 50%,30% 50%,70% 50%,100%"
+              d="M 50,0 C 50,30 50,70 50,100"
               stroke="url(#flowGradient)"
               strokeWidth="2"
               fill="none"
