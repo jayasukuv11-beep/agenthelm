@@ -9,9 +9,7 @@ import {
   GitMerge,
   Package,
   Brain,
-  Zap,
   CheckCircle,
-  AlertCircle,
   Clock,
   XCircle,
   Loader2
