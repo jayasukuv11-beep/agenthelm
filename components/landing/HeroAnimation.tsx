@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Brain, Zap, Terminal, GitBranch, Server, Database, Globe, Users, ArrowRight } from "lucide-react"
+import { Brain, Zap, Terminal, GitBranch, Server, Users, ArrowRight } from "lucide-react"
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 
 const agents = [
@@ -24,24 +24,23 @@ const pipelineStages = [
 
 export default function HeroAnimation() {
   const [phase, setPhase] = useState<"agents" | "pipeline" | "brain" | "context">("agents")
-  const [agentIndex, setAgentIndex] = useState(0)
   const [pipelineIndex, setPipelineIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const shouldReduceMotion = useReducedMotion()
 
   useEffect(() => {
     if (shouldReduceMotion) {
-      setPhase("context")
-      setAgentIndex(agents.length - 1)
-      setPipelineIndex(pipelineStages.length - 1)
-      return
+      const t = setTimeout(() => {
+        setPhase("context")
+        setPipelineIndex(pipelineStages.length - 1)
+      }, 0)
+      return () => clearTimeout(t)
     }
 
     const sequence = async () => {
       // Phase 1: Agents flow in
       setPhase("agents")
       for (let i = 0; i < agents.length; i++) {
-        setAgentIndex(i)
         await new Promise(r => setTimeout(r, 400))
       }
       await new Promise(r => setTimeout(r, 600))
@@ -63,7 +62,6 @@ export default function HeroAnimation() {
       await new Promise(r => setTimeout(r, 1000))
 
       // Loop
-      setAgentIndex(0)
       setPipelineIndex(0)
       sequence()
     }

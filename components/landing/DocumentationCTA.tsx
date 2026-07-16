@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { ArrowRight, BookOpen, Terminal, Zap, GitBranch, ExternalLink, Check, Copy } from "lucide-react"
+import { ArrowRight, BookOpen, Terminal, Zap, GitBranch, Check, Copy } from "lucide-react"
 
 const docSections = [
   {
