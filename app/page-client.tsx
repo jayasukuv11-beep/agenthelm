@@ -68,8 +68,8 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
               The <span className="text-[#ff6b35]">Brain Pipeline</span>
             </h2>
-            <p className="text-zinc-400 font-mono text-sm max-w-xl mx-auto">
-              Knowledge flows through a secure pipeline: proposal → validation → verification → analysis → merge planning → publishing → Project Brain → context injection.
+            <p className="text-zinc-400 font-mono text-sm max-w-2xl mx-auto">
+              Knowledge flows through a secure pipeline: proposal → noise filter → validation → verification → analysis → merge planning → publishing → Project Brain → context injection.
             </p>
           </div>
           <BrainPipelineAnimation />
