@@ -2,6 +2,22 @@
 
 All notable changes to the `agenthelm-sdk` (Python) will be documented in this file.
 
+## [1.1.3] - 2026-07-17
+
+### Fixed
+- Fixed PyPI package metadata so package description renders properly.
+
+## [1.1.2] - 2026-07-17
+
+### Added
+- Documented unique advanced features (Project Brain Context, Knowledge Proposals, Swarm Coordination, and State Claims) in the README.
+
+## [1.1.1] - 2026-07-17
+
+### Fixed
+- Fixed `@agent.read()` decorator to support being invoked both with or without parentheses.
+- Fixed `build_sdist.py` and `upload_sdist.py` to support correct bundling and version resolution.
+
 ## [1.1.0] - 2026-07-07
 
 ### Added

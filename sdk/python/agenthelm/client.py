@@ -1511,7 +1511,7 @@ class Agent:
     
     # ─── CLASSIFICATION-FIRST DECORATORS ─────────────────
     
-    def read(self, func: Callable) -> Callable:
+    def read(self, func: Optional[Callable] = None) -> Callable:
         """
         Decorator: marks a tool call as read-only.
         Unlimited retries, no human confirmation needed.
@@ -1521,6 +1521,9 @@ class Agent:
             def search_web(query):
                 return google.search(query)
         """
+        if func is None:
+            return lambda f: self.read(f)
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             tool_name = func.__name__
