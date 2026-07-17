@@ -12,10 +12,18 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Loader2
+  Loader2,
+  Filter
 } from "lucide-react"
 
 const stages = [
+  {
+    id: "noise-filter",
+    name: "Noise Filter",
+    icon: Filter,
+    desc: "Sarvam-30B classifies raw agent observations as worth compiling or routine noise, before they're considered as a formal proposal",
+    status: "completed" as const,
+  },
   {
     id: "proposal",
     name: "Proposal Ingestion",
