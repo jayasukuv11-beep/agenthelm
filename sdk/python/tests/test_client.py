@@ -56,3 +56,40 @@ class TestLogging:
             self.dock.track_tokens(500, "test-model")
             self.dock.track_tokens(300, "test-model")
             assert self.dock.tokens_session == 800
+
+class TestSafetyFirewall:
+    def setup_method(self):
+        with patch("requests.post") as mock:
+            mock.return_value.status_code = 200
+            mock.return_value.json.return_value = {
+                "agent_id": "test-id"
+            }
+            self.dock = AgentHelm(
+                "ahe_live_test",
+                auto_ping=False
+            )
+
+    def test_read_decorator_without_parentheses(self):
+        @self.dock.read
+        def test_fn(x):
+            return x + 1
+        assert test_fn(5) == 6
+
+    def test_read_decorator_with_parentheses(self):
+        @self.dock.read()
+        def test_fn(x):
+            return x + 2
+        assert test_fn(5) == 7
+
+    def test_side_effect_decorator(self):
+        call_count = 0
+        @self.dock.side_effect(max_retries=2)
+        def test_fn():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ValueError("temporary error")
+            return "success"
+        assert test_fn() == "success"
+        assert call_count == 2
+

@@ -1,4 +1,4 @@
-export { AgentHelm, connect } from './client'
+export { AgentHelm, AgentHelm as Agent, connect } from './client'
 export type {
   AgentHelmOptions,
   TrackTokensOptions,
@@ -10,4 +10,4 @@ export { OfflineQueue } from './queue'
 export type { QueueItem } from './queue'
 
 // Package version
-export const VERSION = '0.1.0'
+export const VERSION = '1.0.3'

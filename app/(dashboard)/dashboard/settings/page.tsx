@@ -368,7 +368,7 @@ export default function SettingsPage() {
               <pre className="text-[12px] text-zinc-400 font-mono space-y-4 overflow-x-auto">
                 <code>{`# Python\npip install agenthelm-sdk\n\nimport agenthelm\ndock = agenthelm.connect("${profile.connect_key}", name="My Agent")`}</code>
                 <div className="h-px bg-zinc-800 my-4" />
-                <code>{`# Node.js\nnpm install agenthelm-sdk\n\nconst dock = require('agenthelm-sdk')\ndock.connect("${profile.connect_key}", { name: "My Agent" })`}</code>
+                <code>{`# Node.js\nnpm install agenthelm-node-sdk\n\nconst { connect } = require('agenthelm-node-sdk')\nconst dock = connect({ key: "${profile.connect_key}", name: "My Agent" })`}</code>
               </pre>
             </div>
           </div>

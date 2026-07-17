@@ -1,4 +1,4 @@
-# agenthelm-sdk
+# agenthelm-sdk (v1.1.3)
 
 Python SDK for AgentHelm — The Control Plane for AI Agents.
 
@@ -14,6 +14,11 @@ pip install agenthelm-sdk
 - **📊 Token Tracking**: Real-time monitoring of LLM costs and usage (INR/USD).
 - **🛰️ Integrity Checkpoints**: Save/Resume agent state with SHA256 hashing.
 - **🤝 Handshake Protocol**: Secure, JWT-based authentication.
+- **🧠 Project Brain Context**: Read versioned, queryable context from your Project Brain (`agent.get_context()`).
+- **📝 Brain Compiler Proposals**: Propose new knowledge, code changes, and decisions to the Brain Compiler (`agent.propose_knowledge()`).
+- **🤝 Swarm Coordination**: Build and orchestrate multi-agent swarms with parent/child tracking.
+- **💾 Workspace State Locking**: Claim files and prevent conflict overrides across concurrent agent runs (`agent.claim_file()`).
+
 
 # Usage (Standard)
 ```python

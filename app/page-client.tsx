@@ -124,6 +124,21 @@ export default function LandingPage() {
           <p className="text-zinc-600 text-[10px] font-mono mt-4">
             Built in India 🇮🇳 · Engineered for global scale
           </p>
+          <div className="mt-6 flex flex-col items-center justify-center gap-2">
+            <span className="text-zinc-600 text-[9px] uppercase tracking-wider font-mono">Powered by</span>
+            <a 
+              href="https://www.sarvam.ai" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="opacity-40 hover:opacity-80 transition-opacity duration-200"
+            >
+              <img 
+                src="/logos/sarvam-ai.svg" 
+                alt="Sarvam AI" 
+                className="h-[18px] w-auto" 
+              />
+            </a>
+          </div>
         </div>
       </footer>
     </div>
