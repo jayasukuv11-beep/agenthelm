@@ -7,6 +7,7 @@ import { TechnicalLabel } from "./TechnicalLabel"
 
 interface ProjectBrainHealth {
   health: {
+    brain_freshness: number
     quality_score: number
     trust_score: number
     latest_version: number
@@ -40,7 +41,7 @@ export default function ProjectBrainPanel({ projectId }: { projectId: string }) 
     return <div className="p-6 text-sm text-zinc-500 font-mono animate-pulse">Loading Project Brain...</div>
   }
 
-  const { quality_score, trust_score, latest_version, average_confidence, latest_delta, coverage, action_items } = health.health
+  const { brain_freshness, quality_score, trust_score, latest_version, average_confidence, latest_delta, coverage, action_items } = health.health
 
   return (
     <div className="bg-[#111] rounded-xl border border-zinc-800 p-6 shadow-2xl">
@@ -54,7 +55,12 @@ export default function ProjectBrainPanel({ projectId }: { projectId: string }) 
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <StatCard
+          label="Freshness"
+          value={`${brain_freshness}%`}
+          description="Up-to-date knowledge"
+        />
         <StatCard
           label="Quality Score"
           value={`${quality_score}/100`}

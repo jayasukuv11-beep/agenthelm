@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { BookOpen, Search, FileText, CheckCircle, Clock, User, Copy, GitBranch, Brain, Inbox, Zap, Loader2, GitCommit } from "lucide-react";
+import { BookOpen, Search, FileText, CheckCircle, Clock, User, Copy, GitBranch, Brain, Inbox, Zap, Loader2, GitCommit, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,9 @@ interface BrainEntry {
   source_path: string | null;
   confidence: number;
   created_at: string;
+  validity_status?: string;
+  stale_reason?: string;
+  validated_at?: string;
 }
 
 function KnowledgeContent() {
@@ -205,11 +208,31 @@ function KnowledgeContent() {
     const categoryMatch = entry.category.toLowerCase().includes(searchLower);
     const descMatch = (entry.content?.description || "").toLowerCase().includes(searchLower);
     const tagMatch = entry.tags?.some((t) => t.toLowerCase().includes(searchLower)) || false;
-    return titleMatch || categoryMatch || descMatch || tagMatch;
+    const vMatch = (entry.validity_status || "CURRENT").toLowerCase().includes(searchLower);
+    return titleMatch || categoryMatch || descMatch || tagMatch || vMatch;
   });
 
   const getEntryDescription = (entry: BrainEntry) => {
     return entry.content?.description || JSON.stringify(entry.content);
+  };
+
+  const handleRevalidate = async (entryId: string, status: string) => {
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/brain/entries/${entryId}/revalidate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ validity_status: status })
+      });
+      if (res.ok) {
+        toast({ title: "Updated", description: `Knowledge marked as ${status}` });
+        fetchEntries(); // Refresh
+      } else {
+        toast({ title: "Error", description: "Failed to update validity status", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+    }
   };
 
   return (
@@ -335,6 +358,17 @@ function KnowledgeContent() {
                             >
                               {entry.status.toUpperCase()}
                             </span>
+                            <span
+                              className={`px-2 py-0.5 text-xs font-mono rounded ${
+                                (entry.validity_status || 'CURRENT') === 'CURRENT'
+                                  ? "bg-green-500/20 text-green-400"
+                                  : (entry.validity_status === 'NEEDS_REVIEW')
+                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  : "bg-red-500/20 text-red-400"
+                              }`}
+                            >
+                              {(entry.validity_status || 'CURRENT').replace('_', ' ')}
+                            </span>
                             <span className="px-2 py-0.5 text-xs font-mono bg-zinc-800/50 rounded text-zinc-400">
                               {entry.category}
                             </span>
@@ -363,6 +397,20 @@ function KnowledgeContent() {
                           </button>
                         </div>
                       </div>
+                      
+                      {entry.validity_status === 'NEEDS_REVIEW' && (
+                        <div className="bg-yellow-500/10 border-b border-zinc-800 px-4 py-2 flex items-center justify-between">
+                          <span className="text-xs text-yellow-500 font-mono flex items-center gap-2">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            {entry.stale_reason || "Flagged for review due to related project changes"}
+                          </span>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleRevalidate(entry.id, 'CURRENT')} className="text-[10px] font-mono text-green-400 hover:text-green-300 bg-green-500/10 px-2 py-1 rounded">MARK VALID</button>
+                            <button onClick={() => handleRevalidate(entry.id, 'STALE')} className="text-[10px] font-mono text-red-400 hover:text-red-300 bg-red-500/10 px-2 py-1 rounded">MARK STALE</button>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="px-4 py-3 bg-[#111]">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono text-zinc-500">
                           <div className="flex items-center gap-2">

@@ -15,6 +15,7 @@ interface BrainEntry {
   source_path?: string | null
   content_hash?: string | null
   created_at?: string | null
+  validity_status?: string
 }
 
 interface RankedEntry extends BrainEntry {
@@ -61,6 +62,11 @@ function scoreEntry(entry: BrainEntry, taskHint: string | null): RankedEntry {
 
   if (entry.source_type && ['git_commit', 'documentation', 'openapi', 'schema', 'human'].includes(entry.source_type)) {
     relevance += 5
+  }
+
+  // Penalize entries that need review
+  if (entry.validity_status === 'NEEDS_REVIEW') {
+    relevance -= 10
   }
 
   return {
@@ -113,8 +119,13 @@ function buildContext(entries: RankedEntry[], tokenBudget: number) {
         evidence_score: entry.evidence_score,
         source_type: entry.source_type,
         source_path: entry.source_path,
-        relevance_score: entry.relevance_score
+        relevance_score: entry.relevance_score,
+        validity_status: entry.validity_status
       }
+    } as any
+
+    if (entry.validity_status === 'NEEDS_REVIEW') {
+      enrichedContent._warning = "This knowledge may be out of date due to recent project changes. Please review."
     }
 
     if (context[entry.category]) {
@@ -146,7 +157,7 @@ export async function POST(req: Request) {
 
     const { supabaseAdmin } = auth
     const agentId = 'agentId' in auth ? auth.agentId : body.agent_id
-    const { project, task_hint } = body
+    const { project, task_hint, trusted_only = true } = body
     const tokenBudget = Math.min(Math.max(Number(body.max_context_tokens || 3000), 500), 12000)
 
     if (!project) {
@@ -164,11 +175,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    const { data: entries, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('brain_entries')
-      .select('id, category, title, content, confidence, evidence_score, source_type, source_path, content_hash, created_at')
+      .select('id, category, title, content, confidence, evidence_score, source_type, source_path, content_hash, created_at, validity_status')
       .eq('project_id', projectRecord.id)
       .eq('status', 'active')
+
+    if (trusted_only) {
+      query = query.in('validity_status', ['CURRENT', 'NEEDS_REVIEW'])
+    }
+
+    const { data: entries, error } = await query
       .order('confidence', { ascending: false })
       .limit(200)
 
@@ -212,7 +229,8 @@ export async function POST(req: Request) {
           category: entry.category,
           relevance_score: entry.relevance_score,
           evidence_score: entry.evidence_score,
-          source_type: entry.source_type
+          source_type: entry.source_type,
+          validity_status: entry.validity_status
         }))
       }
     })
