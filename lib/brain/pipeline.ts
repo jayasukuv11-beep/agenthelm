@@ -23,6 +23,7 @@ import {
   markReviewing,
 } from "./database"
 import { logger, metrics, generateTraceId } from "../observability"
+import { StalenessAnalyzer } from "./staleness-analyzer"
 
 import { classifyObservation } from "./providers/sarvam-promotion"
 
@@ -347,6 +348,24 @@ export class BrainPipeline {
       state.evidence
     )
     if (!result.ok) return null
+    
+    // Async trigger staleness check (fire and forget)
+    if (result.version && state.mergePlan!.entries_to_add.length > 0) {
+      const analyzer = new StalenessAnalyzer(this.supabase)
+      analyzer.analyze({
+        projectId: state.proposal.project_id,
+        newVersion: result.version,
+        newEntries: state.mergePlan!.entries_to_add.map(e => ({
+          id: "",
+          category: e.category,
+          title: e.title,
+          content: e.proposed_content
+        }))
+      }).catch(err => {
+        logger.error("Failed to run async staleness analysis", { meta: { error: String(err) } })
+      })
+    }
+    
     return { state: {} }
   }
 

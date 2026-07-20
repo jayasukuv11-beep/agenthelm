@@ -10,7 +10,7 @@ class ContextInjector:
         self.current_context = None
         self.selection = {}
 
-    def get_context(self, project: str, task_hint: Optional[str] = None) -> Dict[str, Any]:
+    def get_context(self, project: str, task_hint: Optional[str] = None, trusted_only: bool = True) -> Dict[str, Any]:
         """
         Retrieves relevant context from the Project Brain using Smart Context Selection.
         """
@@ -22,6 +22,7 @@ class ContextInjector:
             "agent_id": self.client._agent_id,
             "project": project,
             "task_hint": task_hint,
+            "trusted_only": trusted_only,
             "max_context_tokens": getattr(self.client, "_max_context_tokens", None),
             "timestamp": self.client._now()
         }
@@ -42,7 +43,15 @@ class ContextInjector:
                 if context_size > 50:
                     selected = self.selection.get("entries_selected")
                     suffix = f", {selected} entries selected" if selected is not None else ""
-                    self.client.log(f"Project Brain context injected ({context_size} bytes{suffix}).")
+                    
+                    # Highlight if there are entries that need review
+                    needs_review_count = sum(
+                        1 for src in self.selection.get("sources", [])
+                        if src.get("validity_status") == "NEEDS_REVIEW"
+                    )
+                    review_msg = f" ({needs_review_count} flagged for review)" if needs_review_count > 0 else ""
+                    
+                    self.client.log(f"Project Brain context injected ({context_size} bytes{suffix}){review_msg}.")
                 
                 return self.current_context
             else:
@@ -72,5 +81,9 @@ class ContextInjector:
         standards = self.current_context.get("standards")
         if standards:
             lines.append(f"\n## Standards\n{standards}")
+            
+        # Highlight warnings if any
+        if any("_warning" in str(cat) for cat in self.current_context.values()):
+            lines.append("\n> [!WARNING]\n> Some context above has been flagged for review due to recent project changes. Please verify its validity.")
             
         return "\n".join(lines)

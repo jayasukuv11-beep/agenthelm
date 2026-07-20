@@ -52,7 +52,7 @@ export async function GET(
         .maybeSingle(),
       supabaseAdmin
         .from('brain_entries')
-        .select('category, confidence, evidence_score, source_type, created_at')
+        .select('category, confidence, evidence_score, source_type, created_at, validity_status')
         .eq('project_id', projectId)
         .eq('status', 'active'),
       supabaseAdmin
@@ -70,13 +70,25 @@ export async function GET(
     let validEntriesCount = 0
 
     const categoryBreakdown: Record<string, number> = {}
+    let currentCount = 0
+    let reviewCount = 0
+    let staleCount = 0
+
     entries?.forEach(entry => {
       categoryBreakdown[entry.category] = (categoryBreakdown[entry.category] || 0) + 1
       if (entry.confidence != null) {
         totalConfidence += entry.confidence
         validEntriesCount++
       }
+      
+      const vStatus = entry.validity_status || 'CURRENT'
+      if (vStatus === 'CURRENT') currentCount++
+      else if (vStatus === 'NEEDS_REVIEW') reviewCount++
+      else if (vStatus === 'STALE') staleCount++
     })
+
+    const freshnessDenominator = currentCount + (reviewCount * 0.5) + (staleCount * 1.0)
+    const brainFreshness = freshnessDenominator > 0 ? Math.round((currentCount / freshnessDenominator) * 100) : 100
 
     const avgConfidence = validEntriesCount > 0 ? Math.round(totalConfidence / validEntriesCount) : 100
     const evidenceBackedEntries = entries?.filter(entry => {
@@ -106,9 +118,12 @@ export async function GET(
     if (!categoryBreakdown['database']) actionItems.push('Database knowledge is missing')
     if (!categoryBreakdown['apis']) actionItems.push('API knowledge is missing')
     if (lowEvidenceProposals > 0) actionItems.push(`${lowEvidenceProposals} merged proposal${lowEvidenceProposals === 1 ? '' : 's'} have weak evidence`)
+    if (staleCount > 0) actionItems.push(`${staleCount} knowledge entr${staleCount === 1 ? 'y is' : 'ies are'} completely stale`)
+    if (reviewCount > 0) actionItems.push(`${reviewCount} knowledge entr${reviewCount === 1 ? 'y needs' : 'ies need'} review due to recent changes`)
 
     return NextResponse.json({
       health: {
+        brain_freshness: brainFreshness,
         quality_score: Math.max(0, qualityScore),
         trust_score: trustScore,
         average_confidence: avgConfidence,
@@ -130,6 +145,11 @@ export async function GET(
       stats: {
         total_entries: entries?.length || 0,
         evidence_backed_entries: evidenceBackedEntries,
+        validity: {
+          current: currentCount,
+          needs_review: reviewCount,
+          stale: staleCount
+        },
         category_breakdown: categoryBreakdown,
         proposals: {
           pending: pendingProposals,
