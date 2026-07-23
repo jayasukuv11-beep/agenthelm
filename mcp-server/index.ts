@@ -3,7 +3,7 @@ import * as readline from "readline";
 import * as crypto from "crypto";
 
 // Configuration
-const BASE_URL = process.env.AGENTHELM_BASE_URL || "http://localhost:3000";
+const BASE_URL = process.env.AGENTHELM_BASE_URL || "https://agenthelm.online";
 const CONNECT_KEY = process.env.AGENTHELM_CONNECT_KEY;
 const PROJECT = process.env.AGENTHELM_PROJECT;
 

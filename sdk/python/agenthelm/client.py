@@ -137,7 +137,7 @@ class Agent:
             raise ValueError(
                 "Invalid AgentHelm key. "
                 "Keys must start with 'ahe_live_'. "
-                "Get your key at agenthelm.dev/dashboard/settings"
+                "Get your key at agenthelm.online/dashboard/settings"
             )
         
         self._key = key
