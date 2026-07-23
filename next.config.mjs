@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 import withPWA from "next-pwa"
+import { withSentryConfig } from "@sentry/nextjs"
 
 const nextConfig = {
   output: "standalone",
+  experimental: {
+    instrumentationHook: true,
+  },
   images: {
     domains: ["zuiceudkenboukonzdsu.supabase.co"],
   },
@@ -52,8 +56,6 @@ const nextConfig = {
   }
 }
 
-import { withSentryConfig } from "@sentry/nextjs"
-
 const enablePwa = process.env.ENABLE_PWA === "true"
 
 const exportedConfig = enablePwa
@@ -69,5 +71,4 @@ export default withSentryConfig(exportedConfig, {
   silent: true,
   widenClientFileUpload: true,
   hideSourceMaps: true,
-  disableLogger: true,
 })
