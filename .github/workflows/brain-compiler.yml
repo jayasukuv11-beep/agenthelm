@@ -1,0 +1,28 @@
+name: AgentHelm Brain Compiler
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  compile-brain:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run AgentHelm Brain Compiler
+        env:
+          AGENTHELM_CONNECT_KEY: ${{ secrets.AGENTHELM_CONNECT_KEY }}
+          AGENTHELM_PROJECT: ${{ secrets.AGENTHELM_PROJECT }}
+          AGENTHELM_BASE_URL: ${{ secrets.AGENTHELM_BASE_URL || 'https://agenthelm.online' }}
+        run: node scripts/compile-brain.mjs

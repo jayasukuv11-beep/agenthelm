@@ -70,7 +70,7 @@ export function GuardrailHealthScore({ plan, totalLogs, totalToolExecutions, inj
       <CardHeader className="pb-4 border-b border-zinc-800/50 mb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-[12px] font-mono uppercase tracking-widest font-bold flex items-center gap-2 text-white">
-            <ShieldCheck className="w-4 h-4 text-orange-500" />
+            <ShieldCheck className="w-4 h-4 text-indigo-400" />
             Guardrail Health
           </CardTitle>
           <span className="text-[20px] font-mono font-black text-white">{metrics.score}%</span>
@@ -82,7 +82,7 @@ export function GuardrailHealthScore({ plan, totalLogs, totalToolExecutions, inj
         <Progress 
           value={metrics.score} 
           className="h-2 rounded-none bg-zinc-800" 
-          indicatorColor={metrics.score > 80 ? "bg-orange-500" : metrics.score > 50 ? "bg-yellow-500" : "bg-red-500"}
+          indicatorColor={metrics.score > 80 ? "bg-emerald-500" : metrics.score > 50 ? "bg-yellow-500" : "bg-red-500"}
         />
 
         {!isPremium && (
@@ -127,7 +127,7 @@ export function GuardrailHealthScore({ plan, totalLogs, totalToolExecutions, inj
                 </span>
                 <span className="font-mono flex items-center gap-1 text-zinc-300 font-bold">
                   {metrics.hardLimits}
-                  {metrics.hardLimits === 0 && <span className="text-orange-500">✅</span>}
+                  {metrics.hardLimits === 0 && <ShieldCheck className="w-3 h-3 text-emerald-400 inline ml-1" />}
                 </span>
               </div>
             </div>
@@ -141,7 +141,7 @@ export function GuardrailHealthScore({ plan, totalLogs, totalToolExecutions, inj
             ) : (
               <div className="space-y-2">
                 {anomalies.map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-black/30 border border-zinc-800/50 hover:border-orange-500/20 transition-colors">
+                  <div key={i} className="flex items-center gap-3 p-2 bg-black/30 border border-zinc-800/50 hover:border-indigo-500/20 transition-colors">
                     <span className={cn(
                       "text-[9px] font-mono font-bold px-1.5 py-0.5 min-w-[50px] text-center",
                       a.severity === 'high' ? "bg-red-500/20 text-red-400" : 

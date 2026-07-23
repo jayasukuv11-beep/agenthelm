@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { ShieldCheck } from "lucide-react";
 
 interface SLAMetricsProps {
   agentId: string;
@@ -28,7 +29,6 @@ export function SLAMetrics({ agentId, plan }: SLAMetricsProps) {
     async function load() {
       const supabase = createClient();
 
-      // Fetch tasks with latency_ms recorded
       const { data: tasks } = await supabase
         .from("agent_tasks")
         .select("latency_ms")
@@ -37,7 +37,6 @@ export function SLAMetrics({ agentId, plan }: SLAMetricsProps) {
         .order("created_at", { ascending: false })
         .limit(200);
 
-      // Fetch SLA breach logs
       const { count: breachCount } = await supabase
         .from("agent_logs")
         .select("*", { count: "exact", head: true })
@@ -69,7 +68,7 @@ export function SLAMetrics({ agentId, plan }: SLAMetricsProps) {
   if (totalTasks === 0) {
     return (
       <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 py-4 text-center border border-dashed border-zinc-800 rounded-none bg-[#0a0a0a]">
-        No latency data recorded yet. Ensure your agent records <code className="text-orange-500 bg-orange-500/10 px-1 py-0.5 border border-orange-500/30 font-bold">latency_ms</code> via the SDK.
+        No latency data recorded yet. Ensure your agent records <code className="text-indigo-400 bg-indigo-500/10 px-1 py-0.5 border border-indigo-500/30 font-bold">latency_ms</code> via the SDK.
       </div>
     );
   }
@@ -93,17 +92,19 @@ export function SLAMetrics({ agentId, plan }: SLAMetricsProps) {
         {plan === "studio" && (
           <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-4 shadow-sm hover:border-zinc-600 transition-colors">
             <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold">p99 Latency</div>
-            <div className="text-[20px] font-mono font-black text-orange-500 mt-1">{formatMs(p99)}</div>
+            <div className="text-[20px] font-mono font-black text-indigo-400 mt-1">{formatMs(p99)}</div>
           </div>
         )}
         <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-4 shadow-sm hover:border-zinc-600 transition-colors">
           <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold">SLA Breaches</div>
           <div className="flex items-center gap-3 mt-1">
-            <span className={`text-[20px] font-mono font-black ${breaches > 0 ? "text-red-500" : "text-orange-500"}`}>
+            <span className={`text-[20px] font-mono font-black ${breaches > 0 ? "text-red-500" : "text-indigo-400"}`}>
               {breaches}
             </span>
             {breaches === 0 && (
-              <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-orange-500/30 text-orange-500 rounded-none bg-orange-500/10 font-bold">✓ Healthy</Badge>
+              <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-emerald-500/30 text-emerald-400 rounded-none bg-emerald-500/10 font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" /> Healthy
+              </Badge>
             )}
           </div>
         </div>

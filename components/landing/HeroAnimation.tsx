@@ -1,25 +1,25 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Brain, Zap, Terminal, GitBranch, Server, Users, ArrowRight } from "lucide-react"
+import { Brain, Zap, Terminal, GitBranch, Server, Users, ArrowRight, FileText, CheckCircle2, Search, GitMerge, Package } from "lucide-react"
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 
 const agents = [
-  { name: "Claude Code", icon: Terminal, color: "text-orange-500", bg: "bg-orange-500/10" },
-  { name: "Cursor", icon: Zap, color: "text-blue-500", bg: "bg-blue-500/10" },
-  { name: "Codex", icon: GitBranch, color: "text-green-500", bg: "bg-green-500/10" },
-  { name: "OpenAI SDK", icon: Server, color: "text-purple-500", bg: "bg-purple-500/10" },
-  { name: "CrewAI", icon: Users, color: "text-pink-500", bg: "bg-pink-500/10" },
+  { name: "Claude Code", icon: Terminal, color: "text-indigo-400", bg: "bg-indigo-500/10" },
+  { name: "Cursor", icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+  { name: "Codex", icon: GitBranch, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  { name: "OpenAI SDK", icon: Server, color: "text-purple-400", bg: "bg-purple-500/10" },
+  { name: "CrewAI", icon: Users, color: "text-blue-400", bg: "bg-blue-500/10" },
 ]
 
 const pipelineStages = [
-  { name: "Proposal", icon: "📝", desc: "Agent submits knowledge" },
-  { name: "Validation", icon: "✅", desc: "Sanitize & verify" },
-  { name: "Analysis", icon: "🔍", desc: "Evidence & confidence" },
-  { name: "Merge Plan", icon: "🔀", desc: "Conflict resolution" },
-  { name: "Publish", icon: "📦", desc: "Version & deploy" },
-  { name: "Brain", icon: "🧠", desc: "Shared knowledge" },
-  { name: "Context", icon: "💉", desc: "Inject to agents" },
+  { name: "Proposal", icon: FileText, desc: "Agent submits knowledge" },
+  { name: "Validation", icon: CheckCircle2, desc: "Sanitize & verify" },
+  { name: "Analysis", icon: Search, desc: "Evidence & confidence" },
+  { name: "Merge Plan", icon: GitMerge, desc: "Conflict resolution" },
+  { name: "Publish", icon: Package, desc: "Version & deploy" },
+  { name: "Brain", icon: Brain, desc: "Shared knowledge" },
+  { name: "Context", icon: Zap, desc: "Inject to agents" },
 ]
 
 export default function HeroAnimation() {
@@ -92,8 +92,8 @@ export default function HeroAnimation() {
           >
             <defs>
               <linearGradient id="flowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#ff5722" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.4" />
+                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.4" />
               </linearGradient>
             </defs>
             <path
@@ -138,7 +138,7 @@ export default function HeroAnimation() {
                   <agent.icon className="w-5 h-5" />
                 </div>
                 <span className="font-mono text-sm font-bold text-white">{agent.name}</span>
-                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-orange-500 transition-colors" />
+                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
               </motion.div>
             ))}
           </motion.div>
@@ -159,59 +159,62 @@ export default function HeroAnimation() {
             {/* Connecting line */}
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-zinc-700 to-transparent -z-10" />
 
-            {pipelineStages.map((stage, i) => (
-              <motion.div
-                key={stage.name}
-                initial={{ opacity: 0, y: 40, scale: 0.8 }}
-                animate={{
-                  opacity: i <= pipelineIndex ? 1 : 0.3,
-                  y: 0,
-                  scale: i <= pipelineIndex ? 1 : 0.9
-                }}
-                exit={{ opacity: 0, y: -40, scale: 0.8 }}
-                transition={{
-                  delay: i * 0.05,
-                  type: "spring",
-                  stiffness: 100,
-                  damping: 15
-                }}
-                className="flex flex-col items-center gap-2 px-2"
-              >
+            {pipelineStages.map((stage, i) => {
+              const StageIcon = stage.icon
+              return (
                 <motion.div
-                  className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl border-2 transition-all ${
-                    i <= pipelineIndex
-                      ? "border-orange-500 bg-orange-500/10 shadow-[0_0_30px_-5px_rgba(255,87,34,0.4)]"
-                      : "border-zinc-700 bg-zinc-900/50"
-                  }`}
+                  key={stage.name}
+                  initial={{ opacity: 0, y: 40, scale: 0.8 }}
                   animate={{
-                    scale: i === pipelineIndex && phase === "pipeline" ? [1, 1.1, 1] : 1,
-                    boxShadow: i === pipelineIndex && phase === "pipeline"
-                      ? ["0 0 30px -5px rgba(255,87,34,0.4)", "0 0 50px -5px rgba(255,87,34,0.6)", "0 0 30px -5px rgba(255,87,34,0.4)"]
-                      : "0 0 30px -5px rgba(255,87,34,0.4)"
+                    opacity: i <= pipelineIndex ? 1 : 0.3,
+                    y: 0,
+                    scale: i <= pipelineIndex ? 1 : 0.9
                   }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
+                  exit={{ opacity: 0, y: -40, scale: 0.8 }}
+                  transition={{
+                    delay: i * 0.05,
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15
+                  }}
+                  className="flex flex-col items-center gap-2 px-2"
                 >
-                  <span>{stage.icon}</span>
-                </motion.div>
-                <span className={`font-mono text-xs uppercase tracking-wider text-center w-20 ${
-                  i <= pipelineIndex ? "text-white" : "text-zinc-600"
-                }`}>{stage.name}</span>
-                <span className={`font-mono text-[10px] text-center w-24 ${
-                  i <= pipelineIndex ? "text-zinc-500" : "text-zinc-700"
-                }`}>{stage.desc}</span>
-
-                {/* Arrow between stages */}
-                {i < pipelineStages.length - 1 && (
                   <motion.div
-                    className="absolute top-6 left-[calc(100%_-_8px)] w-16 h-0.5 bg-gradient-to-r from-zinc-700 to-transparent -z-10"
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: i < pipelineIndex ? 1 : 0 }}
-                    transition={{ delay: i * 0.05 + 0.2, duration: 0.3 }}
-                    style={{ transformOrigin: "left center" }}
-                  />
-                )}
-              </motion.div>
-            ))}
+                    className={`w-14 h-14 rounded-xl flex items-center justify-center border-2 transition-all ${
+                      i <= pipelineIndex
+                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-400 shadow-[0_0_30px_-5px_rgba(99,102,241,0.4)]"
+                        : "border-zinc-700 bg-zinc-900/50 text-zinc-600"
+                    }`}
+                    animate={{
+                      scale: i === pipelineIndex && phase === "pipeline" ? [1, 1.1, 1] : 1,
+                      boxShadow: i === pipelineIndex && phase === "pipeline"
+                        ? ["0 0 30px -5px rgba(99,102,241,0.4)", "0 0 50px -5px rgba(99,102,241,0.6)", "0 0 30px -5px rgba(99,102,241,0.4)"]
+                        : "0 0 30px -5px rgba(99,102,241,0.4)"
+                    }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <StageIcon className="w-6 h-6" />
+                  </motion.div>
+                  <span className={`font-mono text-xs uppercase tracking-wider text-center w-20 ${
+                    i <= pipelineIndex ? "text-white" : "text-zinc-600"
+                  }`}>{stage.name}</span>
+                  <span className={`font-mono text-[10px] text-center w-24 ${
+                    i <= pipelineIndex ? "text-zinc-500" : "text-zinc-700"
+                  }`}>{stage.desc}</span>
+
+                  {/* Arrow between stages */}
+                  {i < pipelineStages.length - 1 && (
+                    <motion.div
+                      className="absolute top-6 left-[calc(100%_-_8px)] w-16 h-0.5 bg-gradient-to-r from-zinc-700 to-transparent -z-10"
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: i < pipelineIndex ? 1 : 0 }}
+                      transition={{ delay: i * 0.05 + 0.2, duration: 0.3 }}
+                      style={{ transformOrigin: "left center" }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
           </motion.div>
         )}
       </AnimatePresence>
@@ -229,37 +232,37 @@ export default function HeroAnimation() {
           >
             {/* Outer pulse rings */}
             <motion.div
-              className="absolute inset-0 border-2 border-orange-500/20 rounded-full"
+              className="absolute inset-0 border-2 border-indigo-500/20 rounded-full"
               animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.2, 0.6] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             />
             <motion.div
-              className="absolute inset-0 border-2 border-purple-500/15 rounded-full"
+              className="absolute inset-0 border-2 border-cyan-500/15 rounded-full"
               animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.1, 0.4] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
             />
             <motion.div
-              className="absolute inset-0 border-2 border-blue-500/10 rounded-full"
+              className="absolute inset-0 border-2 border-emerald-500/10 rounded-full"
               animate={{ scale: [1, 1.35, 1], opacity: [0.3, 0.05, 0.3] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
             />
 
             {/* Brain core */}
             <motion.div
-              className="relative w-32 h-32 rounded-2xl bg-gradient-to-br from-orange-500/20 via-purple-500/10 to-blue-500/20 border border-orange-500/30 flex items-center justify-center shadow-[0_0_60px_-10px_rgba(255,87,34,0.3)]"
+              className="relative w-32 h-32 rounded-2xl bg-gradient-to-br from-indigo-500/20 via-cyan-500/10 to-emerald-500/20 border border-indigo-500/30 flex items-center justify-center shadow-[0_0_60px_-10px_rgba(99,102,241,0.3)]"
               animate={{
                 rotate: [0, 0, 2, -2, 0],
-                boxShadow: ["0 0 60px -10px rgba(255,87,34,0.3)", "0 0 80px -5px rgba(168,85,247,0.4)", "0 0 60px -10px rgba(255,87,34,0.3)"]
+                boxShadow: ["0 0 60px -10px rgba(99,102,241,0.3)", "0 0 80px -5px rgba(6,182,212,0.4)", "0 0 60px -10px rgba(99,102,241,0.3)"]
               }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Brain className="w-16 h-16 text-orange-500" />
+              <Brain className="w-16 h-16 text-indigo-400" />
 
               {/* Data particles orbiting */}
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-2 h-2 bg-orange-500/60 rounded-full"
+                  className="absolute w-2 h-2 bg-indigo-400/60 rounded-full"
                   style={{
                     top: "50%",
                     left: "50%",
@@ -288,7 +291,7 @@ export default function HeroAnimation() {
               transition={{ delay: 0.5 }}
             >
               <p className="font-mono text-lg font-bold text-white uppercase tracking-widest">Project Brain</p>
-              <p className="font-mono text-xs text-zinc-550 uppercase tracking-wider mt-1">Active Memory · Sync Active · v3.2.1</p>
+              <p className="font-mono text-xs text-zinc-500 uppercase tracking-wider mt-1">Active Memory · Sync Active · v3.2.1</p>
             </motion.div>
           </motion.div>
         )}
@@ -315,7 +318,7 @@ export default function HeroAnimation() {
                 style={{ borderColor: agent.color }}
               >
                 <motion.div
-                  className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-orange-500 rounded-full"
+                  className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-indigo-500 rounded-full"
                   animate={{
                     scale: [0, 1.5, 0],
                     opacity: [1, 0, 0],
@@ -327,7 +330,7 @@ export default function HeroAnimation() {
                   <agent.icon className="w-4 h-4" />
                 </div>
                 <span className="font-mono text-xs font-bold text-white">{agent.name}</span>
-                <span className="font-mono text-[10px] text-orange-500 uppercase tracking-wider">INJECTED</span>
+                <span className="font-mono text-[10px] text-indigo-400 uppercase tracking-wider">INJECTED</span>
               </motion.div>
             ))}
           </motion.div>
@@ -336,11 +339,11 @@ export default function HeroAnimation() {
 
       {/* Loop indicator */}
       <motion.div
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-zinc-600 font-mono text-xs uppercase tracking-widest"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-zinc-500 font-mono text-xs uppercase tracking-widest"
         animate={{ opacity: [0.3, 1, 0.3] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
-        <div className="w-4 h-4 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+        <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
         <span>Continuous sync</span>
       </motion.div>
 

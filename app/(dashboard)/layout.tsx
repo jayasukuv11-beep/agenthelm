@@ -40,9 +40,9 @@ export default function DashboardLayout({
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-zinc-800 bg-[#111]">
         <div className="p-6 border-b border-zinc-800/50">
-          <Link href="/dashboard" className="flex items-center gap-2 group">
-            <div className="w-6 h-6 bg-orange-500 flex items-center justify-center" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
-              <Shield className="w-3 h-3 text-white" />
+          <Link href="/dashboard" className="flex items-center gap-2.5 group">
+            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-600/20">
+              <Shield className="w-4 h-4 text-white" />
             </div>
             <span className="text-white text-base font-bold font-mono tracking-tight uppercase">AgentHelm</span>
           </Link>
@@ -55,10 +55,10 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 transition-colors font-mono text-[13px] uppercase tracking-wider
+                className={`flex items-center gap-3 px-3 py-2.5 transition-colors font-mono text-[13px] uppercase tracking-wider rounded-md
                   ${isActive 
-                    ? "bg-orange-500/10 text-orange-500 border border-orange-500/30 font-bold" 
-                    : "text-zinc-500 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 font-bold shadow-sm" 
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
                   }`}
               >
                 <item.icon className="w-4 h-4 shrink-0" />

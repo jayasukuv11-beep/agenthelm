@@ -13,6 +13,10 @@
 
 ---
 
+> **Note**: The local workspace directory is legacy-named `agentdock` for historical repository compatibility, but all published SDKs, environment variable prefixes (`AGENTHELM_*`), CLI binaries, and MCP tools are standardized as **AgentHelm**.
+
+---
+
 ## 🧠 The Project Brain Loop
 
 AgentHelm focuses on agent context, governance, and behavior. At its core is the **Project Brain Loop**:

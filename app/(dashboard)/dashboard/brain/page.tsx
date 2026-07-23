@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Brain, GitBranch, Server, Database, Zap, FileText, Search, Inbox, Loader2 } from "lucide-react";
 import ProjectBrainPanel from "@/components/dashboard/ProjectBrainPanel";
+import KnowledgeGraphVisualizer from "@/components/dashboard/KnowledgeGraphVisualizer";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TechnicalLabel } from "@/components/dashboard/TechnicalLabel";
 import { Input } from "@/components/ui/input";
@@ -282,22 +283,12 @@ function ProjectBrainContent() {
             </p>
           </form>
 
-          {/* Knowledge Graph Placeholder */}
-          <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
-            <TechnicalLabel className="block mb-4">Knowledge Graph Visualization</TechnicalLabel>
-            <div className="h-96 bg-[#0a0a0a] border border-zinc-800 rounded-xl flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px]" />
-              <div className="text-center z-10">
-                <div className="w-16 h-16 bg-orange-500/10 rounded-full flex items-center justify-center mb-4 mx-auto border border-orange-500/20">
-                  <Brain className="text-orange-500 w-8 h-8" />
-                </div>
-                <p className="text-zinc-500 font-mono text-sm">
-                  Interactive Knowledge Graph Visualization<br />
-                  <span className="text-xs opacity-50">Coming in Phase 10 (DX & Polish)</span>
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Interactive Knowledge Graph */}
+          <KnowledgeGraphVisualizer
+            latestVersion={healthData?.health.latest_version}
+            totalEntries={healthData?.stats.total_entries}
+            categoryCounts={healthData?.stats.category_breakdown}
+          />
         </>
       )}
     </div>

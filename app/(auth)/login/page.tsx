@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -105,7 +105,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md bg-[#111] border-zinc-800 rounded-none shadow-xl">
         <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
           <div className="flex justify-center mb-4">
-            <span className="text-4xl font-bold text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">⚡</span>
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
           </div>
           <CardTitle className="text-[20px] font-black text-white uppercase tracking-widest mb-2">
             Sign in to AgentHelm
@@ -125,16 +127,16 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-[#0a0a0a] border-zinc-800 text-white rounded-none h-12 px-4 focus-visible:ring-1 focus-visible:ring-orange-500 focus-visible:border-orange-500 transition-all font-mono"
+                className="bg-[#0a0a0a] border-zinc-800 text-white rounded-none h-12 px-4 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 transition-all font-mono"
                 disabled={loading || success || cooldown > 0}
               />
             </div>
             {error && <p className="text-[11px] uppercase tracking-widest text-red-500 text-left bg-red-500/10 p-2 border border-red-500/30">{error}</p>}
-            {success && <p className="text-[11px] uppercase tracking-widest text-orange-500 font-bold text-left bg-orange-500/10 p-2 border border-orange-500/30">Check your email for the code! Redirecting...</p>}
+            {success && <p className="text-[11px] uppercase tracking-widest text-indigo-400 font-bold text-left bg-indigo-500/10 p-2 border border-indigo-500/30">Check your email for the code! Redirecting...</p>}
             
             <Button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-none h-12 uppercase tracking-widest text-[13px] transition-all"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-none h-12 uppercase tracking-widest text-[13px] transition-all"
               disabled={loading || success || cooldown > 0}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

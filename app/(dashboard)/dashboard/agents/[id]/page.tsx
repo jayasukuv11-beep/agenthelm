@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Play, Square, RotateCw, Trash2, Bot } from "lucide-react";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
 import { TraceTimeline } from "@/components/dashboard/TraceTimeline";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
@@ -664,40 +664,40 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:flex md:flex-wrap md:justify-end">
               <Button
                 variant="outline"
-                className="bg-transparent border-orange-500/30 text-orange-500 hover:bg-orange-500/10 font-mono text-[12px] uppercase rounded-none"
+                className="bg-transparent border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 font-mono text-[12px] uppercase rounded-none flex items-center gap-1.5"
                 onClick={() => sendCommand("start")}
                 disabled={commandLoading !== null}
               >
-                {commandLoading === "start" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "▶ "}
+                {commandLoading === "start" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                 Run Now
               </Button>
 
               <Button
                 variant="outline"
-                className="bg-transparent border-red-500/30 text-red-500 hover:bg-red-500/10 font-mono text-[12px] uppercase rounded-none"
+                className="bg-transparent border-red-500/30 text-red-500 hover:bg-red-500/10 font-mono text-[12px] uppercase rounded-none flex items-center gap-1.5"
                 onClick={() => sendCommand("stop")}
                 disabled={commandLoading !== null}
               >
-                {commandLoading === "stop" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "⏹ "}
+                {commandLoading === "stop" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
                 Stop
               </Button>
 
               <Button
                 variant="outline"
-                className="bg-transparent border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 font-mono text-[12px] uppercase rounded-none"
+                className="bg-transparent border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 font-mono text-[12px] uppercase rounded-none flex items-center gap-1.5"
                 onClick={() => sendCommand("restart")}
                 disabled={commandLoading !== null}
               >
-                {commandLoading === "restart" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "🔄 "}
+                {commandLoading === "restart" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
                 Restart
               </Button>
 
               <Button
                 variant="ghost"
-                className="text-red-500 hover:text-red-400 hover:bg-red-500/10 font-mono text-[12px] uppercase rounded-none"
+                className="text-red-500 hover:text-red-400 hover:bg-red-500/10 font-mono text-[12px] uppercase rounded-none flex items-center gap-1.5"
                 onClick={() => setDeleteOpen(true)}
               >
-                🗑 Delete
+                <Trash2 className="h-3.5 w-3.5" /> Delete
               </Button>
             </div>
           </div>
@@ -712,22 +712,22 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       >
         <div className="overflow-x-auto border-b border-zinc-800 pb-px mb-6">
           <TabsList className="bg-transparent h-auto p-0 flex gap-6 w-full justify-start rounded-none">
-            <TabsTrigger value="logs" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
+            <TabsTrigger value="logs" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Logs
             </TabsTrigger>
-            <TabsTrigger value="traces" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
+            <TabsTrigger value="traces" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Traces
             </TabsTrigger>
-            <TabsTrigger value="chat" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
+            <TabsTrigger value="chat" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Chat
             </TabsTrigger>
-            <TabsTrigger value="stats" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
+            <TabsTrigger value="stats" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Stats
             </TabsTrigger>
-            <TabsTrigger value="evals" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
+            <TabsTrigger value="evals" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Evals
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:text-orange-500 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 font-mono text-[13px] uppercase tracking-wider rounded-none px-0 py-3 text-zinc-500 hover:text-white border-b-2 border-transparent">
               Settings
             </TabsTrigger>
           </TabsList>
@@ -849,18 +849,20 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                                     : "Explain this error"
                                 }
                                 onClick={() => explainLog(l.id)}
-                                className="shrink-0 text-xs text-gray-400 hover:text-white border border-[#1f2937] rounded px-2 py-1 bg-[#111111]/40"
+                                className="shrink-0 text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 rounded px-2.5 py-1 bg-indigo-500/10 font-mono flex items-center gap-1.5"
                                 disabled={explainLoadingId === l.id}
                               >
-                                {explainLoadingId === l.id ? "…" : "🤖 Explain"}
+                                {explainLoadingId === l.id ? "…" : <><Bot className="w-3.5 h-3.5" /> Analyze</>}
                               </button>
                             ) : null}
                           </div>
 
                           {explanation ? (
-                            <div className="mt-2 rounded border border-[#374151] bg-[#111827] p-4 text-[#d1d5db]">
-                              <div className="font-medium mb-2">🤖 AI Analysis</div>
-                              <div className="text-sm leading-relaxed">{explanation}</div>
+                            <div className="mt-2 rounded border border-zinc-800 bg-[#111] p-4 text-zinc-300 font-mono text-xs">
+                              <div className="font-bold mb-2 text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <Bot className="w-4 h-4" /> AI Analysis
+                              </div>
+                              <div className="text-xs leading-relaxed text-zinc-300">{explanation}</div>
                               <div className="mt-3">
                                 <button
                                   onClick={() =>
@@ -870,9 +872,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                                       return next;
                                     })
                                   }
-                                  className="text-sm text-gray-300 hover:text-white"
+                                  className="text-xs text-zinc-500 hover:text-zinc-300 uppercase tracking-widest flex items-center gap-1"
                                 >
-                                  ✕ Close
+                                  Close
                                 </button>
                               </div>
                             </div>
@@ -1053,17 +1055,17 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                           </td>
                           <td className="px-4 py-4">
                             {res.passed ? (
-                              <Badge className="bg-orange-500/10 text-orange-500 border border-orange-500/30 rounded-none text-[10px]">PASS</Badge>
+                              <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-none text-[10px]">PASS</Badge>
                             ) : (
                               <Badge className="bg-red-500/10 text-red-400 border border-red-500/30 rounded-none text-[10px]">FAIL</Badge>
                             )}
                           </td>
-                          <td className="px-4 py-4">{res.tool_matches ? "✅ Tools" : "❌ Tools"}</td>
+                          <td className="px-4 py-4">{res.tool_matches ? "Tools Match" : "Tools Mismatch"}</td>
                           <td className="px-4 py-4">{res.latency_ms}ms</td>
                           <td className="px-4 py-4">
                             <div className="flex flex-wrap gap-1">
                               {res.semantic_scores && Object.entries(res.semantic_scores).map(([k, v]: any) => (
-                                <span key={k} className="text-[10px] bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded-none border border-orange-500/20">
+                                <span key={k} className="text-[10px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded-none border border-indigo-500/20">
                                   {k}: {v}
                                 </span>
                               ))}

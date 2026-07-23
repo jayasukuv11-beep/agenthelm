@@ -88,7 +88,7 @@ export default function KnowledgeProposalsPanel({ projectId, onResolve }: { proj
     <div className="bg-[#111] rounded-xl border border-zinc-800 p-6 shadow-2xl">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-medium text-white flex items-center gap-2">
-          <FileSignature className="w-5 h-5 text-orange-500" />
+          <FileSignature className="w-5 h-5 text-indigo-400" />
           Knowledge Proposals
         </h3>
         {!loading && (
@@ -151,7 +151,9 @@ export default function KnowledgeProposalsPanel({ projectId, onResolve }: { proj
                 {/* Conflict Resolution UI */}
                 {proposal.build_status === 'reviewing' && proposal.conflict_detected && (
                   <div className="mt-3 p-3 bg-amber-500/5 border border-amber-500/15 rounded-lg">
-                    <p className="text-xs text-amber-300 font-medium mb-2 font-mono">⚠️ Conflict Detected</p>
+                    <p className="text-xs text-amber-300 font-medium mb-2 font-mono flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Conflict Detected
+                    </p>
                     {conflicts.map((conflict, idx) => (
                       <div key={idx} className="text-xs text-zinc-400 mb-2 font-mono">
                         <div className="flex items-center gap-2">

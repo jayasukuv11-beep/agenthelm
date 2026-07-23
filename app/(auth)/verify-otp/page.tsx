@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 
 function VerifyOTPContent() {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
@@ -148,7 +148,9 @@ function VerifyOTPContent() {
       <Card className="w-full max-w-md bg-[#111] border-zinc-800 rounded-none shadow-xl">
         <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
           <div className="flex justify-center mb-4">
-            <span className="text-4xl font-bold text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">⚡</span>
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
           </div>
           <CardTitle className="text-[20px] font-black text-white uppercase tracking-widest mb-2">
             Verify your email
@@ -172,7 +174,7 @@ function VerifyOTPContent() {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
                   disabled={loading}
-                  className="w-12 h-14 text-center text-[20px] font-bold bg-[#0a0a0a] border border-zinc-800 rounded-none text-white focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 font-mono disabled:opacity-50 transition-all"
+                  className="w-12 h-14 text-center text-[20px] font-bold bg-[#0a0a0a] border border-zinc-800 rounded-none text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono disabled:opacity-50 transition-all"
                 />
               ))}
             </div>

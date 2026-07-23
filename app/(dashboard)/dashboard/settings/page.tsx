@@ -384,9 +384,9 @@ export default function SettingsPage() {
               <CardDescription className="text-[11px] font-mono uppercase text-zinc-500 pt-1 tracking-wider">Get real-time alerts and control agents via Telegram</CardDescription>
             </div>
             {profile.telegram_chat_id ? (
-              <Badge className="bg-orange-500/10 text-orange-500 border border-orange-500/30 font-mono text-[10px] uppercase rounded-none tracking-widest">🟢 Connected</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-[10px] uppercase rounded-none tracking-widest">Connected</Badge>
             ) : (
-              <Badge variant="secondary" className="bg-zinc-800/50 text-zinc-500 border border-zinc-700 font-mono text-[10px] uppercase rounded-none tracking-widest">⚫ Not Connected</Badge>
+              <Badge variant="secondary" className="bg-zinc-800/50 text-zinc-500 border border-zinc-700 font-mono text-[10px] uppercase rounded-none tracking-widest">Not Connected</Badge>
             )}
           </div>
         </CardHeader>
