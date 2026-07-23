@@ -5,16 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Check, Copy, Shield } from "lucide-react";
-
-const AGENT_TYPES = [
-  "Python scripts",
-  "Node.js bots",
-  "Telegram bots",
-  "Web scrapers",
-  "Other"
-];
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
@@ -25,9 +17,6 @@ export default function OnboardingPage() {
   const [fullName, setFullName] = useState("");
   
   // Step 2
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  
-  // Step 3
   const [connectKey, setConnectKey] = useState("");
   const [copied, setCopied] = useState(false);
   
@@ -66,26 +55,9 @@ export default function OnboardingPage() {
     loadProfile();
   }, [router, supabase]);
 
-  const handleStep1 = () => {
+  const handleStep1 = async () => {
     if (!fullName.trim()) {
       setError("Please enter your name");
-      return;
-    }
-    setError(null);
-    setStep(2);
-  };
-
-  const toggleType = (type: string) => {
-    if (selectedTypes.includes(type)) {
-      setSelectedTypes(selectedTypes.filter(t => t !== type));
-    } else {
-      setSelectedTypes([...selectedTypes, type]);
-    }
-  };
-
-  const handleStep2 = async () => {
-    if (selectedTypes.length === 0) {
-      setError("Please select at least one type");
       return;
     }
     setLoading(true);
@@ -102,7 +74,7 @@ export default function OnboardingPage() {
         
       if (updateError) throw updateError;
       
-      setStep(3);
+      setStep(2);
     } catch (err: any) {
       setError("Something went wrong saving your profile.");
     } finally {
@@ -168,51 +140,6 @@ export default function OnboardingPage() {
                 {error && <p className="text-[11px] uppercase tracking-widest text-red-500 bg-red-500/10 p-2 border border-red-500/30 font-bold">{error}</p>}
                 <Button
                   onClick={handleStep1}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
-                >
-                  Continue
-                </Button>
-              </div>
-            </CardContent>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <CardHeader className="space-y-1 border-b border-zinc-800/50 pb-6 mb-4">
-              <CardTitle className="text-[18px] font-black text-white uppercase tracking-widest mb-2 text-center">
-                What kind of agents do you run?
-              </CardTitle>
-              <CardDescription className="text-center text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-                Select all that apply
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {AGENT_TYPES.map(type => (
-                  <div
-                    key={type}
-                    onClick={() => toggleType(type)}
-                    className={`p-4 border rounded-none cursor-pointer transition-all flex items-center justify-between
-                      ${selectedTypes.includes(type) 
-                        ? 'border-indigo-500 bg-indigo-500/10' 
-                        : 'border-zinc-800 bg-[#0a0a0a] hover:border-zinc-600'
-                      }`}
-                  >
-                    <span className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">{type}</span>
-                    <div className={`w-5 h-5 rounded-none border flex items-center justify-center transition-all
-                      ${selectedTypes.includes(type) 
-                        ? 'border-indigo-500 bg-indigo-600' 
-                        : 'border-zinc-600 bg-transparent'
-                      }`}
-                    >
-                      {selectedTypes.includes(type) && <Check className="w-3 h-3 text-white font-bold" />}
-                    </div>
-                  </div>
-                ))}
-                {error && <p className="text-[11px] uppercase tracking-widest text-red-500 bg-red-500/10 p-2 border border-red-500/30 mt-4 font-bold">{error}</p>}
-                <Button
-                  onClick={handleStep2}
                   disabled={loading}
                   className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
                 >
@@ -224,7 +151,7 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <>
              <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
               <div className="flex justify-center mb-6">

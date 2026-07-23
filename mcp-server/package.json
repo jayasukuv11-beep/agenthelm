@@ -1,6 +1,6 @@
 {
   "name": "agenthelm-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AgentHelm Model Context Protocol (MCP) Server",
   "main": "dist/index.js",
   "bin": {

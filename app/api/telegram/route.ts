@@ -345,7 +345,7 @@ async function handleStart(
       chatId,
       '👋 Welcome to AgentHelm Bot!\n\n' +
         'To connect your account:\n' +
-        '1. Go to agenthelm.dev/dashboard/settings\n' +
+        '1. Go to agenthelm.online/dashboard/settings\n' +
         '2. Click "Connect Telegram"\n' +
         '3. The link will connect automatically\n\n' +
         'Type /help to see all commands.'
@@ -364,7 +364,7 @@ async function handleStart(
       chatId,
       '❌ Invalid connect key.\n\n' +
         'Get your key from:\n' +
-        'agenthelm.dev/dashboard/settings'
+        'agenthelm.online/dashboard/settings'
     )
     return
   }
@@ -1132,7 +1132,7 @@ async function handleDisconnect(chatId: number, userId: string): Promise<void> {
     '✅ Telegram disconnected from AgentHelm.\n\n' +
       'You will no longer receive alerts here.\n\n' +
       'Reconnect anytime from:\n' +
-      'agenthelm.dev/dashboard/settings'
+      'agenthelm.online/dashboard/settings'
   )
 }
 

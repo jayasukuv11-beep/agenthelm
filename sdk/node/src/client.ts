@@ -847,7 +847,7 @@ export class AgentHelm {
       } else if (res.status === 401) {
         console.error(
           '[AgentHelm] ❌ Invalid key. ' +
-          'Check agenthelm.dev/dashboard/settings'
+          'Check agenthelm.online/dashboard/settings'
         )
       } else {
         throw new Error(`HTTP ${res.status}`)

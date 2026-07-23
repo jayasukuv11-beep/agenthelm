@@ -48,11 +48,25 @@ agent = Agent(
         <div className="space-y-4 pt-4">
           <h3 className="font-mono text-sm font-bold text-zinc-300 uppercase tracking-widest">2. Model Context Protocol (MCP)</h3>
           <p className="text-xs text-zinc-400 font-mono leading-relaxed">
-            Run the AgentHelm MCP server to expose your Project Brain to cursor, windsurf, or other MCP clients:
+            Plug AgentHelm into Cursor, Claude Code, or Claude Desktop by adding the MCP server configuration:
           </p>
-          <pre className="bg-[#111] border border-zinc-800 p-4 font-mono text-xs text-orange-500 rounded-none">
-            npx agenthelm-mcp --key YOUR_CONNECT_KEY
+          <pre className="bg-[#111] border border-zinc-800 p-4 font-mono text-xs text-zinc-300 rounded-none overflow-x-auto">
+{`{
+  "mcpServers": {
+    "agenthelm": {
+      "command": "npx",
+      "args": ["-y", "agenthelm-mcp"],
+      "env": {
+        "AGENTHELM_CONNECT_KEY": "YOUR_CONNECT_KEY",
+        "AGENTHELM_PROJECT": "my-project-name"
+      }
+    }
+  }
+}`}
           </pre>
+          <p className="text-xs text-zinc-400 font-mono leading-relaxed">
+            Exposes tools: <code className="text-orange-400">get_context</code>, <code className="text-orange-400">propose_knowledge</code>, and <code className="text-orange-400">get_history</code>.
+          </p>
         </div>
       </section>
 
