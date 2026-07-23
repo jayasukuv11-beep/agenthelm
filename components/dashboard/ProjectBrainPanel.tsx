@@ -47,10 +47,10 @@ export default function ProjectBrainPanel({ projectId }: { projectId: string }) 
     <div className="bg-[#111] rounded-xl border border-zinc-800 p-6 shadow-2xl">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-medium text-white flex items-center gap-2">
-          <Brain className="w-5 h-5 text-orange-500" />
+          <Brain className="w-5 h-5 text-indigo-400" />
           Project Brain
         </h3>
-        <span className="px-3 py-1 bg-orange-500/10 text-orange-500 text-xs font-semibold uppercase tracking-wider rounded-full border border-orange-500/20 font-mono">
+        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider rounded-full border border-indigo-500/20 font-mono">
           v{latest_version}
         </span>
       </div>

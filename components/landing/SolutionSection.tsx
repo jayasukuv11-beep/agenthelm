@@ -8,7 +8,7 @@ export default function SolutionSection() {
     <section id="solution" className="py-24 px-6 bg-[#08080a] border-y border-zinc-900">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <span className="text-[11px] font-mono text-[#ff6b35]/60 uppercase tracking-[0.3em] block mb-3">THE SOLUTION</span>
+          <span className="text-[11px] font-mono text-indigo-400 uppercase tracking-[0.3em] block mb-3">THE SOLUTION</span>
           <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
             One Project Brain for All Agents
           </h2>
@@ -27,10 +27,10 @@ export default function SolutionSection() {
             transition={{ delay: 0.1 }}
             className="relative bg-[#111113] border border-zinc-800 rounded-2xl overflow-hidden p-8 flex flex-col justify-center min-h-[340px]"
           >
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,107,53,0.05),transparent_70%)] pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.05),transparent_70%)] pointer-events-none" />
             <div className="space-y-6 relative z-10">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
                   <Brain className="w-5 h-5" />
                 </div>
                 <div>
@@ -44,7 +44,7 @@ export default function SolutionSection() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
@@ -58,7 +58,7 @@ export default function SolutionSection() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
                   <RefreshCw className="w-5 h-5" />
                 </div>
                 <div>
@@ -96,7 +96,7 @@ export default function SolutionSection() {
                   "Catch invalid dependencies at ingestion validation"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-orange-500 shrink-0" />
+                    <CheckCircle className="w-4 h-4 text-indigo-400 shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}

@@ -1,14 +1,14 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Check, HelpCircle } from "lucide-react"
+import { Check, HelpCircle, ArrowRight, X } from "lucide-react"
 
 export default function PricingSection() {
   return (
     <section id="pricing" className="py-24 px-6 bg-[#08080a] border-y border-zinc-900 relative">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <span className="text-[11px] font-mono text-orange-500/60 uppercase tracking-[0.3em] block mb-3">PRICING</span>
+          <span className="text-[11px] font-mono text-indigo-400 uppercase tracking-[0.3em] block mb-3">PRICING</span>
           <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
             Simple, Transparent Pricing
           </h2>
@@ -32,7 +32,7 @@ export default function PricingSection() {
                 <h3 className="font-mono text-lg font-bold text-white uppercase tracking-wider">
                   Free
                 </h3>
-                <p className="font-mono text-lg font-bold text-orange-500">
+                <p className="font-mono text-lg font-bold text-indigo-400">
                   $0
                 </p>
               </div>
@@ -41,25 +41,25 @@ export default function PricingSection() {
               </p>
               <ul className="space-y-3 flex-1 mb-6 font-mono text-xs text-zinc-400">
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   3 Agents limit
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   100,000 tokens/month
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   7-day log history
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   Telegram alerts & control
                 </li>
               </ul>
               <div className="mt-6 pt-4 border-t border-zinc-800/50">
                 <a href="/login" className="w-full bg-[#1e1e22] hover:bg-[#27272a] text-white font-mono font-bold text-xs uppercase tracking-widest py-3 transition-all flex items-center justify-center gap-2">
-                  Get Started <span className="w-4 h-4">→</span>
+                  Get Started <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -74,15 +74,15 @@ export default function PricingSection() {
             transition={{ delay: 0.2 }}
             className="group"
           >
-            <div className="bg-[#111113] border border-orange-500/20 p-6 rounded-2xl transition-all hover:border-orange-500/40 hover:shadow-[0_0_30px_-10px_rgba(255,107,53,0.15)] h-full flex flex-col relative">
-              <div className="absolute -top-3 right-6 bg-orange-500 text-white font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 font-bold">
+            <div className="bg-[#111113] border border-indigo-500/20 p-6 rounded-2xl transition-all hover:border-indigo-500/40 hover:shadow-[0_0_30px_-10px_rgba(99,102,241,0.15)] h-full flex flex-col relative">
+              <div className="absolute -top-3 right-6 bg-indigo-600 text-white font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 font-bold rounded">
                 Popular
               </div>
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-mono text-lg font-bold text-white uppercase tracking-wider">
                   Indie
                 </h3>
-                <p className="font-mono text-lg font-bold text-orange-500">
+                <p className="font-mono text-lg font-bold text-indigo-400">
                   $19<span className="text-zinc-500 text-xs font-normal">/mo</span>
                 </p>
               </div>
@@ -95,25 +95,25 @@ export default function PricingSection() {
                   10 Agents limit
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   2,000,000 tokens/month
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   30-day log history
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   AI failure explanations
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   All anomaly alerts
                 </li>
               </ul>
               <div className="mt-6 pt-4 border-t border-zinc-800/50">
-                <a href="/login" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-mono font-bold text-xs uppercase tracking-widest py-3 transition-all flex items-center justify-center gap-2 shadow-[0_0_30px_-5px_rgba(255,107,53,0.2)]">
-                  Upgrade to Indie <span className="w-4 h-4">→</span>
+                <a href="/login" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs uppercase tracking-widest py-3 transition-all flex items-center justify-center gap-2 shadow-[0_0_30px_-5px_rgba(99,102,241,0.2)] rounded">
+                  Upgrade to Indie <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function PricingSection() {
                 <h3 className="font-mono text-lg font-bold text-white uppercase tracking-wider">
                   Studio
                 </h3>
-                <p className="font-mono text-lg font-bold text-orange-500">
+                <p className="font-mono text-lg font-bold text-indigo-400">
                   $99<span className="text-zinc-500 text-xs font-normal">/mo</span>
                 </p>
               </div>
@@ -142,33 +142,33 @@ export default function PricingSection() {
               </p>
               <ul className="space-y-3 flex-1 mb-6 font-mono text-xs text-zinc-400">
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   1,000 Agents limit
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   Unlimited tokens usage
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   90-day log history
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   Swarms orchestration
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   Trace Replay (Time-Travel)
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   Visual Cost Breakdown
                 </li>
               </ul>
               <div className="mt-6 pt-4 border-t border-zinc-800/50">
-                <a href="/login" className="w-full bg-[#1e1e22] hover:bg-[#27272a] text-white font-mono font-bold text-xs uppercase tracking-widest py-3 transition-all flex items-center justify-center gap-2">
-                  Upgrade to Studio <span className="w-4 h-4">→</span>
+                <a href="/login" className="w-full bg-[#1e1e22] hover:bg-[#27272a] text-white font-mono font-bold text-xs uppercase tracking-widest py-3 transition-all flex items-center justify-center gap-2 rounded">
+                  Upgrade to Studio <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -224,39 +224,39 @@ export default function PricingSection() {
                 </tr>
                 <tr>
                   <td className="p-4">Telegram Alerts</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4">AI Failure Explanations</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4">Anomaly Alerts</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4">Swarms Orchestration</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4">Trace Replay (Time-Travel)</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4">Visual Cost Breakdown</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-zinc-600">✗</td>
-                  <td className="p-4 text-center text-green-500">✓</td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><X className="w-4 h-4 text-zinc-600 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-4 h-4 text-emerald-400 mx-auto" /></td>
                 </tr>
               </tbody>
             </table>

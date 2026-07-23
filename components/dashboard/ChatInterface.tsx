@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bot } from "lucide-react";
 
 export interface ChatInterfaceProps {
   agentId: string;
@@ -150,7 +150,7 @@ export function ChatInterface({
         {/* Header bar */}
         <div className="bg-[#111] border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[16px]">🤖</span>
+            <Bot className="w-4 h-4 text-indigo-400" />
             <span className="font-mono text-[12px] font-bold uppercase tracking-widest text-white truncate">{agentName}</span>
           </div>
 
@@ -158,10 +158,10 @@ export function ChatInterface({
             {isOnline ? (
               <>
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-none bg-orange-500 opacity-50"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-none bg-orange-500"></span>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-none bg-indigo-500 opacity-50"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-none bg-indigo-500"></span>
                 </span>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-orange-500 font-bold">Online</span>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-bold">Online</span>
               </>
             ) : (
               <div className="text-right">
@@ -184,7 +184,9 @@ export function ChatInterface({
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6">
-              <div className="text-4xl mb-3">🤖</div>
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-3">
+                <Bot className="w-6 h-6 text-indigo-400" />
+              </div>
               <div className="text-zinc-400 font-mono text-[12px] uppercase tracking-widest font-bold">No messages yet</div>
               <div className="text-zinc-600 font-mono text-[10px] uppercase tracking-widest mt-2">Send a command to your agent</div>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
@@ -207,16 +209,16 @@ export function ChatInterface({
                   <div key={m.id} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
                     <div className={cn("max-w-[75%]")}>
                       {!isUser ? (
-                        <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">
-                          {m.source === "telegram" ? "🤖 Agent via Telegram" : "🤖 Agent"}
+                        <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-1">
+                          {m.source === "telegram" ? "Agent via Telegram" : "Agent"}
                         </div>
                       ) : null}
                       <div
                         className={cn(
-                          "px-4 py-3 text-[12px] font-mono leading-relaxed rounded-none border border-zinc-800",
+                          "px-4 py-3 text-[12px] font-mono leading-relaxed rounded-none border",
                           isUser
-                            ? "bg-orange-500/10 text-orange-500 border-orange-500/30"
-                            : "bg-[#111] text-zinc-300"
+                            ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/30 font-bold"
+                            : "bg-[#111] text-zinc-300 border-zinc-800"
                         )}
                       >
                         {m.content}
@@ -232,12 +234,12 @@ export function ChatInterface({
               {awaitingReply ? (
                 <div className="flex justify-start">
                   <div className="max-w-[75%]">
-                    <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">🤖 Agent</div>
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">Agent</div>
                     <div className="bg-[#111] border border-zinc-800 text-zinc-500 rounded-none px-4 py-3">
                       <span className="inline-flex gap-2 items-center">
-                        <span className="h-1.5 w-1.5 rounded-none bg-orange-500 animate-pulse" />
-                        <span className="h-1.5 w-1.5 rounded-none bg-orange-500 animate-pulse [animation-delay:150ms]" />
-                        <span className="h-1.5 w-1.5 rounded-none bg-orange-500 animate-pulse [animation-delay:300ms]" />
+                        <span className="h-1.5 w-1.5 rounded-none bg-indigo-500 animate-pulse" />
+                        <span className="h-1.5 w-1.5 rounded-none bg-indigo-500 animate-pulse [animation-delay:150ms]" />
+                        <span className="h-1.5 w-1.5 rounded-none bg-indigo-500 animate-pulse [animation-delay:300ms]" />
                       </span>
                     </div>
                   </div>

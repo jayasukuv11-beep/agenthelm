@@ -103,33 +103,61 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    // Send Telegram Notification for pending approval
+    // Send Multi-Channel HITL Notifications for pending approval (Telegram, Slack, Discord)
     if (execution.status === 'pending_approval') {
       setImmediate(async () => {
         try {
-          const { data: agent } = await supabaseAdmin!
-            .from('agents')
-            .select('name')
-            .eq('id', agent_id)
-            .single()
+          const [agentRes, profileRes] = await Promise.all([
+            supabaseAdmin!.from('agents').select('name').eq('id', agent_id).single(),
+            supabaseAdmin!.from('profiles').select('slack_webhook_url, discord_webhook_url').eq('id', userId).maybeSingle()
+          ])
 
-          const agentName = agent?.name || 'Agent'
-          const message = `🛡️ <b>Action Required: ${agentName}</b>\n\n` +
-            `The agent is requesting approval to run an <b>@irreversible</b> tool:\n\n` +
-            `🔹 <b>Tool:</b> <code>${tool_name}</code>\n` +
-            `${input_preview ? `🔹 <b>Preview:</b> ${input_preview}\n` : ''}\n` +
-            `Use the buttons below to respond. You can also type <code>/resume ${agentName}</code> if this message is lost.`
+          const agentName = agentRes.data?.name || 'Agent'
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agenthelm.online'
+
+          // 1. Telegram
+          const message = `[Action Required: ${agentName}]\n\n` +
+            `The agent is requesting approval to run an @irreversible tool:\n\n` +
+            `Tool: ${tool_name}\n` +
+            `${input_preview ? `Preview: ${input_preview}\n` : ''}\n` +
+            `Use the buttons below or respond via Telegram.`
           
           await sendTelegramToUser(userId, message, 'HTML', {
             inline_keyboard: [
               [
-                { text: '✅ Approve', callback_data: `approve_tool:${execution.id}` },
-                { text: '❌ Reject', callback_data: `reject_tool:${execution.id}` },
+                { text: 'Approve', callback_data: `approve_tool:${execution.id}` },
+                { text: 'Reject', callback_data: `reject_tool:${execution.id}` },
               ]
             ]
-          })
+          }).catch(err => console.error('Telegram error:', err))
+
+          // 2. Slack Webhook
+          if (profileRes.data?.slack_webhook_url) {
+            const { sendSlackApprovalAlert } = await import('@/lib/notifications')
+            await sendSlackApprovalAlert(profileRes.data.slack_webhook_url, {
+              interventionId: execution.id,
+              agentName,
+              actionName: tool_name,
+              payload: { preview: input_preview || 'No details' },
+              confirmType: confirm_channel,
+              baseUrl
+            })
+          }
+
+          // 3. Discord Webhook
+          if (profileRes.data?.discord_webhook_url) {
+            const { sendDiscordApprovalAlert } = await import('@/lib/notifications')
+            await sendDiscordApprovalAlert(profileRes.data.discord_webhook_url, {
+              interventionId: execution.id,
+              agentName,
+              actionName: tool_name,
+              payload: { preview: input_preview || 'No details' },
+              confirmType: confirm_channel,
+              baseUrl
+            })
+          }
         } catch (tgErr) {
-          console.error('Telegram Safety Bridge error:', tgErr)
+          console.error('Multi-channel Safety Bridge error:', tgErr)
         }
       })
     }

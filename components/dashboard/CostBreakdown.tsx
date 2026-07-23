@@ -3,6 +3,7 @@ import { formatCurrency, type CurrencyCode } from "@/lib/currency";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import { Coins } from "lucide-react";
 
 interface CostBreakdownProps {
   agentId: string;
@@ -10,7 +11,7 @@ interface CostBreakdownProps {
   currency: CurrencyCode;
 }
 
-const COLORS = ['#f97316', '#eab308', '#3b82f6', '#a855f7', '#ef4444'];
+const COLORS = ['#6366f1', '#06b6d4', '#10b981', '#a855f7', '#ef4444'];
 
 export function CostBreakdown({ agentId, plan, currency }: CostBreakdownProps) {
   const [loading, setLoading] = useState(true);
@@ -81,14 +82,14 @@ export function CostBreakdown({ agentId, plan, currency }: CostBreakdownProps) {
   if (plan === "free") {
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-[#111] rounded-none border border-zinc-800 border-dashed">
-        <div className="w-12 h-12 bg-[#0a0a0a] rounded-none border border-zinc-800 flex items-center justify-center mb-4">
-          <span className="text-2xl pt-1">💰</span>
+        <div className="w-12 h-12 bg-indigo-500/10 rounded-none border border-indigo-500/20 flex items-center justify-center mb-4">
+          <Coins className="w-6 h-6 text-indigo-400" />
         </div>
         <h3 className="text-white font-mono font-bold uppercase tracking-widest text-[14px] mb-2">Detailed Cost Attribution</h3>
         <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 max-w-sm text-center mb-6 leading-relaxed">
           Upgrade to Indie or Studio to see per-model cost breakdowns and 7-day spending trends.
         </p>
-        <button className="text-[12px] font-mono font-bold uppercase tracking-widest bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-none transition-all">
+        <button className="text-[12px] font-mono font-bold uppercase tracking-widest bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-none transition-all">
           Upgrade Plan
         </button>
       </div>
@@ -152,14 +153,14 @@ export function CostBreakdown({ agentId, plan, currency }: CostBreakdownProps) {
                 formatter={(value: any) => formatCurrency(Number(value) || 0, currency)}
                 contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid #27272a", color: "#fff", borderRadius: "0px", fontFamily: "monospace", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}
               />
-              <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={{ r: 4, fill: "#f97316", strokeWidth: 0 }} />
+              <Line type="monotone" dataKey="cost" stroke="#6366f1" strokeWidth={2} dot={{ r: 4, fill: "#6366f1", strokeWidth: 0 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {plan !== "studio" && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
-            <button className="text-[12px] font-mono font-bold uppercase tracking-widest bg-yellow-500 text-black hover:bg-yellow-400 px-6 py-3 rounded-none transition-all">
+            <button className="text-[12px] font-mono font-bold uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-500 px-6 py-3 rounded-none transition-all">
               Upgrade to Studio
             </button>
           </div>

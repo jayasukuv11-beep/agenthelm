@@ -12,13 +12,14 @@ import SolutionSection from '@/components/landing/SolutionSection'
 import MCPSection from '@/components/landing/MCPSection'
 import PricingSection from '@/components/landing/PricingSection'
 import HeroAnimation from '@/components/landing/HeroAnimation'
+import { ArrowRight } from 'lucide-react'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#08080a] text-zinc-100 font-sans selection:bg-[#ff6b35] selection:text-white">
+    <div className="min-h-screen bg-[#08080a] text-zinc-100 font-sans selection:bg-indigo-600 selection:text-white">
       {/* Hero Section */}
       <section className="relative pt-24 pb-20 px-6 bg-[#08080a] overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,107,53,0.08),transparent_50%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.08),transparent_50%)] pointer-events-none" />
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black font-mono uppercase tracking-tighter text-white mb-6 leading-tight">
             One Project.
@@ -31,14 +32,14 @@ export default function LandingPage() {
             AgentHelm gives every AI coding agent a shared Project Brain so they remember architecture, APIs, decisions, and project knowledge instead of starting from scratch.
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-8">
-            <a href="/login" className="bg-[#ff6b35] hover:bg-[#e0531f] focus-visible:ring-2 focus-visible:ring-[#ff6b35] text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(255,107,53,0.3)]">
-              Get Started Free <span className="w-4 h-4">→</span>
+            <a href="/login" className="bg-indigo-600 hover:bg-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(99,102,241,0.3)] rounded-lg">
+              Get Started Free <ArrowRight className="w-4 h-4" />
             </a>
-            <a href="/docs" className="border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900/60 focus-visible:ring-2 focus-visible:ring-zinc-600 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2">
-              Read Documentation <span className="w-4 h-4">→</span>
+            <a href="/docs" className="border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900/60 focus-visible:ring-2 focus-visible:ring-zinc-600 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 rounded-lg">
+              Read Documentation <ArrowRight className="w-4 h-4" />
             </a>
-            <a href="https://github.com/jayasukuv11-beep/agenthelm" target="_blank" rel="noopener noreferrer" className="border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900/60 focus-visible:ring-2 focus-visible:ring-zinc-600 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2">
-              GitHub <span className="w-4 h-4">→</span>
+            <a href="https://github.com/jayasukuv11-beep/agenthelm" target="_blank" rel="noopener noreferrer" className="border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900/60 focus-visible:ring-2 focus-visible:ring-zinc-600 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 rounded-lg">
+              GitHub <ArrowRight className="w-4 h-4" />
             </a>
           </div>
           <p className="text-zinc-500 font-mono text-xs mt-6 uppercase tracking-widest">
@@ -64,9 +65,9 @@ export default function LandingPage() {
       <section className="py-24 px-6 bg-[#08080a] border-y border-zinc-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-[11px] font-mono text-[#ff6b35]/60 uppercase tracking-[0.3em] block mb-3">HOW IT WORKS</span>
+            <span className="text-[11px] font-mono text-indigo-400 uppercase tracking-[0.3em] block mb-3">HOW IT WORKS</span>
             <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
-              The <span className="text-[#ff6b35]">Brain Pipeline</span>
+              The <span className="text-indigo-400">Brain Pipeline</span>
             </h2>
             <p className="text-zinc-400 font-mono text-sm max-w-2xl mx-auto">
               Knowledge flows through a secure pipeline: proposal → noise filter → validation → verification → analysis → merge planning → publishing → Project Brain → context injection.
@@ -83,9 +84,9 @@ export default function LandingPage() {
       <section className="py-24 px-6 bg-[#08080a] border-y border-zinc-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-[11px] font-mono text-[#ff6b35]/60 uppercase tracking-[0.3em] block mb-3">SECURITY ARCHITECTURE</span>
+            <span className="text-[11px] font-mono text-indigo-400 uppercase tracking-[0.3em] block mb-3">SECURITY ARCHITECTURE</span>
             <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
-              Built-In <span className="text-[#ff6b35]">Security</span>
+              Built-In <span className="text-indigo-400">Security</span>
             </h2>
             <p className="text-zinc-400 font-mono text-sm max-w-xl mx-auto">
               Every layer hardened. Fail-closed by default. JWT agent authentication. Scoped tool permissions. Complete audit logs.
@@ -117,12 +118,12 @@ export default function LandingPage() {
             © {new Date().getFullYear()} AgentHelm · The AgentHelm Research Team
           </p>
           <div className="mt-4 flex justify-center gap-6 text-zinc-500 text-[11px] font-mono">
-            <a href="/privacy-policy" className="hover:text-[#ff6b35] transition-colors">Privacy Policy</a>
-            <a href="/terms-of-service" className="hover:text-[#ff6b35] transition-colors">Terms of Service</a>
-            <a href="/refund-policy" className="hover:text-[#ff6b35] transition-colors">Refund Policy</a>
+            <a href="/privacy-policy" className="hover:text-indigo-400 transition-colors">Privacy Policy</a>
+            <a href="/terms-of-service" className="hover:text-indigo-400 transition-colors">Terms of Service</a>
+            <a href="/refund-policy" className="hover:text-indigo-400 transition-colors">Refund Policy</a>
           </div>
           <p className="text-zinc-600 text-[10px] font-mono mt-4">
-            Built in India 🇮🇳 · Engineered for global scale
+            Engineered for global enterprise scale
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-2">
             <span className="text-zinc-600 text-[9px] uppercase tracking-wider font-mono">Powered by</span>

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Copy } from "lucide-react";
+import { Loader2, Check, Copy, Shield } from "lucide-react";
 
 const AGENT_TYPES = [
   "Python scripts",
@@ -143,7 +143,9 @@ export default function OnboardingPage() {
           <>
             <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
               <div className="flex justify-center mb-4">
-                <span className="text-4xl font-bold text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">⚡</span>
+                <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
               </div>
               <CardTitle className="text-[20px] font-black text-white uppercase tracking-widest mb-2">
                 What should we call you?
@@ -156,7 +158,7 @@ export default function OnboardingPage() {
                     placeholder="YOUR FULL NAME"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="bg-[#0a0a0a] border-zinc-800 text-white focus-visible:ring-1 focus-visible:ring-orange-500 focus-visible:border-orange-500 text-[14px] font-mono font-bold uppercase tracking-widest py-6 rounded-none h-14 px-4 transition-all"
+                    className="bg-[#0a0a0a] border-zinc-800 text-white focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 text-[14px] font-mono font-bold uppercase tracking-widest py-6 rounded-none h-14 px-4 transition-all"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleStep1();
@@ -166,7 +168,7 @@ export default function OnboardingPage() {
                 {error && <p className="text-[11px] uppercase tracking-widest text-red-500 bg-red-500/10 p-2 border border-red-500/30 font-bold">{error}</p>}
                 <Button
                   onClick={handleStep1}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
                 >
                   Continue
                 </Button>
@@ -193,18 +195,18 @@ export default function OnboardingPage() {
                     onClick={() => toggleType(type)}
                     className={`p-4 border rounded-none cursor-pointer transition-all flex items-center justify-between
                       ${selectedTypes.includes(type) 
-                        ? 'border-orange-500 bg-orange-500/10' 
+                        ? 'border-indigo-500 bg-indigo-500/10' 
                         : 'border-zinc-800 bg-[#0a0a0a] hover:border-zinc-600'
                       }`}
                   >
                     <span className="text-[12px] font-mono font-bold text-white uppercase tracking-widest">{type}</span>
                     <div className={`w-5 h-5 rounded-none border flex items-center justify-center transition-all
                       ${selectedTypes.includes(type) 
-                        ? 'border-orange-500 bg-orange-500' 
+                        ? 'border-indigo-500 bg-indigo-600' 
                         : 'border-zinc-600 bg-transparent'
                       }`}
                     >
-                      {selectedTypes.includes(type) && <Check className="w-3 h-3 text-black font-bold" />}
+                      {selectedTypes.includes(type) && <Check className="w-3 h-3 text-white font-bold" />}
                     </div>
                   </div>
                 ))}
@@ -212,7 +214,7 @@ export default function OnboardingPage() {
                 <Button
                   onClick={handleStep2}
                   disabled={loading}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-14 rounded-none text-[13px] uppercase tracking-widest mt-6 transition-all"
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Continue
@@ -226,8 +228,8 @@ export default function OnboardingPage() {
           <>
              <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
               <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 bg-orange-500/10 border border-orange-500/30 rounded-none flex items-center justify-center">
-                  <span className="text-3xl text-orange-500 pt-1">🎉</span>
+                <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/30 rounded-none flex items-center justify-center">
+                  <Check className="w-8 h-8 text-indigo-400 font-bold" />
                 </div>
               </div>
               <CardTitle className="text-[18px] font-black text-white uppercase tracking-widest mb-2">
@@ -238,9 +240,9 @@ export default function OnboardingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              <div className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-orange-500/30 rounded-none overflow-hidden relative">
-                <span className="font-mono text-orange-500 font-bold text-[13px]">{connectKey || "Loading..."}</span>
-                <Button variant="ghost" size="sm" onClick={handleCopy} className="text-orange-500 hover:text-orange-400 border border-orange-500 hover:bg-orange-500/10 rounded-none font-mono text-[10px] uppercase tracking-widest ml-4 transition-all">
+              <div className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-indigo-500/30 rounded-none overflow-hidden relative">
+                <span className="font-mono text-indigo-400 font-bold text-[13px]">{connectKey || "Loading..."}</span>
+                <Button variant="ghost" size="sm" onClick={handleCopy} className="text-indigo-400 hover:text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/10 rounded-none font-mono text-[10px] uppercase tracking-widest ml-4 transition-all">
                   {copied ? <Check className="w-3 h-3 mr-2" /> : <Copy className="w-3 h-3 mr-2" />}
                   {copied ? "Copied" : "Copy"}
                 </Button>
