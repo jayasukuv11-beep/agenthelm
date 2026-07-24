@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, ownsAgent } from '@/lib/sdk-auth'
 
 export async function POST(req: Request) {
   try {
@@ -12,15 +12,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const { supabaseAdmin, plan } = auth
+    const { userId, supabaseAdmin, plan } = auth
 
     if (plan !== 'studio') {
       return NextResponse.json({ error: "Evals require Studio plan." }, { status: 403 })
     }
 
+    if (!(await ownsAgent(supabaseAdmin!, agent_id, userId))) {
+      return NextResponse.json({ error: 'Unauthorized agent access' }, { status: 403 })
+    }
+
     // 1. Resolve Eval Set
     let resolvedSetId = eval_set_id;
-    
+
+    if (eval_set_id) {
+      // A caller-supplied set id must belong to the agent we just authorized
+      const { data: set } = await supabaseAdmin!
+        .from('agent_eval_sets')
+        .select('agent_id')
+        .eq('id', eval_set_id)
+        .maybeSingle()
+
+      if (!set || set.agent_id !== agent_id) {
+        return NextResponse.json({ error: 'Unauthorized eval set access' }, { status: 403 })
+      }
+    }
+
     if (!resolvedSetId && name) {
       const { data: existingSet } = await supabaseAdmin!
         .from('agent_eval_sets')
