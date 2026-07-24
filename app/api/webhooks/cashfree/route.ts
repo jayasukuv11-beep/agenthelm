@@ -31,7 +31,10 @@ export async function POST(req: Request) {
       .update(signatureString)
       .digest("base64");
       
-    if (computedSignature !== signature) {
+    const expected = Buffer.from(computedSignature)
+    const received = Buffer.from(signature)
+
+    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
       console.error("Webhook signature verification failed");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }

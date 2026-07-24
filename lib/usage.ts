@@ -16,7 +16,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
   const now = new Date()
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const firstDayOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
 
   const [
     { count: agentCount },
