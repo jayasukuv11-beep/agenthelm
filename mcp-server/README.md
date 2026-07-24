@@ -1,8 +1,9 @@
 # AgentHelm MCP Server
 
 Exposes the AgentHelm control plane context and proposals features as Model Context Protocol (MCP) tools:
-- `get_context`: Fetch ranked brain entries.
-- `propose_knowledge`: Submit knowledge proposals.
+- `get_context`: Fetch versioned architecture guidelines, database schemas, and conventions.
+- `propose_knowledge`: Submit new engineering decisions and codebase discoveries to the Brain Compiler.
+- `get_history`: Query history logs, diffs, and decision trace blame.
 
 ---
 
@@ -10,9 +11,9 @@ Exposes the AgentHelm control plane context and proposals features as Model Cont
 
 ### Environment Variables
 Set the following environment variables when running the server:
-- `AGENTHELM_CONNECT_KEY`: Your Agent connection key (connect key from your Profile).
+- `AGENTHELM_CONNECT_KEY`: Your Agent connection key from [agenthelm.online](https://agenthelm.online).
 - `AGENTHELM_PROJECT`: The project ID or project name.
-- `AGENTHELM_BASE_URL` (optional): The control plane URL (defaults to `http://localhost:3000` or use `https://agenthelm.online` for production).
+- `AGENTHELM_BASE_URL` (optional): Defaults to `https://agenthelm.online`.
 
 ---
 
@@ -25,12 +26,11 @@ Add the configuration block below to your `.cursor/mcp.json` or configure it dir
 {
   "mcpServers": {
     "agenthelm": {
-      "command": "node",
-      "args": ["d:/agentdock/mcp-server/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "agenthelm-mcp"],
       "env": {
         "AGENTHELM_CONNECT_KEY": "YOUR_CONNECT_KEY_HERE",
-        "AGENTHELM_PROJECT": "YOUR_PROJECT_NAME_OR_ID_HERE",
-        "AGENTHELM_BASE_URL": "http://localhost:3000"
+        "AGENTHELM_PROJECT": "your-project-name"
       }
     }
   }
@@ -38,7 +38,7 @@ Add the configuration block below to your `.cursor/mcp.json` or configure it dir
 ```
 
 ### 2. Claude Desktop Setup
-Open your Claude Desktop configuration file (accessible via Settings > Developer > Edit Config):
+Open your Claude Desktop configuration file:
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
@@ -48,12 +48,11 @@ Add the server:
 {
   "mcpServers": {
     "agenthelm": {
-      "command": "node",
-      "args": ["d:/agentdock/mcp-server/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "agenthelm-mcp"],
       "env": {
         "AGENTHELM_CONNECT_KEY": "YOUR_CONNECT_KEY_HERE",
-        "AGENTHELM_PROJECT": "YOUR_PROJECT_NAME_OR_ID_HERE",
-        "AGENTHELM_BASE_URL": "http://localhost:3000"
+        "AGENTHELM_PROJECT": "your-project-name"
       }
     }
   }
