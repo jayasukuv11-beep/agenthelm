@@ -68,3 +68,5 @@ yarn-error.log*
 /agent_bench_v2/
 /agent_test_run/
 /output/
+/scratch/
+scratch/
