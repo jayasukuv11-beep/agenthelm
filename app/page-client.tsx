@@ -18,21 +18,32 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#08080a] text-zinc-100 font-sans selection:bg-indigo-600 selection:text-white">
       {/* Hero Section */}
-      <section className="relative pt-24 pb-20 px-6 bg-[#08080a] overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.08),transparent_50%)] pointer-events-none" />
+      <section className="relative pt-20 pb-20 px-6 bg-[#08080a] overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.12),transparent_55%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+        
         <div className="max-w-6xl mx-auto text-center relative z-10">
+          {/* Announcement Pill */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono mb-8 hover:bg-indigo-500/20 transition-all cursor-pointer">
+            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+            <span className="font-bold">v0.1.2 Released</span> — Model Context Protocol (MCP) Server live on npm
+            <ArrowRight className="w-3 h-3 ml-1" />
+          </div>
+
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black font-mono uppercase tracking-tighter text-white mb-6 leading-tight">
             One Project.
             <br />
             One Brain.
             <br />
-            Unlimited AI Agents.
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400">
+              Unlimited AI Agents.
+            </span>
           </h1>
           <p className="text-zinc-400 font-mono text-lg max-w-xl mx-auto mb-12 leading-relaxed">
             AgentHelm gives every AI coding agent a shared Project Brain so they remember architecture, APIs, decisions, and project knowledge instead of starting from scratch.
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-8">
-            <a href="/login" className="bg-indigo-600 hover:bg-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(99,102,241,0.3)] rounded-lg">
+            <a href="/login" className="bg-indigo-600 hover:bg-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(99,102,241,0.4)] rounded-lg">
               Get Started Free <ArrowRight className="w-4 h-4" />
             </a>
             <a href="/docs" className="border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900/60 focus-visible:ring-2 focus-visible:ring-zinc-600 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 rounded-lg">
