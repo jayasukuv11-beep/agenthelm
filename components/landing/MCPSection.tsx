@@ -16,7 +16,7 @@ const tabData = [
       "env": {
         "AGENTHELM_CONNECT_KEY": "ahe_live_...",
         "AGENTHELM_PROJECT": "my-production-app",
-        "AGENTHELM_BASE_URL": "https://api.agenthelm.online"
+        "AGENTHELM_BASE_URL": "https://agenthelm.online"
       }
     }
   }
@@ -33,7 +33,7 @@ Command: npx -y agenthelm-mcp
 # Environment Variables:
 AGENTHELM_CONNECT_KEY = "ahe_live_..."
 AGENTHELM_PROJECT = "my-production-app"
-AGENTHELM_BASE_URL = "https://api.agenthelm.online"`
+AGENTHELM_BASE_URL = "https://agenthelm.online"`
   },
   {
     id: "cli",
