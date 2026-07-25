@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, ownsAgent } from '@/lib/sdk-auth'
 
 function generateHeuristicRubric(toolSequence: string[], reasoningSteps: any[]) {
   const criteria = [];
@@ -54,7 +54,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const { supabaseAdmin } = auth
+    const { userId, supabaseAdmin } = auth
+
+    if (!(await ownsAgent(supabaseAdmin, agent_id, userId))) {
+      return NextResponse.json({ error: 'Unauthorized agent access' }, { status: 403 })
+    }
+
+    const { data: task } = await supabaseAdmin
+      .from('agent_tasks')
+      .select('user_id')
+      .eq('id', task_id)
+      .maybeSingle()
+
+    if (!task || task.user_id !== userId) {
+      return NextResponse.json({ error: 'Unauthorized task access' }, { status: 403 })
+    }
 
     // 1. Fetch checkpoints
     const { data: checkpoints, error: cpError } = await supabaseAdmin

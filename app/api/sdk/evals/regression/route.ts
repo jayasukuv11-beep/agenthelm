@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { validateConnectKey, ownsAgent } from '@/lib/sdk-auth'
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +16,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const { supabaseAdmin } = auth
+    const { userId, supabaseAdmin } = auth
+
+    if (!(await ownsAgent(supabaseAdmin, agent_id, userId))) {
+      return NextResponse.json({ error: 'Unauthorized agent access' }, { status: 403 })
+    }
+
+    const { data: evalSet } = await supabaseAdmin
+      .from('agent_eval_sets')
+      .select('agent_id')
+      .eq('id', eval_set_id)
+      .maybeSingle()
+
+    if (!evalSet || evalSet.agent_id !== agent_id) {
+      return NextResponse.json({ error: 'Unauthorized eval set access' }, { status: 403 })
+    }
 
     // 1. Fetch latest result for current version
     const { data: currentResult, error: currentError } = await supabaseAdmin
@@ -125,7 +139,11 @@ export async function GET(req: Request) {
     const auth: any = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { supabaseAdmin } = auth
+    const { userId, supabaseAdmin } = auth
+
+    if (!(await ownsAgent(supabaseAdmin, agent_id, userId))) {
+      return NextResponse.json({ error: 'Unauthorized agent access' }, { status: 403 })
+    }
 
     const { data: regressions, error } = await supabaseAdmin
       .from('eval_regressions')
@@ -154,7 +172,17 @@ export async function PATCH(req: Request) {
     const auth: any = await validateConnectKey(key)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { supabaseAdmin } = auth
+    const { userId, supabaseAdmin } = auth
+
+    const { data: regression } = await supabaseAdmin
+      .from('eval_regressions')
+      .select('agent_id')
+      .eq('id', regression_id)
+      .maybeSingle()
+
+    if (!regression || !(await ownsAgent(supabaseAdmin, regression.agent_id, userId))) {
+      return NextResponse.json({ error: 'Unauthorized agent access' }, { status: 403 })
+    }
 
     const { error } = await supabaseAdmin
       .from('eval_regressions')

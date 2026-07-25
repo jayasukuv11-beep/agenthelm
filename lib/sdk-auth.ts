@@ -25,6 +25,28 @@ export function hasError(result: AuthResult): result is AuthError {
   return 'error' in result
 }
 
+/**
+ * SDK routes use the service role client, which bypasses RLS.
+ * Any route that accepts an agent_id from the request body must check
+ * the agent belongs to the caller before touching its data.
+ */
+export async function ownsAgent(
+  supabaseAdmin: SupabaseClient,
+  agentId: string,
+  userId: string
+): Promise<boolean> {
+  if (!agentId) return false
+
+  const { data } = await supabaseAdmin
+    .from('agents')
+    .select('id')
+    .eq('id', agentId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return !!data
+}
+
 export async function issueAgentToken(userId: string, agentId: string, plan: string) {
   const jwt = await new jose.SignJWT({ userId, plan, agentId })
     .setProtectedHeader({ alg: 'HS256' })
