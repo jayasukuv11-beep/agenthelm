@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { validateConnectKey } from '@/lib/sdk-auth'
 import { compileProposal } from '@/lib/brain-compiler'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { resolveProject } from '@/lib/project-resolver'
 
 export async function OPTIONS() {
   return new Response(null, {
@@ -39,13 +40,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields: project, content_hash, payload' }, { status: 400 })
     }
 
-    // 1. Resolve project_id
-    const { data: projectRecord, error: projectError } = await supabaseAdmin
-      .from('projects')
-      .select('id')
-      .or(`id.eq.${project},name.eq.${project}`)
-      .limit(1)
-      .single()
+    // 1. Resolve project_id (supports UUID or Project Name)
+    const { data: projectRecord, error: projectError } = await resolveProject(supabaseAdmin, project)
 
     if (projectError || !projectRecord) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
@@ -89,10 +85,9 @@ export async function POST(req: Request) {
       throw insertError
     }
 
-    // 3. Trigger Brain Compiler (fire and forget)
-    setImmediate(() => {
-      compileProposal(proposal.id).catch(console.error)
-    })
+    // 3. Trigger Brain Compiler and await result
+    const compileResult = await compileProposal(proposal.id)
+
 
     // 4. Log timeline event
     await supabaseAdmin

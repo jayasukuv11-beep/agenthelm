@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { validateConnectKey, hasError } from '@/lib/sdk-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { resolveProject } from '@/lib/project-resolver'
+
 
 export const dynamic = 'force-dynamic'
 
@@ -164,16 +166,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Project is required' }, { status: 400 })
     }
 
-    const { data: projectRecord } = await supabaseAdmin
-      .from('projects')
-      .select('id, brain_version')
-      .or(`id.eq.${project},name.eq.${project}`)
-      .limit(1)
-      .single()
+    const { data: projectRecord, error: projectError } = await resolveProject(supabaseAdmin, project)
 
-    if (!projectRecord) {
+    if (projectError || !projectRecord) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
+
 
     let query = supabaseAdmin
       .from('brain_entries')

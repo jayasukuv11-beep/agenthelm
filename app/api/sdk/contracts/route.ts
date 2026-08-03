@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
 import { compileProposal } from '@/lib/brain-compiler'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { resolveProject } from '@/lib/project-resolver'
 
 export async function OPTIONS() {
   return new Response(null, {
@@ -45,13 +46,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // 1. Resolve project_id by name or ID (assuming `project` is name or ID)
-    const { data: projectRecord, error: projectError } = await supabaseAdmin
-      .from('projects')
-      .select('id')
-      .or(`id.eq.${project},name.eq.${project}`)
-      .limit(1)
-      .single()
+    // 1. Resolve project_id (supports UUID or Project Name)
+    const { data: projectRecord, error: projectError } = await resolveProject(supabaseAdmin, project)
 
     if (projectError || !projectRecord) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })

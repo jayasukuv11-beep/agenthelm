@@ -120,3 +120,32 @@ export async function resolveConflict(
 
   return { status: "approved" }
 }
+
+export async function compilePendingProposals(projectId: string) {
+  const { data: proposals } = await supabaseAdmin
+    .from("knowledge_proposals")
+    .select("id, build_status, human_reviewed")
+    .eq("project_id", projectId)
+    .in("build_status", ["pending", "reviewing"])
+    .order("created_at", { ascending: true })
+
+  if (!proposals || proposals.length === 0) {
+    return { compiled: 0, total: 0, results: [] }
+  }
+
+  const results = []
+  for (const prop of proposals) {
+    if (prop.build_status === "reviewing") {
+      await supabaseAdmin
+        .from("knowledge_proposals")
+        .update({ build_status: "pending", human_reviewed: true })
+        .eq("id", prop.id)
+    }
+    const res = await compileProposal(prop.id)
+    results.push(res)
+  }
+
+  const compiledCount = results.filter((r) => r?.outcome === "merged").length
+  return { compiled: compiledCount, total: proposals.length, results }
+}
+

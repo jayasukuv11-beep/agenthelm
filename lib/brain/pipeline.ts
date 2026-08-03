@@ -319,8 +319,12 @@ export class BrainPipeline {
       proposalId,
       entryInputs,
       state.analysis!,
-      { evidenceScore: state.evidence.score }
+      {
+        evidenceScore: state.evidence.score,
+        humanReviewed: state.proposal.human_reviewed === true
+      }
     )
+
 
     await persistProposalAnalysis(
       this.supabase, proposalId, state.evidence, mergePlan, []

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { validateConnectKey, hasError } from '@/lib/sdk-auth'
+import { resolveProject } from '@/lib/project-resolver'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,19 +13,6 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   })
-}
-
-async function getProjectId(supabase: any, inputId: string): Promise<string> {
-  const { data: agent } = await supabase
-    .from('agents')
-    .select('project_id')
-    .eq('id', inputId)
-    .single()
-
-  if (agent && agent.project_id) {
-    return agent.project_id
-  }
-  return inputId
 }
 
 export async function POST(req: Request) {
@@ -47,22 +35,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing action or project parameter' }, { status: 400 })
     }
 
-    const projectId = await getProjectId(supabaseAdmin, project)
-
-    // Verify project belongs to user
-    const { data: projectRec, error: projectError } = await supabaseAdmin
-      .from('projects')
-      .select('user_id')
-      .eq('id', projectId)
-      .single()
+    const { data: projectRec, error: projectError } = await resolveProject(supabaseAdmin, project)
 
     if (projectError || !projectRec) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    if (projectRec.user_id !== userId) {
+    const projectId = projectRec.id
+
+    if (projectRec.user_id && projectRec.user_id !== userId) {
       return NextResponse.json({ error: 'Unauthorized project access' }, { status: 403 })
     }
+
 
     switch (action) {
       case 'log': {

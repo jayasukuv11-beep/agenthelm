@@ -38,10 +38,12 @@ export function buildMergePlan(
   options: {
     evidenceScore?: number
     minEvidenceForAuto?: number
+    humanReviewed?: boolean
   } = {}
 ): MergePlan {
   const evidenceScore = options.evidenceScore ?? 0
-  const minEvidence = options.minEvidenceForAuto ?? 85
+  const minEvidence = options.minEvidenceForAuto ?? 50
+  const isHumanReviewed = options.humanReviewed ?? false
 
   const entriesToAdd: MergePlanEntry[] = []
   const entriesToDeprecate: Array<{
@@ -130,13 +132,17 @@ export function buildMergePlan(
   }
 
   // Determine if human review is required
+  // If explicitly human reviewed, do not re-flag for review
   const hasHighSeverity = analysis.conflicts.some((c) => c.severity === "high")
   const humanReviewNeeded =
-    evidenceScore < minEvidence ||
-    hasHighSeverity ||
-    entriesToReject.length > 0 ||
-    analysis.stale.length > 0 ||
-    analysis.dependencies.length > 0
+    !isHumanReviewed && (
+      evidenceScore < minEvidence ||
+      hasHighSeverity ||
+      entriesToReject.length > 0 ||
+      analysis.stale.length > 0 ||
+      analysis.dependencies.length > 0
+    )
+
 
   if (humanReviewNeeded) {
     if (evidenceScore < minEvidence) {

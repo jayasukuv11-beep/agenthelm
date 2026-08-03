@@ -148,11 +148,12 @@ export default function KnowledgeProposalsPanel({ projectId, onResolve }: { proj
                   </div>
                 )}
 
-                {/* Conflict Resolution UI */}
-                {proposal.build_status === 'reviewing' && proposal.conflict_detected && (
+                {/* Conflict Resolution & Human Approval UI */}
+                {proposal.build_status === 'reviewing' && (
                   <div className="mt-3 p-3 bg-amber-500/5 border border-amber-500/15 rounded-lg">
                     <p className="text-xs text-amber-300 font-medium mb-2 font-mono flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Conflict Detected
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      {proposal.conflict_detected ? "Conflict Detected" : "Review Required"}
                     </p>
                     {conflicts.map((conflict, idx) => (
                       <div key={idx} className="text-xs text-zinc-400 mb-2 font-mono">
@@ -167,20 +168,22 @@ export default function KnowledgeProposalsPanel({ projectId, onResolve }: { proj
                       <button
                         onClick={() => handleResolve(proposal.id, 'approve')}
                         disabled={resolving === proposal.id}
-                        className="px-3 py-1.5 bg-green-500/15 text-green-400 text-xs font-medium rounded-md hover:bg-green-500/25 transition-colors border border-green-500/20 font-mono uppercase tracking-wider"
+                        className="px-3 py-1.5 bg-green-500/15 text-green-400 text-xs font-medium rounded-md hover:bg-green-500/25 transition-colors border border-green-500/20 font-mono uppercase tracking-wider flex items-center gap-1"
                       >
-                        Approve & Supersede
+                        {resolving === proposal.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        Approve & Compile
                       </button>
                       <button
                         onClick={() => handleResolve(proposal.id, 'reject')}
                         disabled={resolving === proposal.id}
-                        className="px-3 py-1.5 bg-red-500/15 text-red-400 text-xs font-medium rounded-md hover:bg-red-500/25 transition-colors border border-red-500/20 font-mono uppercase tracking-wider"
+                        className="px-3 py-1.5 bg-red-500/15 text-red-400 text-xs font-medium rounded-md hover:bg-red-500/25 transition-colors border border-red-500/20 font-mono uppercase tracking-wider flex items-center gap-1"
                       >
                         Reject
                       </button>
                     </div>
                   </div>
                 )}
+
               </div>
             )
           })}
