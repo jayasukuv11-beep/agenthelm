@@ -4,9 +4,10 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Brain, Loader2, Inbox, Zap, Trash2, AlertTriangle } from "lucide-react";
+import { Brain, Loader2, Inbox, Zap, Trash2, AlertTriangle, Plus, FolderPlus } from "lucide-react";
 import { loadDemoData } from "@/app/actions/demo";
-import { deleteProject } from "@/app/actions/project";
+import { deleteProject, createProject } from "@/app/actions/project";
+
 import { useToast } from "@/components/ui/use-toast";
 import { StatCard } from "@/components/dashboard/StatCard";
 import {
@@ -44,6 +45,54 @@ export default function ProjectsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Create modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newRepoUrl, setNewRepoUrl] = useState("");
+  const [createLoading, setCreateLoading] = useState(false);
+
+  const handleCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+
+    setCreateLoading(true);
+    try {
+      const result = await createProject({
+        name: newName.trim(),
+        description: newDescription.trim() || undefined,
+        repo_url: newRepoUrl.trim() || undefined,
+      });
+
+      if (result.success) {
+        toast({
+          title: "PROJECT CREATED",
+          description: `"${newName.trim()}" has been successfully created.`,
+        });
+        setCreateModalOpen(false);
+        setNewName("");
+        setNewDescription("");
+        setNewRepoUrl("");
+        fetchProjects();
+      } else {
+        toast({
+          title: "CREATION FAILED",
+          description: result.error || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "ERROR",
+        description: err.message || "Failed to create project.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
 
   const handleLoadDemo = async () => {
     setDemoLoading(true);
@@ -131,12 +180,10 @@ export default function ProjectsPage() {
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            onClick={() => {
-              alert("Create project functionality coming soon");
-            }}
-            className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 font-mono text-[12px] uppercase rounded-none gap-2"
+            onClick={() => setCreateModalOpen(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-black font-mono text-[12px] uppercase rounded-none gap-2 font-bold"
           >
+            <Plus className="w-4 h-4" />
             New Project
           </Button>
         </div>
@@ -162,16 +209,27 @@ export default function ProjectsPage() {
           <p className="text-zinc-500 font-mono text-sm mb-6 max-w-md">
             Create your first project to start building a Project Brain, or load demo data to explore the platform.
           </p>
-          <Button
-            onClick={handleLoadDemo}
-            disabled={demoLoading}
-            className="bg-orange-500 hover:bg-orange-600 text-black font-mono uppercase text-xs tracking-wider gap-2"
-          >
-            {demoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            Load Demo Data
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              onClick={() => setCreateModalOpen(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-black font-mono uppercase text-xs tracking-wider gap-2 font-bold"
+            >
+              <Plus className="w-4 h-4" />
+              Create Project
+            </Button>
+            <Button
+              onClick={handleLoadDemo}
+              disabled={demoLoading}
+              variant="outline"
+              className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 font-mono uppercase text-xs tracking-wider gap-2"
+            >
+              {demoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-orange-500" />}
+              Load Demo Data
+            </Button>
+          </div>
         </div>
       )}
+
 
       {/* Projects Grid */}
       {!loading && projects.length > 0 && (
@@ -312,6 +370,81 @@ export default function ProjectsPage() {
               Permanently Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Project Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="bg-[#111] border-zinc-800 text-white sm:max-w-lg rounded-none border-t-2 border-t-orange-500">
+          <form onSubmit={handleCreateProject}>
+            <DialogHeader>
+              <DialogTitle className="font-mono text-base uppercase tracking-widest text-orange-500 flex items-center gap-2">
+                <FolderPlus className="w-5 h-5 text-orange-500" />
+                Create New Project
+              </DialogTitle>
+              <DialogDescription className="font-mono text-xs uppercase tracking-wider text-zinc-500 pt-1">
+                Initialize a new AI engineering project and start building its Project Brain.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 pt-4 font-mono text-xs">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
+                  Project Name <span className="text-orange-500">*</span>
+                </label>
+                <Input
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g., E-Commerce Core API"
+                  className="bg-[#0a0a0a] border-zinc-800 text-white font-mono text-xs rounded-none focus:border-orange-500 h-10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
+                  Description <span className="text-zinc-600">(Optional)</span>
+                </label>
+                <Input
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="e.g., Main backend API and business logic"
+                  className="bg-[#0a0a0a] border-zinc-800 text-white font-mono text-xs rounded-none focus:border-orange-500 h-10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
+                  Git Repository URL <span className="text-zinc-600">(Optional)</span>
+                </label>
+                <Input
+                  value={newRepoUrl}
+                  onChange={(e) => setNewRepoUrl(e.target.value)}
+                  placeholder="e.g., github.com/organization/repo"
+                  className="bg-[#0a0a0a] border-zinc-800 text-white font-mono text-xs rounded-none focus:border-orange-500 h-10"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-6 gap-2 flex-col sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateModalOpen(false)}
+                className="bg-transparent border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-widest rounded-none h-10"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!newName.trim() || createLoading}
+                className="bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-mono text-xs uppercase tracking-widest rounded-none h-10 gap-2 font-bold"
+              >
+                {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Create Project
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -57,3 +57,64 @@ export async function deleteProject(projectId: string): Promise<{ success: boole
 
   return { success: true }
 }
+
+/**
+ * Creates a new project for the authenticated user and initializes its brain.
+ */
+export async function createProject(data: {
+  name: string
+  description?: string
+  repo_url?: string
+}): Promise<{ success: boolean; project?: any; error?: string }> {
+  if (!data.name || !data.name.trim()) {
+    return { success: false, error: 'Project name is required' }
+  }
+
+  const supabase = await createClient()
+
+  // 1. Verify current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, error: 'Unauthorized — you must be logged in.' }
+  }
+
+  // 2. Insert project record
+  const { data: project, error: createError } = await supabase
+    .from('projects')
+    .insert({
+      user_id: user.id,
+      name: data.name.trim(),
+      description: data.description?.trim() || null,
+      repo_url: data.repo_url?.trim() || null,
+      brain_version: 0,
+    })
+    .select()
+    .single()
+
+  if (createError) {
+    console.error('Project creation failed:', createError)
+    return { success: false, error: `Creation failed: ${createError.message}` }
+  }
+
+  // 3. Create initial brain version snapshot (version 1)
+  const { error: versionError } = await supabase
+    .from('brain_versions')
+    .insert({
+      project_id: project.id,
+      version: 1,
+      evolution_reason: 'Project initialized',
+      files_changed_count: 0,
+      apis_changed_count: 0,
+    })
+
+  if (versionError) {
+    console.error('Initial brain version creation warning:', versionError)
+  }
+
+  // 4. Revalidate dashboard pages
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard')
+
+  return { success: true, project }
+}
+
