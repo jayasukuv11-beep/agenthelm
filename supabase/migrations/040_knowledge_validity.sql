@@ -1,4 +1,4 @@
--- Migration 037: Knowledge Validity & Staleness Tracking
+-- Migration 040: Knowledge Validity & Staleness Tracking
 
 ALTER TABLE brain_entries
   ADD COLUMN IF NOT EXISTS validity_status TEXT DEFAULT 'CURRENT' CHECK (validity_status IN ('CURRENT', 'NEEDS_REVIEW', 'STALE', 'SUPERSEDED')),
