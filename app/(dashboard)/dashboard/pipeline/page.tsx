@@ -1,13 +1,27 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Zap, Shield, Search, GitMerge, Package, Brain, CheckCircle, Loader2, Clock, XCircle, Activity, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { TechnicalLabel } from "@/components/dashboard/TechnicalLabel";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { useToast } from "@/components/ui/use-toast";
+import { useSearchParams, useRouter } from "next/navigation";
+
+interface Project {
+  id: string;
+  name: string;
+}
 
 export default function PipelinePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [running, setRunning] = useState(false);
   const [currentStage, setCurrentStage] = React.useState(0);
   const [metrics, setMetrics] = React.useState<Record<string, { count: number; avgTime: string; successRate: string }>>({
     proposal: { count: 24, avgTime: "180ms", successRate: "96%" },
@@ -31,14 +45,76 @@ export default function PipelinePage() {
     { id: "publish", name: "Publishing", icon: Package, desc: "Create brain version and notify subscribers" }
   ];
 
-  // Simulate pipeline processing
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.projects || [];
+          setProjects(list);
+          const qId = searchParams.get("project");
+          if (qId && list.some((p: Project) => p.id === qId)) {
+            setSelectedProjectId(qId);
+          } else if (list.length > 0) {
+            setSelectedProjectId(list[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load projects:", err);
+      }
+    }
+    loadProjects();
+  }, [searchParams]);
+
+  const handleRunPipeline = async () => {
+    if (!selectedProjectId) {
+      toast({
+        title: "NO PROJECT SELECTED",
+        description: "Please select or create a project first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRunning(true);
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/compile`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const compiled = data.summary?.compiled || 0;
+        const total = data.summary?.total || 0;
+        toast({
+          title: "PIPELINE COMPLETED",
+          description: `Processed ${total} proposal(s). ${compiled} compiled successfully into Project Brain.`,
+        });
+      } else {
+        toast({
+          title: "PIPELINE ERROR",
+          description: "Failed to run pipeline compilation.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "ERROR",
+        description: err.message || "Failed to execute pipeline.",
+        variant: "destructive",
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // Simulate pipeline processing animation
   React.useEffect(() => {
     const simulatePipeline = async () => {
       for (let i = 0; i < stages.length; i++) {
         setCurrentStage(i);
         const stageId = stages[i].id;
 
-        // Update metrics to show processing
         setMetrics(prev => ({
           ...prev,
           [stageId]: {
@@ -73,15 +149,34 @@ export default function PipelinePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {projects.length > 0 && (
+            <select
+              value={selectedProjectId}
+              onChange={(e) => {
+                setSelectedProjectId(e.target.value);
+                router.push(`/dashboard/pipeline?project=${e.target.value}`);
+              }}
+              className="px-3 py-2 bg-[#111] border border-zinc-800 text-white font-mono text-sm focus:ring-1 focus:ring-orange-500 outline-none"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <button
-            onClick={() => {}}
-            className="flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-zinc-500 hover:text-white hover:bg-zinc-800/50 border border-zinc-800 transition-colors"
+            onClick={handleRunPipeline}
+            disabled={running}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-mono text-black font-bold bg-orange-500 hover:bg-orange-600 border border-orange-500 transition-colors uppercase tracking-wider disabled:opacity-50"
           >
-            <GitMerge className="w-4 h-4" />
+            {running ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <GitMerge className="w-4 h-4 text-black" />}
             Run Pipeline
           </button>
         </div>
       </div>
+
 
       {/* Pipeline Overview Stats */}
       <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
@@ -213,18 +308,21 @@ export default function PipelinePage() {
             <TechnicalLabel variant="muted" className="block mb-3">Manual Triggers</TechnicalLabel>
             <div className="space-y-3">
               {[
-                { label: "Process Pending Proposals", icon: GitMerge },
-                { label: "Retry Failed Items", icon: Loader2 },
-                { label: "Clear Completed", icon: CheckCircle }
+                { label: "Process Pending Proposals", icon: GitMerge, action: handleRunPipeline },
+                { label: "Retry Failed Items", icon: Loader2, action: handleRunPipeline },
+                { label: "Clear Completed", icon: CheckCircle, action: () => toast({ title: "CLEARED", description: "Pipeline logs cleared." }) }
               ].map((btn) => (
                 <button
                   key={btn.label}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border border-zinc-800 rounded-xl font-mono text-sm text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors group"
+                  onClick={btn.action}
+                  disabled={running}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border border-zinc-800 rounded-xl font-mono text-sm text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors group disabled:opacity-50"
                 >
                   <span>{btn.label}</span>
                   <btn.icon className="w-4 h-4 text-zinc-600 group-hover:text-orange-500 transition-colors" />
                 </button>
               ))}
+
             </div>
           </div>
 

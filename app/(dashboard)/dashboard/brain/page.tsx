@@ -88,6 +88,10 @@ function ProjectBrainContent() {
       if (res.ok) {
         const data = await res.json();
         setHealthData(data);
+        toast({
+          title: "BRAIN REFRESHED",
+          description: "Project Brain metrics and health data updated.",
+        });
       }
     } catch (err) {
       console.error("Failed to load project health:", err);
@@ -95,6 +99,7 @@ function ProjectBrainContent() {
       setLoadingHealth(false);
     }
   };
+
 
   useEffect(() => {
     fetchProjectHealth();
