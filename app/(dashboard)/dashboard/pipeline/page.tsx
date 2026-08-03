@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Zap, Shield, Search, GitMerge, Package, Brain, CheckCircle, Loader2, Clock, XCircle, Activity, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { TechnicalLabel } from "@/components/dashboard/TechnicalLabel";
@@ -14,7 +14,7 @@ interface Project {
   name: string;
 }
 
-export default function PipelinePage() {
+function PipelineContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -108,7 +108,7 @@ export default function PipelinePage() {
     }
   };
 
-  // Simulate pipeline processing animation
+  // Simulate pipeline processing
   React.useEffect(() => {
     const simulatePipeline = async () => {
       for (let i = 0; i < stages.length; i++) {
@@ -177,7 +177,6 @@ export default function PipelinePage() {
         </div>
       </div>
 
-
       {/* Pipeline Overview Stats */}
       <div className="bg-[#111] border border-zinc-800 rounded-xl p-6">
         <TechnicalLabel className="block mb-4">Pipeline Overview</TechnicalLabel>
@@ -244,11 +243,10 @@ export default function PipelinePage() {
                 >
                   {/* Status indicator */}
                   <div className="relative z-10 group">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all ${
-                      isActive ? "bg-orange-500/20 border-orange-500/50 text-orange-500 scale-110" :
-                      isCompleted ? "bg-green-500/10 border-green-500/30 text-green-400" :
-                      "bg-zinc-900 border-zinc-800 text-zinc-600"
-                    }`}>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all ${isActive ? "bg-orange-500/20 border-orange-500/50 text-orange-500 scale-110" :
+                        isCompleted ? "bg-green-500/10 border-green-500/30 text-green-400" :
+                          "bg-zinc-900 border-zinc-800 text-zinc-600"
+                      }`}>
                       {isActive ? <Loader2 className="w-5 h-5 animate-spin" /> : <stage.icon className="w-5 h-5" />}
                     </div>
                   </div>
@@ -322,7 +320,6 @@ export default function PipelinePage() {
                   <btn.icon className="w-4 h-4 text-zinc-600 group-hover:text-orange-500 transition-colors" />
                 </button>
               ))}
-
             </div>
           </div>
 
@@ -363,5 +360,18 @@ export default function PipelinePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PipelinePage() {
+  return (
+    <Suspense fallback={
+      <div className="animate-pulse space-y-8 max-w-6xl mx-auto p-6">
+        <div className="h-24 bg-[#111] border border-zinc-800"></div>
+        <div className="h-64 bg-[#111] border border-zinc-800"></div>
+      </div>
+    }>
+      <PipelineContent />
+    </Suspense>
   );
 }
