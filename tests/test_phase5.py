@@ -11,13 +11,14 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'sdk', 'python'))
 
 import agenthelm
+from agenthelm.client import PermissionDenied
 
 class TestScopedPermissions(unittest.TestCase):
     """Tests that the agent SDK enforces tool whitelists."""
 
     @patch('requests.post')
     def test_permission_denied_throws_runtime_error(self, mock_post):
-        """Verify that calling an unwhitelisted tool raises RuntimeError in block_mode."""
+        """Verify that calling an unwhitelisted tool raises PermissionDenied in block_mode."""
         # Mock connection response with studio plan and restricted permissions
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {
@@ -30,7 +31,7 @@ class TestScopedPermissions(unittest.TestCase):
         }
 
         dock = agenthelm.connect("ahe_live_test", name="SecurityTestAgent")
-        
+
         # Define a safe tool (decorator usage)
         @dock.irreversible(confirm="slack")
         def safe_tool():
@@ -44,11 +45,11 @@ class TestScopedPermissions(unittest.TestCase):
         # This should work
         # (We skip the internal approval poll by mocking _enforce_tool_execution_safety or just checking it directly)
         dock._enforce_tool_execution_safety("safe_tool", (), {})
-        
-        # This should raise RuntimeError
-        with self.assertRaises(RuntimeError) as cm:
+
+        # This should raise PermissionDenied (which is a RuntimeError subclass)
+        with self.assertRaises(PermissionDenied) as cm:
             dock._enforce_tool_execution_safety("restricted_tool", (), {})
-        
+
         self.assertIn("Tool 'restricted_tool' not in allowed permissions list", str(cm.exception))
 
     @patch('requests.post')

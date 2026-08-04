@@ -47,7 +47,7 @@ class InjectionDetected(AgentHelmError):
     """Raised when prompt injection is identified in input or output."""
     pass
 
-class PermissionDenied(AgentHelmError):
+class PermissionDenied(AgentHelmError, RuntimeError):
     """Raised when an agent attempts to call a non-whitelisted tool."""
     pass
 
