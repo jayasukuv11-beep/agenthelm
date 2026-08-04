@@ -272,8 +272,8 @@ export class BrainPipeline {
     )
     const result = verifyProposal(proposal, source)
     
-    // Non-blocking fallback: if score is less than 50, fall back to 50
-    const finalScore = result.score >= 50 ? result.score : 50
+    // Use actual evidence score - no artificial floor
+    const finalScore = result.score
     return { state: { evidence: sourceToEvidenceResult(finalScore, source) } }
   }
 

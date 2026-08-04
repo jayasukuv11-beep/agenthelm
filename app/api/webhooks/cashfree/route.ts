@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendIndieSubscriptionEmail } from "@/lib/email";
 import { acquireLock } from "@/lib/redis";
 
@@ -9,11 +9,8 @@ export const dynamic = "force-dynamic";
 import { MULTI_CURRENCY_PLANS, type CurrencyCode } from "@/lib/currency";
  
 export async function POST(req: Request) {
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const rawBody = await req.text();
     const timestamp = req.headers.get("x-webhook-timestamp") || "";
     const signature = req.headers.get("x-webhook-signature") || "";

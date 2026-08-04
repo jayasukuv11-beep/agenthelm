@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         known_limitations: payload.known_limitations || [],
         next_steps: payload.next_steps || [],
         tests_passed: payload.tests_passed || false,
-        human_reviewed: false,
+        human_reviewed: payload.author === 'mcp-agent',
         commit_sha: payload.commit_sha,
         branch: payload.branch,
         author: payload.author,

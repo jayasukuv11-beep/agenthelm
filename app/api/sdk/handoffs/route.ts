@@ -1,23 +1,10 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
-import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
-
-import { SupabaseClient } from '@supabase/supabase-js'
-
-let _supabase: SupabaseClient | null = null
-const supabase = new Proxy({} as any, {
-  get(target, prop) {
-    if (!_supabase) {
-      _supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-    }
-    const value = Reflect.get(_supabase, prop)
-    return typeof value === 'function' ? value.bind(_supabase) : value
-  }
-}) as SupabaseClient
+import {
+  authorizeSdkAgent,
+  authorizeSdkTask,
+  hasError,
+} from '@/lib/sdk-auth'
 
 export async function POST(req: Request) {
   try {
@@ -34,18 +21,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const authResult: AuthResult = await validateConnectKey(key)
-
+    const authResult = await authorizeSdkAgent(key, agent_id)
     if (hasError(authResult)) {
-      return NextResponse.json({ error: authResult.error }, { status: authResult.status || 401 })
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
 
-    if ('agentId' in authResult && authResult.agentId && authResult.agentId !== agent_id) {
-      return NextResponse.json({ error: 'Mismatched connect key for this agent' }, { status: 401 })
+    if (task_id) {
+      const task = await authorizeSdkTask(authResult, task_id)
+      if ('error' in task) {
+        return NextResponse.json({ error: task.error }, { status: task.status })
+      }
+    }
+
+    const { data: targetAgent } = await authResult.supabaseAdmin
+      .from('agents')
+      .select('id, project_id')
+      .eq('id', to_agent_id)
+      .eq('user_id', authResult.userId)
+      .single()
+
+    if (!targetAgent || targetAgent.project_id !== authResult.agent.project_id) {
+      return NextResponse.json({ error: 'Target agent not found or unauthorized' }, { status: 403 })
     }
 
     // Insert handoff
-    const { error: insertError } = await supabase
+    const { error: insertError } = await authResult.supabaseAdmin
       .from('agent_handoffs')
       .insert({
         from_agent_id: agent_id,
@@ -78,18 +78,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing key or agent_id' }, { status: 400 })
     }
 
-    const authResult: AuthResult = await validateConnectKey(key)
-
+    const authResult = await authorizeSdkAgent(key, agent_id)
     if (hasError(authResult)) {
-      return NextResponse.json({ error: authResult.error }, { status: authResult.status || 401 })
-    }
-
-    if ('agentId' in authResult && authResult.agentId && authResult.agentId !== agent_id) {
-      return NextResponse.json({ error: 'Mismatched connect key for this agent' }, { status: 401 })
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
 
     // Fetch handoffs where agent is either sender or receiver
-    const { data: handoffs, error } = await supabase
+    const { data: handoffs, error } = await authResult.supabaseAdmin
       .from('agent_handoffs')
       .select('*, from_agent:from_agent_id(name), to_agent:to_agent_id(name)')
       .or(`from_agent_id.eq.${agent_id},to_agent_id.eq.${agent_id}`)

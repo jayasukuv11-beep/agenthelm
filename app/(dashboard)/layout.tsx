@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle, Network, Shield, Folder, Brain, BookOpen, Zap, GitBranch, Activity, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, HelpCircle, Network, Shield, Folder, Brain, BookOpen, Zap, GitBranch, Activity, MoreHorizontal, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import DashboardErrorBoundary from "@/components/dashboard/DashboardErrorBoundary";
 
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/dashboard/projects", icon: Folder, label: "Projects" },
   { href: "/dashboard/brain", icon: Brain, label: "Project Brain" },
   { href: "/dashboard/knowledge", icon: BookOpen, label: "Knowledge" },
+  { href: "/dashboard/proposals", icon: FileText, label: "Proposals" },
   { href: "/dashboard/pipeline", icon: Zap, label: "Pipeline" },
   { href: "/dashboard/versions", icon: GitBranch, label: "Versions" },
   { href: "/dashboard/agents", icon: Users, label: "Agents" },

@@ -6,6 +6,8 @@ import * as crypto from "crypto";
 const BASE_URL = process.env.AGENTHELM_BASE_URL || "https://agenthelm.online";
 const CONNECT_KEY = process.env.AGENTHELM_CONNECT_KEY;
 const PROJECT = process.env.AGENTHELM_PROJECT;
+// Agent name for identification - can be "Claude", "Codex", or custom
+const AGENT_NAME = process.env.AGENTHELM_AGENT_NAME || "MCP Agent";
 
 let activeToken: string | null = null;
 let agentId: string | null = null;
@@ -38,10 +40,11 @@ async function ensureHandshake() {
     },
     body: JSON.stringify({
       key: CONNECT_KEY,
-      name: "MCP Agent",
+      name: AGENT_NAME,
       agent_type: "node",
       version: "1.0.0",
-      status: "idle"
+      status: "idle",
+      project: PROJECT
     })
   });
 
@@ -150,6 +153,11 @@ async function handleRequest(req: any): Promise<any> {
                   items: { "type": "object" },
                   description: "Details of any database schema or table changes made."
                 },
+                architecture: {
+                  type: "array",
+                  items: { "type": "object" },
+                  description: "Architecture findings, patterns, component diagrams, or system design decisions."
+                },
                 tests_passed: {
                   type: "boolean",
                   description: "Whether all local tests passed successfully."
@@ -191,6 +199,77 @@ async function handleRequest(req: any): Promise<any> {
                 }
               },
               required: ["action"]
+            }
+          },
+          {
+            name: "resume_task",
+            description: "Resumes a previous agent session by retrieving the last completed checkpoint for a given task_id. Returns the state snapshot, step name, and output data to continue where the previous session left off.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                task_id: {
+                  type: "string",
+                  description: "The task ID to resume from (returned from a previous session)."
+                }
+              },
+              required: ["task_id"]
+            }
+          },
+          {
+            name: "list_tasks",
+            description: "Lists available tasks/checkpoints for the current project. Returns tasks with their latest checkpoint info so a fresh session can pick up where it left off.",
+            inputSchema: {
+              type: "object",
+              properties: {}
+            }
+          },
+          {
+            name: "record_incident",
+            description: "Records an incident/debugging finding to prevent duplicate work. Stores root cause, solution, and context so future sessions (or other agents) can retrieve it instead of re-debugging.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                title: {
+                  type: "string",
+                  description: "Brief title of the incident (e.g., 'Auth cookie not sent in Safari')"
+                },
+                root_cause: {
+                  type: "string",
+                  description: "What actually caused the issue"
+                },
+                solution: {
+                  type: "string",
+                  description: "How the issue was fixed"
+                },
+                context: {
+                  type: "string",
+                  description: "Additional context (error messages, stack traces, environment details)"
+                },
+                tags: {
+                  type: "array",
+                  items: { "type": "string" },
+                  description: "Searchable tags for retrieval (e.g., ['auth', 'cookie', 'safari'])"
+                }
+              },
+              required: ["title", "root_cause", "solution"]
+            }
+          },
+          {
+            name: "get_incident",
+            description: "Retrieves a previously recorded incident by title or tags. Use this to check if a similar issue has been debugged before starting work.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                title: {
+                  type: "string",
+                  description: "Exact title to search for"
+                },
+                tags: {
+                  type: "array",
+                  items: { "type": "string" },
+                  description: "Tags to filter incidents by"
+                }
+              }
             }
           }
         ]
@@ -240,6 +319,14 @@ async function handleRequest(req: any): Promise<any> {
       return await handleProposeKnowledge(id, args);
     } else if (name === "get_history") {
       return await handleGetHistory(id, args);
+    } else if (name === "resume_task") {
+      return await handleResumeTask(id, args);
+    } else if (name === "list_tasks") {
+      return await handleListTasks(id, args);
+    } else if (name === "record_incident") {
+      return await handleRecordIncident(id, args);
+    } else if (name === "get_incident") {
+      return await handleGetIncident(id, args);
     } else {
       return {
         jsonrpc: "2.0",
@@ -328,7 +415,7 @@ async function handleGetContext(id: any, args: any): Promise<any> {
 }
 
 async function handleProposeKnowledge(id: any, args: any): Promise<any> {
-  const { summary, decisions, files_modified, apis_affected, db_changes, tests_passed } = args || {};
+  const { summary, decisions, files_modified, apis_affected, db_changes, architecture, tests_passed } = args || {};
   
   if (!summary) {
     return {
@@ -354,6 +441,7 @@ async function handleProposeKnowledge(id: any, args: any): Promise<any> {
       files_modified: files_modified || [],
       apis_affected: apis_affected || [],
       db_changes: db_changes || [],
+      architecture: architecture || [],
       tests_passed: !!tests_passed,
       author: "mcp-agent"
     };
@@ -400,6 +488,319 @@ async function handleProposeKnowledge(id: any, args: any): Promise<any> {
           {
             type: "text",
             text: JSON.stringify(data, null, 2)
+          }
+        ],
+        isError: false
+      }
+    };
+  } catch (err: any) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: `Connection failed: ${err.message || String(err)}`
+          }
+        ],
+        isError: true
+      }
+    };
+  }
+}
+
+async function handleResumeTask(id: any, args: any): Promise<any> {
+  const { task_id } = args || {};
+
+  if (!task_id) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: "Error: task_id parameter is required."
+          }
+        ],
+        isError: true
+      }
+    };
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/sdk/checkpoint?key=${CONNECT_KEY}&task_id=${encodeURIComponent(task_id)}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${activeToken}`
+      }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: `API Error (status ${response.status}): ${errText || response.statusText}`
+            }
+          ],
+          isError: true
+        }
+      };
+    }
+
+    const data = await response.json();
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(data, null, 2)
+          }
+        ],
+        isError: false
+      }
+    };
+  } catch (err: any) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: `Connection failed: ${err.message || String(err)}`
+          }
+        ],
+        isError: true
+      }
+    };
+  }
+}
+
+async function handleListTasks(id: any, args: any): Promise<any> {
+  try {
+    const projectParam = PROJECT || "";
+    const response = await fetch(`${BASE_URL}/api/sdk/tasks?key=${CONNECT_KEY}&project=${encodeURIComponent(projectParam)}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${activeToken}`
+      }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: `API Error (status ${response.status}): ${errText || response.statusText}`
+            }
+          ],
+          isError: true
+        }
+      };
+    }
+
+    const data = await response.json();
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(data, null, 2)
+          }
+        ],
+        isError: false
+      }
+    };
+  } catch (err: any) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: `Connection failed: ${err.message || String(err)}`
+          }
+        ],
+        isError: true
+      }
+    };
+  }
+}
+
+async function handleRecordIncident(id: any, args: any): Promise<any> {
+  const { title, root_cause, solution, context, tags } = args || {};
+
+  if (!title || !root_cause || !solution) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: "Error: title, root_cause, and solution parameters are required."
+          }
+        ],
+        isError: true
+      }
+    };
+  }
+
+  try {
+    // Use propose_knowledge to store incident as a special proposal
+    const payload = {
+      summary: `[INCIDENT] ${title}`,
+      decisions: [{
+        title: "Incident Root Cause",
+        description: root_cause,
+        type: "incident"
+      }, {
+        title: "Incident Solution",
+        description: solution,
+        type: "incident"
+      }],
+      files_modified: [],
+      apis_affected: [],
+      db_changes: [],
+      architecture: [],
+      tests_passed: true,
+      author: "mcp-agent"
+    };
+
+    const contentHash = crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+
+    const response = await fetch(`${BASE_URL}/api/sdk/proposals`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${activeToken}`
+      },
+      body: JSON.stringify({
+        project: PROJECT,
+        agent_id: agentId,
+        content_hash: contentHash,
+        payload
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: `API Error (status ${response.status}): ${errText || response.statusText}`
+            }
+          ],
+          isError: true
+        }
+      };
+    }
+
+    const data = await response.json();
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ ...data, message: "Incident recorded successfully" }, null, 2)
+          }
+        ],
+        isError: false
+      }
+    };
+  } catch (err: any) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: `Connection failed: ${err.message || String(err)}`
+          }
+        ],
+        isError: true
+      }
+    };
+  }
+}
+
+async function handleGetIncident(id: any, args: any): Promise<any> {
+  const { title, tags } = args || {};
+
+  try {
+    // Search for incidents via history API with blame action or custom search
+    // For now, use get_history with a search approach
+    const response = await fetch(`${BASE_URL}/api/sdk/history`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${activeToken}`
+      },
+      body: JSON.stringify({
+        key: CONNECT_KEY,
+        project: PROJECT,
+        action: "log"
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: `API Error (status ${response.status}): ${errText || response.statusText}`
+            }
+          ],
+          isError: true
+        }
+      };
+    }
+
+    const data = await response.json();
+    // Filter for incidents in the response
+    const incidents = (data.entries || []).filter((entry: any) =>
+      entry.title && entry.title.startsWith("[INCIDENT]") &&
+      (title ? entry.title.includes(title) : true) &&
+      (tags && tags.length > 0 ? tags.some((t: string) =>
+        JSON.stringify(entry.content).toLowerCase().includes(t.toLowerCase())
+      ) : true)
+    );
+
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ incidents, count: incidents.length }, null, 2)
           }
         ],
         isError: false

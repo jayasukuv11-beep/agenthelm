@@ -134,19 +134,20 @@ export function buildMergePlan(
   // Determine if human review is required
   // If explicitly human reviewed, do not re-flag for review
   const hasHighSeverity = analysis.conflicts.some((c) => c.severity === "high")
+  // Only require review for low evidence if there are REAL issues (conflicts, stale, deps)
+  // A fresh brain has no conflicts/stale/dupes by definition - low evidence alone shouldn't block auto-merge
+  const hasRealIssues =
+    hasHighSeverity ||
+    entriesToReject.length > 0 ||
+    analysis.stale.length > 0 ||
+    analysis.dependencies.length > 0
   const humanReviewNeeded =
-    !isHumanReviewed && (
-      evidenceScore < minEvidence ||
-      hasHighSeverity ||
-      entriesToReject.length > 0 ||
-      analysis.stale.length > 0 ||
-      analysis.dependencies.length > 0
-    )
+    !isHumanReviewed && (hasRealIssues || (evidenceScore <= minEvidence && hasRealIssues))
 
 
   if (humanReviewNeeded) {
-    if (evidenceScore < minEvidence) {
-      reviewReasons.push(`Evidence score ${evidenceScore} below auto-merge threshold ${minEvidence}`)
+    if (evidenceScore <= minEvidence) {
+      reviewReasons.push(`Evidence score ${evidenceScore} at or below auto-merge threshold ${minEvidence}`)
     }
     if (hasHighSeverity) {
       reviewReasons.push("High-severity conflict detected")

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { validateConnectKey, issueAgentToken } from '@/lib/sdk-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { resolveProject } from '@/lib/project-resolver'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
 
-    const { key, name, agent_type, version, status, error_message } = body
+    const { key, name, agent_type, version, status, error_message, project, agent_id } = body
 
     if (!await checkRateLimit(key, 6, 60)) {
       return NextResponse.json({ error: 'Rate limit exceeded (6 per min)' }, { status: 429 })
@@ -39,30 +40,38 @@ export async function POST(req: Request) {
     const { getUserUsage } = await import('@/lib/usage')
     const usage = await getUserUsage(userId)
 
-    let agentId = body.agent_id
     let existingAgent = null
 
-    if (agentId) {
+    if (agent_id) {
       const { data } = await supabaseAdmin!
         .from('agents')
         .select('id')
-        .eq('id', agentId)
+        .eq('id', agent_id)
         .eq('user_id', userId)
         .maybeSingle()
       existingAgent = data
     }
 
+    // Deduplicate by name AND agent_type to allow different agent types (Claude vs Codex) to coexist
     if (!existingAgent && name) {
       const { data } = await supabaseAdmin!
         .from('agents')
         .select('id')
         .eq('user_id', userId)
         .eq('name', name)
+        .eq('agent_type', agent_type || 'node')
         .maybeSingle()
       existingAgent = data
     }
 
-    agentId = existingAgent?.id
+    let agentId = existingAgent?.id
+
+    // Resolve project if provided
+    let projectId: string | null = null
+    if (project) {
+      const { data: projectRecord } = await resolveProject(supabaseAdmin!, project)
+      projectId = projectRecord?.id || null
+    }
 
     if (agentId) {
       // Update existing
@@ -73,14 +82,15 @@ export async function POST(req: Request) {
           agent_type,
           version,
           error_message: error_message || null,
-          last_ping: new Date().toISOString()
+          last_ping: new Date().toISOString(),
+          project_id: projectId
         })
         .eq('id', agentId)
     } else {
       // Create new - ENFORCE LIMIT
       if (usage.agentCount >= usage.agentLimit) {
-        return NextResponse.json({ 
-          error: 'agent_limit_reached', 
+        return NextResponse.json({
+          error: 'agent_limit_reached',
           message: `Your current plan (${usage.plan}) is limited to ${usage.agentLimit} agents. Upgrade to connect more.`,
           upgrade_url: '/dashboard/settings'
         }, { status: 402 })
@@ -95,7 +105,8 @@ export async function POST(req: Request) {
           agent_type,
           version,
           error_message: error_message || null,
-          last_ping: new Date().toISOString()
+          last_ping: new Date().toISOString(),
+          project_id: projectId
         })
         .select()
         .single()

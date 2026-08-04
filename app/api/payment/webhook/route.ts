@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 export const dynamic = 'force-dynamic'
 
 function verifySignature(
@@ -31,18 +32,14 @@ export async function POST(req: Request) {
     const signature = req.headers.get('x-webhook-signature') || ''
     const webhookSecret = process.env.CASHFREE_WEBHOOK_SECRET || ''
 
-    // Verify signature if secret is set
-    if (webhookSecret && timestamp && signature) {
-      const isValid = verifySignature(
-        rawBody, timestamp, signature, webhookSecret
-      )
-      if (!isValid) {
-        console.error('Invalid webhook signature')
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 401 }
-        )
-      }
+    if (!webhookSecret || !timestamp || !signature) {
+      console.error('Missing Cashfree webhook verification configuration or headers')
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 })
+    }
+
+    if (!verifySignature(rawBody, timestamp, signature, webhookSecret)) {
+      console.error('Invalid webhook signature')
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 })
     }
 
     const body = JSON.parse(rawBody) as {
@@ -79,13 +76,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ received: true })
       }
 
-      // Import Supabase admin client
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      )
+      const supabase = getSupabaseAdmin()
 
       // Find user by customer_id (which is userId.slice(0,50))
       const { data: profile } = await supabase

@@ -1,26 +1,6 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 import { BrainPipeline } from "./brain/pipeline"
 import { logger } from "./observability"
-
-let _supabaseAdmin: SupabaseClient | null = null
-const supabaseAdmin = new Proxy({} as any, {
-  get(target, prop) {
-    if (!_supabaseAdmin) {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-      if ((!url || !key) && process.env.NEXT_PHASE !== 'phase-production-build') {
-        throw new Error("FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.");
-      }
-      _supabaseAdmin = createClient(
-        url || "https://placeholder.supabase.co",
-        key || "placeholder",
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      )
-    }
-    const value = Reflect.get(_supabaseAdmin, prop)
-    return typeof value === 'function' ? value.bind(_supabaseAdmin) : value
-  }
-}) as SupabaseClient
 
 export async function compileProposal(proposalId: string) {
   try {
