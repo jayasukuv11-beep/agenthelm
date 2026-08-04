@@ -48,7 +48,7 @@ export async function GET(
         conflict_detected,
         conflict_details,
         evidence_score,
-        rejection_reason,
+        rejection_reason:review_notes,
         created_at
       `)
       .eq('project_id', params.projectId)

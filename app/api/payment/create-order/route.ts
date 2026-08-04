@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { MULTI_CURRENCY_PLANS, getCurrencyForCountry, type CurrencyCode } from '@/lib/currency'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,30 +16,26 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
   try {
     const body = await req.json()
-    const { plan, userId, email, name, phone } = body as {
+    const { plan, name, phone } = body as {
       plan: string
-      userId: string
-      email: string
       name?: string
       phone?: string
     }
 
-    if (!userId || !email) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user?.email) {
       return NextResponse.json(
-        { error: 'Missing userId or email' },
-        { status: 400 }
+        { error: 'Authentication is required to create an order' },
+        { status: 401 }
       )
     }
 
     // Determine currency: 1. Profile preference, 2. Geo-IP header, 3. Default USD
-    const { data: profile } = await supabaseAdmin.from('profiles').select('preferred_currency').eq('id', userId).single();
+    const { data: profile } = await supabase.from('profiles').select('preferred_currency').eq('id', user.id).single();
     
     const currency: CurrencyCode = (profile?.preferred_currency as CurrencyCode) || 
       getCurrencyForCountry(req.headers.get('x-vercel-ip-country'));
@@ -53,23 +49,23 @@ export async function POST(req: Request) {
       )
     }
 
-    const orderId = `ahelm_${plan}_${userId.slice(0, 8)}_${Date.now()}`
+    const orderId = `ahelm_${plan}_${user.id.slice(0, 8)}_${Date.now()}`
 
-    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://agenthelm.online";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agenthelm.online"
 
     const cashfreeBody = {
       order_id: orderId,
       order_amount: planData.amount,
       order_currency: currency,
       customer_details: {
-        customer_id: userId.slice(0, 50),
+        customer_id: user.id.slice(0, 50),
         customer_name: name || 'AgentHelm User',
-        customer_email: email,
+        customer_email: user.email,
         customer_phone: phone || '9999999999',
       },
       order_meta: {
-        return_url: `${origin}/dashboard?payment=success&order_id=${orderId}&plan=${plan}`,
-        notify_url: `${origin}/api/payment/webhook`,
+        return_url: `${appUrl}/dashboard?payment=success&order_id=${orderId}&plan=${plan}`,
+        notify_url: `${appUrl}/api/payment/webhook`,
       },
       order_note: planData.name,
     }

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 type ProfileRow = {
   telegram_chat_id: string | null
@@ -16,11 +16,7 @@ export async function sendTelegramToUser(
   replyMarkup?: any
 ): Promise<void> {
   try {
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
+    const supabaseAdmin = getSupabaseAdmin()
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')

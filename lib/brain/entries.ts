@@ -29,5 +29,13 @@ export function proposalEntries(
     })
   })
 
+  proposal.architecture?.forEach((arch) => {
+    entries.push({
+      category: "architecture",
+      title: String(arch.title || "Architecture Finding"),
+      content: arch
+    })
+  })
+
   return entries
 }

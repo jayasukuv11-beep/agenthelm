@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
+import { authorizeSdkAgent, hasError } from '@/lib/sdk-auth'
 import { createClient as createServerSupabase } from '@/app/lib/supabase'
 
 // Handle CORS preflight
@@ -21,24 +21,10 @@ export async function GET(req: Request) {
     const key = searchParams.get('key')
     const agent_id = searchParams.get('agent_id')
 
-    const auth: AuthResult = await validateConnectKey(key)
+    const auth = await authorizeSdkAgent(key, agent_id)
     if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
-
-    // Verify agent belongs to user (skip DB hit if valid JWT connects them)
-    if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin
-        .from('agents')
-        .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-      }
-    }
+    const { supabaseAdmin } = auth
 
     // Fetch pending commands
     const { data: commands, error } = await supabaseAdmin
@@ -75,24 +61,10 @@ export async function POST(req: Request) {
 
     // If called from SDK (connect_key auth), keep existing behavior
     if (key) {
-      const auth: AuthResult = await validateConnectKey(key)
+      const auth = await authorizeSdkAgent(key, agent_id)
       if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-      const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
-
-      // Ensure agent belongs to user (skip DB hit if valid JWT connects them)
-      if (!jwtAgentId || jwtAgentId !== agent_id) {
-        const { data: agent } = await supabaseAdmin
-          .from('agents')
-          .select('id')
-          .eq('id', agent_id)
-          .eq('user_id', userId)
-          .single()
-
-        if (!agent) {
-          return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-        }
-      }
+      const { supabaseAdmin } = auth
 
       const { data: command, error } = await supabaseAdmin
         .from('agent_commands')
@@ -152,13 +124,13 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json()
-    const { key, command_id, status } = body
+    const { key, command_id, agent_id, status } = body
 
-    if (!command_id || status !== 'delivered') {
+    if (!command_id || !agent_id || status !== 'delivered') {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
 
-    const auth: AuthResult = await validateConnectKey(key)
+    const auth = await authorizeSdkAgent(key, agent_id)
     if (hasError(auth)) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
@@ -166,16 +138,22 @@ export async function PATCH(req: Request) {
     const { supabaseAdmin } = auth
 
     // Acknowledge command delivery
-    const { error } = await supabaseAdmin
+    const { data: command, error } = await supabaseAdmin
       .from('agent_commands')
       .update({
         status: 'delivered',
         delivered_at: new Date().toISOString()
       })
       .eq('id', command_id)
+      .eq('agent_id', auth.agent.id)
       .eq('status', 'delivering')
+      .select('id')
+      .maybeSingle()
 
     if (error) throw error
+    if (!command) {
+      return NextResponse.json({ error: 'Command not found or unavailable' }, { status: 404 })
+    }
 
     return NextResponse.json({ success: true })
 

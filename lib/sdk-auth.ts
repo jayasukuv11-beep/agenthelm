@@ -21,8 +21,79 @@ export interface AuthError {
 
 export type AuthResult = AuthSuccess | AuthError
 
+export interface AuthorizedAgent extends AuthSuccess {
+  agent: {
+    id: string
+    user_id: string
+    project_id: string | null
+  }
+}
+
+export type AuthorizedAgentResult = AuthorizedAgent | AuthError
+
 export function hasError(result: AuthResult): result is AuthError {
   return 'error' in result
+}
+
+/**
+ * Authorize an SDK request against the exact agent it is acting on.
+ *
+ * SDK routes use the service-role client after authentication, so every
+ * caller-supplied resource ID must be checked here before it is queried or
+ * mutated. A JWT is still checked against the database to support revocation
+ * and to prevent stale/deleted agent tokens from retaining access.
+ */
+export async function authorizeSdkAgent(
+  keyOrToken: string | null,
+  agentId: string | null | undefined
+): Promise<AuthorizedAgentResult> {
+  const auth = await validateConnectKey(keyOrToken)
+  if (hasError(auth)) return auth
+
+  if (!agentId) {
+    return { error: 'Missing agent ID', status: 400 }
+  }
+
+  if (auth.agentId && auth.agentId !== agentId) {
+    return { error: 'Mismatched agent token', status: 403 }
+  }
+
+  const { data: agent, error } = await auth.supabaseAdmin
+    .from('agents')
+    .select('id, user_id, project_id')
+    .eq('id', agentId)
+    .eq('user_id', auth.userId)
+    .single()
+
+  if (error || !agent) {
+    return { error: 'Agent not found or unauthorized', status: 403 }
+  }
+
+  return { ...auth, agent }
+}
+
+/** Ensure a supplied task belongs to an already-authorized agent. */
+export async function authorizeSdkTask(
+  auth: AuthorizedAgent,
+  taskId: string | null | undefined
+): Promise<AuthError | { id: string }> {
+  if (!taskId) {
+    return { error: 'Missing task ID', status: 400 }
+  }
+
+  const { data: task, error } = await auth.supabaseAdmin
+    .from('agent_tasks')
+    .select('id')
+    .eq('id', taskId)
+    .eq('agent_id', auth.agent.id)
+    .eq('user_id', auth.userId)
+    .single()
+
+  if (error || !task) {
+    return { error: 'Task not found or unauthorized', status: 403 }
+  }
+
+  return task
 }
 
 export async function issueAgentToken(userId: string, agentId: string, plan: string) {

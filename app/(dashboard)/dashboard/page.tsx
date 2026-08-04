@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { StatsRow } from "@/components/dashboard/StatsRow";
@@ -26,7 +26,7 @@ interface Project {
 }
 
 function DashboardContent() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -46,7 +46,7 @@ function DashboardContent() {
 
   const [recentActivity, setRecentActivity] = useState<Array<{
     id: string;
-    type: 'pipeline' | 'proposal' | 'publish' | 'security';
+    type: 'pipeline' | 'proposal' | 'publish' | 'security' | 'context';
     title: string;
     description: string;
     timestamp: string;
@@ -78,6 +78,40 @@ function DashboardContent() {
       setDemoLoading(false);
     }
   };
+
+  const loadRecentActivity = useCallback(async (projectId: string) => {
+    const { data: events } = await supabase
+      .from('ai_timeline_events')
+      .select('id, event_type, title, details, created_at, agents(name)')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (!events) return
+
+    setRecentActivity(events.map((event: any) => {
+      const isContextRead = event.event_type === 'context_injected'
+      const isPublished = [
+        'brain_version_created',
+        'brain_compiled',
+        'knowledge_published',
+        'context_published',
+      ].includes(event.event_type)
+      const isFailure = ['error', 'pipeline_failed', 'proposal_rejected'].includes(event.event_type)
+      const agentName = event.agents?.name || 'System'
+
+      return {
+        id: event.id,
+        type: isContextRead ? 'context' : isPublished ? 'publish' : event.event_type === 'proposal_submitted' ? 'proposal' : 'pipeline',
+        title: isContextRead ? 'Context read: ' + event.title : event.title,
+        description: isContextRead
+          ? agentName + ' read ' + (event.details?.total_entries_selected ?? 0) + ' Brain entries'
+          : agentName + ' · ' + event.event_type.replaceAll('_', ' '),
+        timestamp: new Date(event.created_at).toLocaleString(),
+        status: isFailure ? 'failed' : event.event_type.includes('pending') ? 'pending' : 'success',
+      }
+    }))
+  }, [supabase])
 
   // Load projects list
   const fetchProjects = async () => {
@@ -175,24 +209,6 @@ function DashboardContent() {
         setAgents(mappedAgents);
       }
 
-      // Fetch recent knowledge proposals for activity feed
-      const { data: proposals } = await supabase
-        .from('knowledge_proposals')
-        .select('id, summary, author, build_status, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (proposals) {
-        setRecentActivity(proposals.map(p => ({
-          id: p.id,
-          type: 'proposal',
-          title: `Proposal: ${p.summary}`,
-          description: `Submitted by ${p.author}`,
-          timestamp: new Date(p.created_at).toLocaleTimeString(),
-          status: p.build_status === 'merged' ? 'success' : p.build_status === 'rejected' ? 'failed' : 'pending'
-        })));
-      }
-
       setLoading(false);
 
       // Subscribe to real-time agent changes
@@ -229,6 +245,25 @@ function DashboardContent() {
       if (agentSubscription) supabase.removeChannel(agentSubscription);
     };
   }, [supabase]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return
+
+    loadRecentActivity(selectedProjectId)
+
+    const activitySubscription = supabase
+      .channel('dashboard-activity-' + selectedProjectId)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_timeline_events', filter: 'project_id=eq.' + selectedProjectId },
+        () => loadRecentActivity(selectedProjectId)
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(activitySubscription)
+    }
+  }, [selectedProjectId, supabase, loadRecentActivity])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(connectKey);
@@ -402,7 +437,7 @@ function DashboardContent() {
                 </div>
                 <h2 className="text-xl font-black font-mono text-white mb-3 uppercase tracking-tight">No activity yet</h2>
                 <p className="text-zinc-500 font-mono text-sm max-w-md mx-auto leading-relaxed">
-                  Pipeline runs, proposals, and brain publishes will appear here once agents start working.
+                  Proposals, Brain publishes, and context read events will appear here once agents start working.
                 </p>
               </div>
             ) : (

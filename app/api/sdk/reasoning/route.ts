@@ -1,23 +1,10 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
-import { validateConnectKey, hasError } from '@/lib/sdk-auth'
-
-import { SupabaseClient } from '@supabase/supabase-js'
-
-let _supabase: SupabaseClient | null = null
-const supabase = new Proxy({} as any, {
-  get(target, prop) {
-    if (!_supabase) {
-      _supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-    }
-    const value = Reflect.get(_supabase, prop)
-    return typeof value === 'function' ? value.bind(_supabase) : value
-  }
-}) as SupabaseClient
+import {
+  authorizeSdkAgent,
+  authorizeSdkTask,
+  hasError,
+} from '@/lib/sdk-auth'
 
 export async function POST(req: Request) {
   try {
@@ -43,23 +30,23 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!key || !agent_id || !task_id || !step_index) {
+    if (!key || !agent_id || !task_id || !Number.isInteger(step_index) || step_index < 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const authResult = await validateConnectKey(key)
+    const authResult = await authorizeSdkAgent(key, agent_id)
 
     if (hasError(authResult)) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
-    
-    // If it's a JWT from an agent, agentId must match the payload
-    if ('agentId' in authResult && authResult.agentId && authResult.agentId !== agent_id) {
-      return NextResponse.json({ error: 'Mismatched connect key for this agent' }, { status: 401 })
+
+    const task = await authorizeSdkTask(authResult, task_id)
+    if ('error' in task) {
+      return NextResponse.json({ error: task.error }, { status: task.status })
     }
 
     // Insert reasoning step
-    const { error: insertError } = await supabase
+    const { error: insertError } = await authResult.supabaseAdmin
       .from('agent_reasoning_steps')
       .insert({
         agent_id,

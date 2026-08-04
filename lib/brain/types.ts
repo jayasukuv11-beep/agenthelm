@@ -8,7 +8,7 @@ export interface EvidenceFactors {
 
 export type JsonRecord = Record<string, unknown>
 
-export type BrainCategory = 'decisions' | "apis" | "database"
+export type BrainCategory = 'decisions' | 'apis' | 'database' | 'architecture'
 
 export interface KnowledgeProposal {
   id: string
@@ -20,6 +20,7 @@ export interface KnowledgeProposal {
   files_modified?: string[]
   apis_affected?: JsonRecord[]
   db_changes?: JsonRecord[]
+  architecture?: JsonRecord[]
   tests_passed?: boolean | null
   human_reviewed?: boolean | null
   commit_sha?: string | null
