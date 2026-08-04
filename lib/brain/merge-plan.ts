@@ -142,7 +142,7 @@ export function buildMergePlan(
     analysis.stale.length > 0 ||
     analysis.dependencies.length > 0
   const humanReviewNeeded =
-    !isHumanReviewed && (hasRealIssues || (evidenceScore <= minEvidence && hasRealIssues))
+    !isHumanReviewed && (hasRealIssues || evidenceScore <= minEvidence)
 
 
   if (humanReviewNeeded) {
