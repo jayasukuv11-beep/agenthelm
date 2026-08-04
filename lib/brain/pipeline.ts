@@ -146,28 +146,32 @@ export class BrainPipeline {
       const elapsedMs = Date.now() - start
 
       if (!result) {
+        const isReviewing = this.outcomeOverride === "reviewing"
         this.stages.push({
-          stage: name, ok: false, skipped: false,
+          stage: name, ok: isReviewing, skipped: false,
           elapsedMs,
         })
 
-        const lastFailed = this.stages.filter((s) => !s.ok).pop()
-        const errorCode = lastFailed ? `STAGE_${lastFailed.stage.toUpperCase()}_FAILED` : undefined
+        if (!isReviewing) {
+          const lastFailed = this.stages.filter((s) => !s.ok).pop()
+          const errorCode = lastFailed ? `STAGE_${lastFailed.stage.toUpperCase()}_FAILED` : undefined
 
-        metrics.recordStage(name, false, elapsedMs, errorCode)
+          metrics.recordStage(name, false, elapsedMs, errorCode)
 
-        logger.error(`Pipeline stage ${name} failed`, {
-          proposalId,
-          projectId: this.projectId,
-          traceId: this.traceId,
-          stage: name,
-          duration: elapsedMs,
-          status: "failed",
-          errorCode,
-        })
+          logger.error(`Pipeline stage ${name} failed`, {
+            proposalId,
+            projectId: this.projectId,
+            traceId: this.traceId,
+            stage: name,
+            duration: elapsedMs,
+            status: "failed",
+            errorCode,
+          })
+        }
 
         return null
       }
+
 
       this.stages.push({
         stage: name, ok: true, skipped: false,
@@ -330,6 +334,7 @@ export class BrainPipeline {
       this.supabase, proposalId, state.evidence, mergePlan, []
     )
     if (mergePlan.action === "review") {
+      this.outcomeOverride = "reviewing"
       await markReviewing(
         this.supabase, state.proposal, proposalId,
         [], state.evidence, mergePlan
