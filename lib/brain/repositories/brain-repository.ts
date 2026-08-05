@@ -39,6 +39,7 @@ export type CreateVersionInput = Omit<
   "id" | "created_at" | "version"
 > & {
   parent_version: number
+  version?: number
 }
 
 // ---------------------------------------------------------------------------
