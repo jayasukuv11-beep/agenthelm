@@ -68,7 +68,15 @@ function verifyGit(proposal: KnowledgeProposal, source: EvidenceSource): Evidenc
 }
 
 function verifyFiles(proposal: KnowledgeProposal, source: EvidenceSource): Evidence {
-  const files = proposal.files_modified
+  let files: unknown = proposal.files_modified
+  if (typeof files === "string") {
+    try {
+      const parsed = JSON.parse(files)
+      files = Array.isArray(parsed) ? parsed : [parsed]
+    } catch {
+      files = [files]
+    }
+  }
   if (!Array.isArray(files) || files.length === 0) {
     return createEvidence("files", false, 0, "No files declared in proposal")
   }

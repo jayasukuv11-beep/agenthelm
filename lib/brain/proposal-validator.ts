@@ -125,13 +125,26 @@ function validateEntries(
   errors: ValidationError[],
   warnings: string[]
 ): void {
-  if (!Array.isArray(proposal.decisions) || proposal.decisions.length === 0) {
+  const hasEntries = (value: unknown): boolean => {
+    if (Array.isArray(value)) return value.length > 0
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed) ? parsed.length > 0 : true
+      } catch {
+        return value.trim().length > 0
+      }
+    }
+    return value !== null && value !== undefined
+  }
+
+  if (!hasEntries(proposal.decisions)) {
     warnings.push("No decisions entries in proposal")
   }
-  if (!Array.isArray(proposal.apis_affected) || proposal.apis_affected.length === 0) {
+  if (!hasEntries(proposal.apis_affected)) {
     warnings.push("No API entries in proposal")
   }
-  if (!Array.isArray(proposal.db_changes) || proposal.db_changes.length === 0) {
+  if (!hasEntries(proposal.db_changes)) {
     warnings.push("No database entries in proposal")
   }
 }
@@ -142,7 +155,22 @@ function validateFileReferences(
 ): void {
   if (!proposal.files_modified) return
 
-  if (!Array.isArray(proposal.files_modified)) {
+  // Normalize: if it's a JSON-encoded string, parse it
+  let files: unknown = proposal.files_modified
+  if (typeof files === "string") {
+    try {
+      const parsed = JSON.parse(files)
+      if (Array.isArray(parsed)) {
+        files = parsed
+      } else {
+        files = [parsed]
+      }
+    } catch {
+      files = [files]
+    }
+  }
+
+  if (!Array.isArray(files)) {
     errors.push({
       field: "files_modified",
       message: "files_modified must be an array",
@@ -151,7 +179,7 @@ function validateFileReferences(
     return
   }
 
-  for (const file of proposal.files_modified) {
+  for (const file of files) {
     if (typeof file !== "string" || file.trim() === "") {
       errors.push({
         field: "files_modified",

@@ -47,6 +47,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
+    // Normalize array fields - they may come as JSON-encoded strings
+    const normalizeArray = (value: unknown): unknown[] => {
+      if (value === null || value === undefined) return []
+      if (Array.isArray(value)) return value
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed)) return parsed
+          return [parsed]
+        } catch {
+          return [{ text: value }]
+        }
+      }
+      return [value]
+    }
+
     // 2. Insert Proposal into knowledge_proposals
     const { data: proposal, error: insertError } = await supabaseAdmin
       .from('knowledge_proposals')
@@ -55,12 +71,13 @@ export async function POST(req: Request) {
         agent_id: agentId,
         content_hash,
         summary: payload.summary,
-        decisions: payload.decisions || [],
-        files_modified: payload.files_modified || [],
-        apis_affected: payload.apis_affected || [],
-        db_changes: payload.db_changes || [],
-        known_limitations: payload.known_limitations || [],
-        next_steps: payload.next_steps || [],
+        decisions: normalizeArray(payload.decisions),
+        files_modified: normalizeArray(payload.files_modified).map(f => typeof f === 'string' ? f : JSON.stringify(f)),
+        apis_affected: normalizeArray(payload.apis_affected),
+        db_changes: normalizeArray(payload.db_changes),
+        architecture: normalizeArray(payload.architecture),
+        known_limitations: normalizeArray(payload.known_limitations).map(f => typeof f === 'string' ? f : JSON.stringify(f)),
+        next_steps: normalizeArray(payload.next_steps).map(f => typeof f === 'string' ? f : JSON.stringify(f)),
         tests_passed: payload.tests_passed || false,
         human_reviewed: payload.author === 'mcp-agent',
         commit_sha: payload.commit_sha,
