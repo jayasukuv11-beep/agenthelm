@@ -37,10 +37,12 @@ export class SupabaseBrainRepository implements BrainRepository {
   }
 
   async createVersion(input: CreateVersionInput): Promise<BrainVersionRecord> {
+    const version = input.version ?? (input.parent_version + 1)
     const { data, error } = await this.supabase
       .from("brain_versions")
       .insert({
         project_id: input.project_id,
+        version: version,
         parent_version: input.parent_version,
         evolution_reason: input.evolution_reason,
         built_from_proposals: input.built_from_proposals,

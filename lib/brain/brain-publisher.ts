@@ -57,8 +57,9 @@ export interface PublisherMetrics {
  * - Business errors (conflict, validation) → NOT retryable
  */
 function classifyError(err: unknown): { code: string; retryable: boolean } {
-  const message = err instanceof Error ? err.message : String(err || "")
+  const message = err instanceof Error ? err.message : typeof err === "object" && err !== null ? (err as any).message || JSON.stringify(err) : String(err || "")
   const lower = message.toLowerCase()
+
 
   // Transient / infrastructure
   if (
@@ -165,7 +166,7 @@ export class BrainPublisher {
       return result
     } catch (err) {
       const { code, retryable } = classifyError(err)
-      const message = err instanceof Error ? err.message : String(err)
+      const message = err instanceof Error ? err.message : typeof err === "object" && err !== null ? (err as any).message || JSON.stringify(err) : String(err)
 
       logger.error("Publish failed", {
         proposalId,
@@ -214,6 +215,7 @@ export class BrainPublisher {
 
     const versionRecord = await this.repository.createVersion({
       project_id: proposal.project_id,
+      version: next,
       parent_version: parent,
       evolution_reason: proposal.summary ?? "",
       built_from_proposals: [proposalId],
@@ -241,7 +243,7 @@ export class BrainPublisher {
       category: entry.category,
       title: entry.title,
       content: entry.proposed_content,
-      content_hash: proposal.content_hash ?? null,
+      content_hash: proposal.content_hash || `hash_${Date.now()}`,
       source_type: "ai_proposal" as const,
       source_path: proposalId,
       confidence: evidence.score ?? 0,

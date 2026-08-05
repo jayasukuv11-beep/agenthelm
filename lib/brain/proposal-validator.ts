@@ -14,7 +14,7 @@ export interface ValidationResult {
   warnings: string[]
 }
 
-export const MAX_SUMMARY_LENGTH = 2000
+export const MAX_SUMMARY_LENGTH = 10_000
 export const MAX_PAYLOAD_SIZE = 100_000
 
 export const VALID_STATUSES = [

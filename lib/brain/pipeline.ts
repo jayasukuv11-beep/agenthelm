@@ -356,7 +356,17 @@ export class BrainPipeline {
       state.mergePlan!,
       state.evidence
     )
-    if (!result.ok) return null
+    if (!result.ok) {
+      if (result.errorCode === "ALREADY_PUBLISHED") {
+        // Idempotency success: if already published, treat as a successful no-op
+        const latestVersion = await repository.getLatestVersion(state.proposal.project_id)
+        if (latestVersion !== null) {
+          await repository.markProposalMerged(proposalId, latestVersion)
+        }
+        return { state: {} }
+      }
+      return null
+    }
     
     // Async trigger staleness check (fire and forget)
     if (result.version && state.mergePlan!.entries_to_add.length > 0) {
