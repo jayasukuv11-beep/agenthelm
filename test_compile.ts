@@ -31,7 +31,7 @@ async function testCompileProposal() {
   // Fetch updated proposal
   const { data: prop } = await supabaseAdmin
     .from("knowledge_proposals")
-    .select("id, build_status, review_notes")
+    .select("id, project_id, build_status, review_notes")
     .eq("id", proposalId)
     .single()
   console.log("Updated Proposal Status in Supabase:", prop)
