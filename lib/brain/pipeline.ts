@@ -365,7 +365,9 @@ export class BrainPipeline {
         }
         return { state: {} }
       }
-      return null
+      // Surface the real publisher error so the pipeline reports a useful message
+      const detail = result.errors?.[0] || result.errorCode || "Publish failed"
+      throw new Error(`[${result.errorCode || "PUBLISH_FAILED"}] ${detail}`)
     }
     
     // Async trigger staleness check (fire and forget)
@@ -391,15 +393,25 @@ export class BrainPipeline {
   private done(proposalId: string, outcome: PipelineOutcome): PipelineResult {
     const lastFailed = this.stages.filter((s) => !s.ok).pop()
 
+    // Build a descriptive error when a stage failed silently (returned null without throwing)
+    let error: string | undefined
+    if (outcome === "rejected" || outcome === "error") {
+      if (lastFailed?.error) {
+        error = lastFailed.error
+      } else if (lastFailed) {
+        error = `Stage '${lastFailed.stage}' failed without a specific error (outcome: ${outcome})`
+      } else {
+        error = outcome
+      }
+    }
+
     const result: PipelineResult = {
       ok: outcome === "merged",
       proposalId,
       outcome,
       stages: [...this.stages],
       traceId: this.traceId,
-      error: outcome === "rejected" || outcome === "error"
-        ? lastFailed?.error || outcome
-        : undefined,
+      error,
       errorCode: lastFailed ? `STAGE_${lastFailed.stage.toUpperCase()}_FAILED` : undefined,
       retryable: outcome === "error" && lastFailed?.stage === "build",
     }
