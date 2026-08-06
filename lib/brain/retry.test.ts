@@ -37,6 +37,11 @@ describe("isTransientError", () => {
   it("returns false for non-transient error string", () => {
     expect(isTransientError("Something went wrong")).toBe(false)
   })
+
+  it("matches non-transient keywords regardless of case", () => {
+    expect(isTransientError(new Error("Validation failed"))).toBe(false)
+    expect(isTransientError(new Error("Request Timeout: Unauthorized upstream"))).toBe(false)
+  })
 })
 
 describe("retryWithBackoff", () => {

@@ -20,11 +20,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing judge_rubric' }, { status: 400 })
     }
 
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      console.error('Missing GEMINI_API_KEY in environment')
+      return NextResponse.json({ error: 'Configuration Error' }, { status: 500 })
+    }
+
     const semantic_scores: Record<string, number> = {}
 
     for (const [criterion, description] of Object.entries(judge_rubric)) {
       try {
-        const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyBLtJbWM0NbIXi4KwI6e-pT-wDTfT6ex_c'
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: {

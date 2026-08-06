@@ -37,8 +37,9 @@ const TRANSIENT_PATTERNS = [
  * Validation, verification, and conflict errors are NEVER transient.
  */
 export function isTransientError(error: unknown): boolean {
-  const message =
-    error instanceof Error ? error.message : String(error || "").toLowerCase()
+  const message = (
+    error instanceof Error ? error.message : String(error || "")
+  ).toLowerCase()
 
   // Explicit non-transient keywords (fast-path rejection)
   const nonTransient = [
