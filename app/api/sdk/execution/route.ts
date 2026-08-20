@@ -1,28 +1,39 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
 import { sendTelegramToUser } from '@/lib/telegram'
+import { z } from 'zod'
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const executionPostSchema = z.object({
+  agent_id: z.string().uuid(),
+  task_id: z.string().optional(),
+  tool_name: z.string().min(1),
+  classification: z.string().min(1),
+  idempotency_key: z.string().optional(),
+  input_hash: z.string().optional(),
+  input_preview: z.string().optional(),
+  confirm_channel: z.string().default('telegram'),
+  retry_count: z.number().int().min(0).default(0),
+  max_retries: z.number().int().min(0).default(3),
+  status: z.string().default('executed'),
+})
 
-// ─── POST: Register a tool execution (creates pending_approval for irreversible) ──
+const executionPatchSchema = z.object({
+  execution_id: z.string().uuid(),
+  status: z.enum(['approved', 'rejected'])
+})
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
+export const OPTIONS = handleSdkOptions
+
+export const POST = withSdkAuth(
+  {
+    schema: executionPostSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
     const {
-      key,
-      agent_id,
       task_id,
       tool_name,
       classification,
@@ -35,45 +46,18 @@ export async function POST(req: Request) {
       status = 'executed',
     } = body
 
-    if (!tool_name || !classification) {
-      return NextResponse.json(
-        { error: 'tool_name and classification are required' },
-        { status: 400 }
-      )
-    }
-
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
-
-    // Verify agent belongs to user
-    if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin!
-        .from('agents')
-        .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-      }
-    }
-
     // For irreversible: check if approval already exists for this input_hash
     if (classification === 'irreversible' && input_hash) {
-      const { data: existing } = await supabaseAdmin!
+      const { data: existing } = await supabase
         .from('tool_executions')
         .select('id, status')
-        .eq('agent_id', agent_id)
+        .eq('agent_id', agentId)
         .eq('input_hash', input_hash)
         .in('status', ['pending_approval', 'approved', 'rejected'])
         .order('created_at', { ascending: false })
         .limit(1)
 
       if (existing && existing.length > 0) {
-        // Already have a record — return its current status
         return NextResponse.json({
           execution_id: existing[0].id,
           status: existing[0].status,
@@ -82,11 +66,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // Insert the tool execution
-    const { data: execution, error } = await supabaseAdmin!
+    const { data: execution, error } = await supabase
       .from('tool_executions')
       .insert({
-        agent_id,
+        agent_id: agentId,
         task_id: task_id || null,
         tool_name,
         classification,
@@ -103,19 +86,17 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    // Send Multi-Channel HITL Notifications for pending approval (Telegram, Slack, Discord)
     if (execution.status === 'pending_approval') {
       setImmediate(async () => {
         try {
           const [agentRes, profileRes] = await Promise.all([
-            supabaseAdmin!.from('agents').select('name').eq('id', agent_id).single(),
-            supabaseAdmin!.from('profiles').select('slack_webhook_url, discord_webhook_url').eq('id', userId).maybeSingle()
+            supabase.from('agents').select('name').eq('id', agentId).single(),
+            supabase.from('profiles').select('slack_webhook_url, discord_webhook_url').eq('id', userId).maybeSingle()
           ])
 
           const agentName = agentRes.data?.name || 'Agent'
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agenthelm.online'
 
-          // 1. Telegram
           const message = `[Action Required: ${agentName}]\n\n` +
             `The agent is requesting approval to run an @irreversible tool:\n\n` +
             `Tool: ${tool_name}\n` +
@@ -131,7 +112,6 @@ export async function POST(req: Request) {
             ]
           }).catch(err => console.error('Telegram error:', err))
 
-          // 2. Slack Webhook
           if (profileRes.data?.slack_webhook_url) {
             const { sendSlackApprovalAlert } = await import('@/lib/notifications')
             await sendSlackApprovalAlert(profileRes.data.slack_webhook_url, {
@@ -144,7 +124,6 @@ export async function POST(req: Request) {
             })
           }
 
-          // 3. Discord Webhook
           if (profileRes.data?.discord_webhook_url) {
             const { sendDiscordApprovalAlert } = await import('@/lib/notifications')
             await sendDiscordApprovalAlert(profileRes.data.discord_webhook_url, {
@@ -167,19 +146,16 @@ export async function POST(req: Request) {
       execution_id: execution.id,
       status: execution.status,
     })
-
-  } catch (err: unknown) {
-    console.error('Execution POST error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)
 
-// ─── GET: Check status of a tool execution (used by SDK polling for approval) ──
-
-export async function GET(req: Request) {
-  try {
+export const GET = withSdkAuth(
+  {
+    isWrite: false
+  },
+  async (ctx, req) => {
+    const { supabase, userId } = ctx
     const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
     const agent_id = searchParams.get('agent_id')
     const input_hash = searchParams.get('input_hash')
     const execution_id = searchParams.get('execution_id')
@@ -191,18 +167,14 @@ export async function GET(req: Request) {
       )
     }
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin } = auth as any
-
-    let query = supabaseAdmin!
+    let query = supabase
       .from('tool_executions')
-      .select('id, status, tool_name, classification, input_preview, created_at')
+      .select('id, status, tool_name, classification, input_preview, created_at, agent_id, agents!inner(user_id)')
+      .eq('agents.user_id', userId)
 
     if (execution_id) {
       query = query.eq('id', execution_id)
-    } else {
+    } else if (agent_id) {
       query = query.eq('agent_id', agent_id)
       if (input_hash) {
         query = query.eq('input_hash', input_hash)
@@ -211,55 +183,41 @@ export async function GET(req: Request) {
     }
 
     const { data: executions, error } = await query.limit(1)
-
     if (error) throw error
-
     const execution = executions?.[0] || null
 
     return NextResponse.json({
       status: execution?.status || 'not_found',
       execution,
     })
-
-  } catch (err: unknown) {
-    console.error('Execution GET error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)
 
-// ─── PATCH: Approve or reject an irreversible tool execution ──
-
-export async function PATCH(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
-    const body = await req.json()
+export const PATCH = withSdkAuth(
+  {
+    schema: executionPatchSchema,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { supabase, userId, body } = ctx
     const { execution_id, status } = body
 
-    if (!execution_id || !status) {
-      return NextResponse.json(
-        { error: 'execution_id and status are required' },
-        { status: 400 }
-      )
+    const { data: executionCheck } = await supabase
+      .from('tool_executions')
+      .select('id, agents!inner(user_id)')
+      .eq('id', execution_id)
+      .eq('agents.user_id', userId)
+      .single()
+
+    if (!executionCheck) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return NextResponse.json(
-        { error: 'status must be "approved" or "rejected"' },
-        { status: 400 }
-      )
-    }
-
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin } = auth as any
-
-    const { data, error } = await supabaseAdmin!
+    const { data, error } = await supabase
       .from('tool_executions')
       .update({ status })
       .eq('id', execution_id)
-      .eq('status', 'pending_approval')  // Only update if still pending
+      .eq('status', 'pending_approval')
       .select('id, status')
       .single()
 
@@ -270,9 +228,5 @@ export async function PATCH(req: Request) {
       execution_id: data.id,
       status: data.status,
     })
-
-  } catch (err: unknown) {
-    console.error('Execution PATCH error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

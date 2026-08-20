@@ -24,11 +24,14 @@ import {
 } from "./database"
 import { logger, metrics, generateTraceId } from "../observability"
 import { StalenessAnalyzer } from "./staleness-analyzer"
-
-import { classifyObservation } from "./providers/sarvam-promotion"
+import { classifyProposal, SarvamClassification } from "./providers/sarvam-classify"
+import { evaluatePolicy, ProjectPolicyConfig } from "./policy-engine"
+import { assessEvidenceQuality } from "./providers/sarvam-evidence"
 
 export type StageName =
   | "intake"
+  | "policy"
+  | "classify"
   | "verify"
   | "validate"
   | "analyze"
@@ -41,6 +44,8 @@ export interface StageResult {
   stage: StageName
   ok: boolean
   skipped: boolean
+  sarvam_used?: boolean
+  fallback_used?: boolean
   error?: string
   elapsedMs: number
 }
@@ -58,13 +63,19 @@ export interface PipelineResult {
 
 interface BuildState {
   proposal: KnowledgeProposal
+  policyConfig?: ProjectPolicyConfig | null
+  classification?: SarvamClassification
   evidence: EvidenceResult
   entries: Array<{ category: BrainCategory; title: string; content: JsonRecord }>
   analysis?: AnalysisResult
   mergePlan?: MergePlan
 }
 
-type StageResultWithState = { state: Partial<BuildState> }
+type StageResultWithState = {
+  state: Partial<BuildState>
+  sarvam_used?: boolean
+  fallback_used?: boolean
+}
 
 export class BrainPipeline {
   private readonly supabase: SupabaseClient
@@ -84,31 +95,48 @@ export class BrainPipeline {
     const now = Date.now()
     logger.info("Pipeline started", { proposalId, traceId: this.traceId, stage: "intake" })
 
+    // Stage 1: Intake (Load & Structure check)
     let state = await this.stage(proposalId, "intake", () => this.doIntake(proposalId))
     if (!state) {
       return this.done(proposalId, this.outcomeOverride || "error")
     }
-    // Collect projectId after intake
     if (state.proposal) {
       this.projectId = state.proposal.project_id
     }
 
-    let partial = await this.stage(proposalId, "verify", () => this.doVerify(state!.proposal))
+    // Stage 2: Policy Engine
+    let partial = await this.stage(proposalId, "policy", () => this.doPolicy(state!, proposalId))
+    if (!partial) {
+      return this.done(proposalId, this.outcomeOverride || "rejected")
+    }
+    state = { ...state, ...partial }
+
+    // Stage 3: Rich Sarvam Classification
+    partial = await this.stage(proposalId, "classify", () => this.doClassify(state!, proposalId))
     if (!partial) return this.done(proposalId, "error")
     state = { ...state, ...partial }
 
+    // Stage 4: Verify (Deterministic scoring + Sarvam evidence quality assessment)
+    partial = await this.stage(proposalId, "verify", () => this.doVerify(state!))
+    if (!partial) return this.done(proposalId, "error")
+    state = { ...state, ...partial }
+
+    // Stage 5: Validate
     partial = await this.stage(proposalId, "validate", () => this.doValidate(state!, proposalId))
     if (!partial) return this.done(proposalId, "rejected")
     state = { ...state, ...partial }
 
+    // Stage 6: Analyze (Async Semantic Conflict & Cross-Category Dependency Detection)
     partial = await this.stage(proposalId, "analyze", () => this.doAnalyze(state!))
     if (!partial) return this.done(proposalId, "error")
     state = { ...state, ...partial }
 
+    // Stage 7: Plan
     partial = await this.stage(proposalId, "plan", () => this.doPlan(state!, proposalId))
     if (!partial) return this.done(proposalId, "reviewing")
     state = { ...state, ...partial }
 
+    // Stage 8: Build (Publish version & trigger staleness analysis)
     partial = await this.stage(proposalId, "build", () => this.doBuild(state!, proposalId))
     if (!partial) return this.done(proposalId, "error")
 
@@ -148,7 +176,11 @@ export class BrainPipeline {
       if (!result) {
         const isReviewing = this.outcomeOverride === "reviewing"
         this.stages.push({
-          stage: name, ok: isReviewing, skipped: false,
+          stage: name,
+          ok: isReviewing,
+          skipped: false,
+          sarvam_used: false,
+          fallback_used: false,
           elapsedMs,
         })
 
@@ -172,9 +204,12 @@ export class BrainPipeline {
         return null
       }
 
-
       this.stages.push({
-        stage: name, ok: true, skipped: false,
+        stage: name,
+        ok: true,
+        skipped: false,
+        sarvam_used: result.sarvam_used ?? false,
+        fallback_used: result.fallback_used ?? false,
         elapsedMs,
       })
 
@@ -195,7 +230,11 @@ export class BrainPipeline {
       const errorCode = err instanceof Error ? err.message : String(err)
 
       this.stages.push({
-        stage: name, ok: false, skipped: false,
+        stage: name,
+        ok: false,
+        skipped: false,
+        sarvam_used: false,
+        fallback_used: false,
         error: errorCode,
         elapsedMs,
       })
@@ -216,37 +255,11 @@ export class BrainPipeline {
     }
   }
 
+  // 1. Intake
   private async doIntake(proposalId: string): Promise<StageResultWithState | null> {
     const { proposal, error: err } = await loadProposal(this.supabase, proposalId)
     if (err || !proposal) return null
     if (proposal.build_status !== "pending") return null
-
-    // Pre-filter with Sarvam
-    const observation = `Summary: ${proposal.summary || ''}\nDecisions: ${JSON.stringify(proposal.decisions || [])}\nFiles: ${JSON.stringify(proposal.files_modified || [])}\nAPIs: ${JSON.stringify(proposal.apis_affected || [])}\nDB changes: ${JSON.stringify(proposal.db_changes || [])}`
-    const classification = await classifyObservation(observation)
-
-    if (!classification.promote) {
-      this.outcomeOverride = "rejected"
-      await this.supabase
-        .from("knowledge_proposals")
-        .update({
-          build_status: "rejected",
-          review_notes: `Ignored: ${classification.reason}`
-        })
-        .eq("id", proposalId)
-
-      await this.supabase
-        .from("ai_timeline_events")
-        .insert({
-          project_id: proposal.project_id,
-          agent_id: proposal.agent_id,
-          event_type: "proposal_rejected",
-          title: `Ignored proposal: ${proposal.summary?.substring(0, 50)}`,
-          details: { proposal_id: proposalId, reason: classification.reason }
-        })
-
-      return null
-    }
 
     const result = validateProposalStructure(proposal)
     if (!result.valid) {
@@ -266,7 +279,87 @@ export class BrainPipeline {
     }
   }
 
-  private async doVerify(proposal: KnowledgeProposal): Promise<StageResultWithState | null> {
+  // 2. Policy Engine
+  private async doPolicy(state: BuildState, proposalId: string): Promise<StageResultWithState | null> {
+    const { data: policyRecord } = await this.supabase
+      .from("project_policies")
+      .select("*")
+      .eq("project_id", state.proposal.project_id)
+      .maybeSingle()
+
+    const config: ProjectPolicyConfig | null = policyRecord || { mode: "gated" }
+    const policyResult = evaluatePolicy(state.proposal, config, state.proposal.evidence_score || 0)
+
+    // Audit log (fire-and-forget)
+    void this.supabase
+      .from("policy_audit_log")
+      .insert({
+        project_id: state.proposal.project_id,
+        proposal_id: proposalId,
+        agent_id: state.proposal.agent_id || null,
+        decision: policyResult.decision,
+        rules_matched: policyResult.rules_matched,
+        mode: policyResult.mode,
+        reason: policyResult.reason,
+        evidence_score: state.proposal.evidence_score || 0,
+        elapsed_ms: policyResult.elapsed_ms
+      })
+
+    if (policyResult.decision === "reject") {
+      this.outcomeOverride = "rejected"
+      await this.supabase
+        .from("knowledge_proposals")
+        .update({
+          build_status: "rejected",
+          review_notes: `Policy Rejected: ${policyResult.reason}`
+        })
+        .eq("id", proposalId)
+
+      await this.supabase
+        .from("ai_timeline_events")
+        .insert({
+          project_id: state.proposal.project_id,
+          agent_id: state.proposal.agent_id,
+          event_type: "proposal_rejected",
+          title: `Policy Rejected: ${state.proposal.summary?.substring(0, 50)}`,
+          details: { proposal_id: proposalId, reason: policyResult.reason, rules: policyResult.rules_matched }
+        })
+
+      return null
+    }
+
+    return {
+      state: { policyConfig: config }
+    }
+  }
+
+  // 3. Classify (Sarvam-105B)
+  private async doClassify(state: BuildState, proposalId: string): Promise<StageResultWithState | null> {
+    const classification = await classifyProposal(state.proposal)
+    const isFallback = classification.reason.startsWith("Deterministic fallback")
+
+    // Store rich classification on proposal (fire-and-forget)
+    void this.supabase
+      .from("knowledge_proposals")
+      .update({
+        sarvam_category: classification.category,
+        sarvam_risk_level: classification.risk_level,
+        sarvam_confidence: classification.confidence,
+        sarvam_summary: classification.summary_for_brain,
+        semantic_tags: classification.semantic_tags
+      })
+      .eq("id", proposalId)
+
+    return {
+      state: { classification },
+      sarvam_used: !isFallback,
+      fallback_used: isFallback
+    }
+  }
+
+  // 4. Verify
+  private async doVerify(state: BuildState): Promise<StageResultWithState | null> {
+    const { proposal } = state
     const source = createDefaultEvidenceSource(
       isLikelyCommitSha(proposal.commit_sha),
       proposal.tests_passed === true,
@@ -275,12 +368,29 @@ export class BrainPipeline {
       Array.isArray(proposal.files_modified) && proposal.files_modified.length > 0
     )
     const result = verifyProposal(proposal, source)
-    
-    // Use actual evidence score - no artificial floor
-    const finalScore = result.score
-    return { state: { evidence: sourceToEvidenceResult(finalScore, source) } }
+    let finalScore = result.score
+
+    // Enrich with Sarvam qualitative evidence assessment
+    let sarvamUsed = false
+    try {
+      const assessment = await assessEvidenceQuality(proposal, finalScore)
+      if (assessment && typeof assessment.quality_score === "number") {
+        sarvamUsed = true
+        // Blend: 50% deterministic score + 50% qualitative score
+        finalScore = Math.round(0.5 * finalScore + 0.5 * assessment.quality_score)
+      }
+    } catch {
+      // Fallback to deterministic score
+    }
+
+    return {
+      state: { evidence: sourceToEvidenceResult(finalScore, source) },
+      sarvam_used: sarvamUsed,
+      fallback_used: !sarvamUsed
+    }
   }
 
+  // 5. Validate
   private async doValidate(
     state: BuildState,
     proposalId: string
@@ -294,8 +404,8 @@ export class BrainPipeline {
     return { state: { entries } }
   }
 
+  // 6. Analyze
   private async doAnalyze(state: BuildState): Promise<StageResultWithState | null> {
-    // Load existing active brain entries for this project
     const query = this.supabase
       .from("brain_entries")
       .select("*")
@@ -304,11 +414,12 @@ export class BrainPipeline {
     const { data: existing } = (await query) as any
     const activeEntries = existing || []
 
-    const analysis = analyzeKnowledge(state.entries, activeEntries)
+    const analysis = await analyzeKnowledge(state.entries, activeEntries)
 
     return { state: { analysis } }
   }
 
+  // 7. Plan
   private async doPlan(
     state: BuildState,
     proposalId: string
@@ -329,7 +440,6 @@ export class BrainPipeline {
       }
     )
 
-
     await persistProposalAnalysis(
       this.supabase, proposalId, state.evidence, mergePlan, []
     )
@@ -344,6 +454,7 @@ export class BrainPipeline {
     return { state: { mergePlan } }
   }
 
+  // 8. Build
   private async doBuild(
     state: BuildState,
     proposalId: string
@@ -358,19 +469,17 @@ export class BrainPipeline {
     )
     if (!result.ok) {
       if (result.errorCode === "ALREADY_PUBLISHED") {
-        // Idempotency success: if already published, treat as a successful no-op
         const latestVersion = await repository.getLatestVersion(state.proposal.project_id)
         if (latestVersion !== null) {
           await repository.markProposalMerged(proposalId, latestVersion)
         }
         return { state: {} }
       }
-      // Surface the real publisher error so the pipeline reports a useful message
       const detail = result.errors?.[0] || result.errorCode || "Publish failed"
       throw new Error(`[${result.errorCode || "PUBLISH_FAILED"}] ${detail}`)
     }
     
-    // Async trigger staleness check (fire and forget)
+    // Fire-and-forget async staleness check
     if (result.version && state.mergePlan!.entries_to_add.length > 0) {
       const analyzer = new StalenessAnalyzer(this.supabase)
       analyzer.analyze({
@@ -393,7 +502,6 @@ export class BrainPipeline {
   private done(proposalId: string, outcome: PipelineOutcome): PipelineResult {
     const lastFailed = this.stages.filter((s) => !s.ok).pop()
 
-    // Build a descriptive error when a stage failed silently (returned null without throwing)
     let error: string | undefined
     if (outcome === "rejected" || outcome === "error") {
       if (lastFailed?.error) {

@@ -1,8 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { logger } from "../observability"
-import { classifyObservation } from "./providers/sarvam-promotion"
+import { analyzeStaleness } from "./providers/sarvam-staleness"
 
-// Assume we have an entry structure with validity_status
 export interface StaleAnalysisContext {
   projectId: string
   newVersion: number
@@ -21,7 +20,7 @@ export class StalenessAnalyzer {
     logger.info("Staleness analysis started", { projectId: context.projectId, meta: { version: context.newVersion } })
 
     try {
-      // 1. Fetch all currently active, CURRENT entries that might depend on something
+      // 1. Fetch all currently active, CURRENT entries
       const { data: existingEntries, error } = await this.supabase
         .from("brain_entries")
         .select("id, category, title, content, validity_status")
@@ -39,7 +38,6 @@ export class StalenessAnalyzer {
       // 2. Deterministic Check: Dependencies between APIs and DB
       for (const newEntry of context.newEntries) {
         if (newEntry.category === "apis") {
-          // If a new API entry was added, it might affect frontend or database
           for (const existing of existingEntries) {
             if (existing.category === "database" || existing.category === "architecture") {
               const keyword = newEntry.title.toLowerCase()
@@ -54,7 +52,6 @@ export class StalenessAnalyzer {
           }
         }
         if (newEntry.category === "database") {
-          // If a new DB entry was added, it might affect APIs or Architecture
           for (const existing of existingEntries) {
             if (existing.category === "apis" || existing.category === "architecture") {
               const keyword = newEntry.title.toLowerCase()
@@ -70,31 +67,38 @@ export class StalenessAnalyzer {
         }
       }
 
-      // 3. Semantic Check: use Sarvam to confirm ambiguous dependencies
-      // For now, if deterministically affected, we'll run it through Sarvam or just mark as NEEDS_REVIEW.
-      // We will only mark as NEEDS_REVIEW, never STALE, as per user requirement.
+      // 3. Dedicated Sarvam Staleness Analysis for affected entries
       const toUpdate = Array.from(affectedIds)
       
       if (toUpdate.length > 0) {
         for (const id of toUpdate) {
-          const reason = staleReasons.get(id) || "Potential semantic dependency change"
+          const existing = existingEntries.find(e => e.id === id)
+          const baseReason = staleReasons.get(id) || "Potential semantic dependency change"
+          let finalReason = baseReason
+
+          if (existing && context.newEntries.length > 0) {
+            try {
+              const staleness = await analyzeStaleness(context.newEntries[0], existing)
+              if (staleness) {
+                finalReason = `${baseReason} (Sarvam assessment: ${staleness.reason})`
+              }
+            } catch {
+              // Fallback to base reason
+            }
+          }
           
-          // Use Sarvam to validate the dependency (Optional semantic filter)
-          const observation = `Does the new change "${reason}" invalidate this knowledge?`
-          const classification = await classifyObservation(observation) // Reuse existing sarvam integration
-          
-          // Only transition to NEEDS_REVIEW
+          // Transition to NEEDS_REVIEW
           await this.supabase
             .from("brain_entries")
             .update({
               validity_status: "NEEDS_REVIEW",
-              stale_reason: classification.promote ? `${reason} (Semantic check: ${classification.reason})` : reason,
+              stale_reason: finalReason,
               validated_at: new Date().toISOString(),
               validated_against_version: context.newVersion
             })
             .eq("id", id)
             
-          logger.info("Entry marked for review", { meta: { entryId: id, reason } })
+          logger.info("Entry marked for review", { meta: { entryId: id, reason: finalReason } })
         }
       }
 
@@ -117,7 +121,6 @@ export class StalenessAnalyzer {
         }
       })
       
-      // Track the failure silently but observably
       await this.supabase.from("ai_timeline_events").insert({
         project_id: context.projectId,
         agent_id: "system",

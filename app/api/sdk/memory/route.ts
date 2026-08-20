@@ -1,38 +1,35 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { key, agent_id, index_content } = body
+const memoryPayloadSchema = z.object({
+  agent_id: z.string().uuid(),
+  index_content: z.any().optional(),
+  key: z.string().optional(),
+  value: z.any().optional()
+})
 
-    if (!agent_id || !index_content) {
-      return NextResponse.json({ error: 'Missing agent_id or index_content' }, { status: 400 })
+export const OPTIONS = handleSdkOptions
+
+export const POST = withSdkAuth(
+  {
+    schema: memoryPayloadSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
+    const index_content = body.index_content || (body.key ? { [body.key]: body.value } : null)
+
+    if (!index_content) {
+      return NextResponse.json({ error: 'Missing memory content' }, { status: 400 })
     }
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin } = auth as any
-
-    // Verify ownership
-    const { data: dbAgent } = await supabaseAdmin!
-      .from('agents')
-      .select('id')
-      .eq('id', agent_id)
-      .eq('user_id', userId)
-      .single()
-
-    if (!dbAgent) {
-      return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-    }
-
-    // Upsert the synced memory index
-    const { error } = await supabaseAdmin!
+    const { error } = await supabase
       .from('agent_memory')
       .upsert({
-        agent_id,
+        agent_id: agentId,
         user_id: userId,
         index_content,
         last_synced_at: new Date().toISOString()
@@ -44,9 +41,5 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true })
-
-  } catch (err: unknown) {
-    console.error('Memory sync error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

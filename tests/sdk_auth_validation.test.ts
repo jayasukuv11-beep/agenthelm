@@ -5,11 +5,13 @@ describe("sdk-auth env validation", () => {
     // Save original env
     const originalEncryptionKey = process.env.ENCRYPTION_KEY
     const originalSupabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const originalJwtSecret = process.env.AGENTHELM_JWT_SECRET
     const originalNextPhase = process.env.NEXT_PHASE
 
     // Set missing secrets and non-build phase
     delete process.env.ENCRYPTION_KEY
     delete process.env.SUPABASE_SERVICE_ROLE_KEY
+    delete process.env.AGENTHELM_JWT_SECRET
     process.env.NEXT_PHASE = "phase-production-server"
 
     // @ts-expect-error - Query parameter is used to bypass module caching in Vitest dynamic imports
@@ -20,6 +22,7 @@ describe("sdk-auth env validation", () => {
     // Restore env
     if (originalEncryptionKey) process.env.ENCRYPTION_KEY = originalEncryptionKey
     if (originalSupabaseKey) process.env.SUPABASE_SERVICE_ROLE_KEY = originalSupabaseKey
+    if (originalJwtSecret) process.env.AGENTHELM_JWT_SECRET = originalJwtSecret
     if (originalNextPhase) {
       process.env.NEXT_PHASE = originalNextPhase
     } else {
@@ -31,11 +34,13 @@ describe("sdk-auth env validation", () => {
     // Save original env
     const originalEncryptionKey = process.env.ENCRYPTION_KEY
     const originalSupabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const originalJwtSecret = process.env.AGENTHELM_JWT_SECRET
     const originalNextPhase = process.env.NEXT_PHASE
 
     // Set missing secrets and build phase
     delete process.env.ENCRYPTION_KEY
     delete process.env.SUPABASE_SERVICE_ROLE_KEY
+    delete process.env.AGENTHELM_JWT_SECRET
     process.env.NEXT_PHASE = "phase-production-build"
 
     // Dynamic import should load successfully with fallback
@@ -46,6 +51,7 @@ describe("sdk-auth env validation", () => {
     // Restore env
     if (originalEncryptionKey) process.env.ENCRYPTION_KEY = originalEncryptionKey
     if (originalSupabaseKey) process.env.SUPABASE_SERVICE_ROLE_KEY = originalSupabaseKey
+    if (originalJwtSecret) process.env.AGENTHELM_JWT_SECRET = originalJwtSecret
     if (originalNextPhase) {
       process.env.NEXT_PHASE = originalNextPhase
     } else {

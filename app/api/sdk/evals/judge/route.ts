@@ -1,20 +1,26 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { key, agent_id, output, judge_rubric, judge_model } = body
+const evalsJudgeSchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  output: z.any().optional(),
+  judge_rubric: z.record(z.string(), z.any()),
+  judge_model: z.string().optional()
+})
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status })
-    }
+export const OPTIONS = handleSdkOptions
 
-    if (auth.plan !== 'studio') {
-      return NextResponse.json({ error: 'LLM-as-Judge requires Studio plan' }, { status: 403 })
-    }
+export const POST = withSdkAuth(
+  {
+    schema: evalsJudgeSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { body } = ctx
+    const { output, judge_rubric } = body
 
     if (!judge_rubric || Object.keys(judge_rubric).length === 0) {
       return NextResponse.json({ error: 'Missing judge_rubric' }, { status: 400 })
@@ -58,15 +64,13 @@ Respond with ONLY valid JSON in this exact format:
 
         const result = await response.json()
         const content = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
-        
-        // Try to extract JSON if Gemini somehow wraps it in markdown despite responseMimeType
         const jsonMatch = content.match(/\{[\s\S]*?\}/)
         const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content)
         
         semantic_scores[criterion] = parseFloat((parsed.score || 0).toFixed(2))
       } catch (err) {
         console.error(`Judge failed for criterion ${criterion}:`, err)
-        semantic_scores[criterion] = 0 // Explicit error state scoring
+        semantic_scores[criterion] = 0
       }
     }
 
@@ -74,9 +78,5 @@ Respond with ONLY valid JSON in this exact format:
       success: true, 
       semantic_scores 
     })
-
-  } catch (err: any) {
-    console.error('Judge API Error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

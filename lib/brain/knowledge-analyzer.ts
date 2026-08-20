@@ -1,8 +1,8 @@
 /**
- * Sprint 4 - Knowledge Analyzer
+ * Knowledge Analyzer
  *
- * Answers: "How does this proposal change the project's knowledge?"
- * Pure functions. No side effects.
+ * Two-tier conflict detection (Bigram pre-filter + Sarvam Semantic Analysis)
+ * and Sarvam cross-category dependency mapping.
  */
 
 import {
@@ -16,10 +16,8 @@ import {
   KnowledgeDependency,
   AnalysisResult,
 } from "./types"
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+import { analyzeSemanticRelation } from "./providers/sarvam-semantic"
+import { analyzeDependencies as analyzeSarvamDependencies } from "./providers/sarvam-dependencies"
 
 export interface ProposedEntry {
   category: BrainCategory
@@ -27,22 +25,25 @@ export interface ProposedEntry {
   content: JsonRecord
 }
 
-export function analyzeKnowledge(
+export async function analyzeKnowledge(
   proposed: ProposedEntry[],
   existing: BrainEntry[],
   options: {
     staleThresholdDays?: number
     now?: Date
   } = {}
-): AnalysisResult {
+): Promise<AnalysisResult> {
   const staleThreshold = options.staleThresholdDays ?? 365
   const now = options.now ?? new Date()
 
-  const conflicts = detectConflicts(proposed, existing)
-  const duplicates = detectDuplicates(proposed, existing)
+  const [conflicts, duplicates, dependencies] = await Promise.all([
+    detectConflicts(proposed, existing),
+    Promise.resolve(detectDuplicates(proposed, existing)),
+    detectDependencies(proposed, existing)
+  ])
+
   const stale = detectStale(existing, staleThreshold, now)
   const similar = detectSimilar(proposed, existing)
-  const dependencies = detectDependencies(proposed, existing)
 
   const reviewReasons: string[] = []
   if (conflicts.length > 0) reviewReasons.push(`Found ${conflicts.length} conflict(s)`)
@@ -71,28 +72,56 @@ export function analyzeKnowledge(
 }
 
 // ---------------------------------------------------------------------------
-// Conflict Detection
+// Conflict Detection (Two-Tier)
 // ---------------------------------------------------------------------------
 
-function detectConflicts(
+async function detectConflicts(
   proposed: ProposedEntry[],
   existing: BrainEntry[]
-): KnowledgeConflict[] {
+): Promise<KnowledgeConflict[]> {
   const conflicts: KnowledgeConflict[] = []
   const active = existing.filter((e) => e.status === "active")
 
   for (const entry of proposed) {
-    const match = findSimilarTitle(entry, active)
-    if (match && hasDifferentContent(entry, match)) {
-      conflicts.push({
-        type: "conflict",
-        category: entry.category,
-        existing_entry_id: match.id,
-        existing_title: match.title,
-        proposed_title: entry.title,
-        reason: `Proposed "${entry.title}" conflicts with existing "${match.title}"`,
-        severity: "medium",
-      })
+    for (const brain of active) {
+      if (brain.category !== entry.category) continue
+
+      const titleSim = stringSimilarity(entry.title, brain.title)
+      const contentSim = contentSimilarity(entry.content, brain.content)
+
+      // Tier 1: Exact / high title similarity with differing content
+      if (titleSim >= 0.6 && contentSim < 0.85) {
+        conflicts.push({
+          type: "conflict",
+          category: entry.category,
+          existing_entry_id: brain.id,
+          existing_title: brain.title,
+          proposed_title: entry.title,
+          reason: `Proposed "${entry.title}" conflicts with existing "${brain.title}"`,
+          severity: "medium",
+        })
+        continue
+      }
+
+      // Tier 2: Ambiguous similarity range (0.3 to 0.85) - ask Sarvam
+      if (contentSim >= 0.3 && contentSim < 0.85) {
+        try {
+          const relation = await analyzeSemanticRelation(entry, brain)
+          if (relation && relation.relation === "contradicts") {
+            conflicts.push({
+              type: "conflict",
+              category: entry.category,
+              existing_entry_id: brain.id,
+              existing_title: brain.title,
+              proposed_title: entry.title,
+              reason: relation.reason || `Semantic contradiction detected with "${brain.title}"`,
+              severity: "high",
+            })
+          }
+        } catch {
+          // Fallback gracefully on Sarvam error
+        }
+      }
     }
   }
 
@@ -192,44 +221,70 @@ function detectSimilar(
 // Dependency Impact Detection
 // ---------------------------------------------------------------------------
 
-function detectDependencies(
+async function detectDependencies(
   proposed: ProposedEntry[],
   existing: BrainEntry[]
-): KnowledgeDependency[] {
+): Promise<KnowledgeDependency[]> {
   const deps: KnowledgeDependency[] = []
   const active = existing.filter((e) => e.status === "active")
-  const apiEntries = active.filter((e) => e.category === "apis")
-  const dbEntries = active.filter((e) => e.category === "database")
 
-  // API changes may affect database entries
-  for (const api of proposed.filter((p) => p.category === "apis")) {
-    for (const db of findEntriesByKeyword(dbEntries, api.title)) {
-      deps.push({
-        type: "dependency",
-        source_entry_id: "proposed",
-        source_title: api.title,
-        category: "apis",
-        target_entry_id: db.id,
-        target_title: db.title,
-        target_category: "database",
-        reason: `API "${api.title}" may affect DB "${db.title}"`,
-      })
+  for (const newEntry of proposed) {
+    try {
+      const sarvamAnalysis = await analyzeSarvamDependencies(newEntry, active)
+      if (sarvamAnalysis && sarvamAnalysis.dependencies.length > 0) {
+        for (const dep of sarvamAnalysis.dependencies) {
+          const target = active.find(a => a.id === dep.entry_id)
+          if (target) {
+            deps.push({
+              type: "dependency",
+              source_entry_id: "proposed",
+              source_title: newEntry.title,
+              category: newEntry.category,
+              target_entry_id: target.id,
+              target_title: target.title,
+              target_category: target.category,
+              reason: dep.relationship,
+            })
+          }
+        }
+        continue
+      }
+    } catch {
+      // Fall back to deterministic keyword matching
     }
-  }
 
-  // Database changes may affect API entries
-  for (const db of proposed.filter((p) => p.category === "database")) {
-    for (const api of findEntriesByKeyword(apiEntries, db.title)) {
-      deps.push({
-        type: "dependency",
-        source_entry_id: "proposed",
-        source_title: db.title,
-        category: "database",
-        target_entry_id: api.id,
-        target_title: api.title,
-        target_category: "apis",
-        reason: `DB "${db.title}" may affect API "${api.title}"`,
-      })
+    // Deterministic Fallback
+    const apiEntries = active.filter((e) => e.category === "apis")
+    const dbEntries = active.filter((e) => e.category === "database")
+
+    if (newEntry.category === "apis") {
+      for (const db of findEntriesByKeyword(dbEntries, newEntry.title)) {
+        deps.push({
+          type: "dependency",
+          source_entry_id: "proposed",
+          source_title: newEntry.title,
+          category: "apis",
+          target_entry_id: db.id,
+          target_title: db.title,
+          target_category: "database",
+          reason: `API "${newEntry.title}" may affect DB "${db.title}"`,
+        })
+      }
+    }
+
+    if (newEntry.category === "database") {
+      for (const api of findEntriesByKeyword(apiEntries, newEntry.title)) {
+        deps.push({
+          type: "dependency",
+          source_entry_id: "proposed",
+          source_title: newEntry.title,
+          category: "database",
+          target_entry_id: api.id,
+          target_title: api.title,
+          target_category: "apis",
+          reason: `DB "${newEntry.title}" may affect API "${api.title}"`,
+        })
+      }
     }
   }
 
@@ -239,26 +294,6 @@ function detectDependencies(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function findSimilarTitle(
-  entry: ProposedEntry,
-  candidates: BrainEntry[]
-): BrainEntry | undefined {
-  for (const candidate of candidates) {
-    if (candidate.category !== entry.category) continue
-    if (stringSimilarity(entry.title, candidate.title) >= 0.6) {
-      return candidate
-    }
-  }
-  return undefined
-}
-
-function hasDifferentContent(
-  entry: ProposedEntry,
-  brainEntry: BrainEntry
-): boolean {
-  return contentSimilarity(entry.content, brainEntry.content) < 0.85
-}
 
 function findEntriesByKeyword(
   entries: BrainEntry[],
@@ -270,10 +305,6 @@ function findEntriesByKeyword(
     JSON.stringify(e.content).toLowerCase().includes(lower)
   )
 }
-
-// ---------------------------------------------------------------------------
-// Similarity Utilities
-// ---------------------------------------------------------------------------
 
 function stringSimilarity(a: string, b: string): number {
   if (a.length < 2 || b.length < 2) {

@@ -1,51 +1,39 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const taskCompleteSchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  task_id: z.string().min(1),
+  result: z.any().optional(),
+  error: z.string().optional()
+})
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization')
-    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
-    const body = await req.json().catch(() => ({}))
-    
-    if (!token && body.key) token = body.key
+export const OPTIONS = handleSdkOptions
 
-    const auth: any = await validateConnectKey(token)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+export const POST = withSdkAuth(
+  {
+    schema: taskCompleteSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { agentId, supabase, body } = ctx
+    const { task_id, result } = body
 
-    const { supabaseAdmin, agentId } = auth as any
-    const { task_id } = body
-
-    if (!task_id) {
-      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
-    }
-
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('agent_tasks')
       .update({
-        status: 'completed',
+        status: body.error ? 'failed' : 'completed',
+        result: result || null,
         completed_at: new Date().toISOString()
       })
       .eq('id', task_id)
-      .eq('agent_id', agentId) // Ensure they only complete tasks they own
+      .eq('agent_id', agentId)
 
     if (error) throw error
 
     return NextResponse.json({ success: true })
-
-  } catch (err) {
-    console.error('Task complete error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

@@ -1,69 +1,49 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const timelineBatchPostSchema = z.object({
+  project: z.string().optional(),
+  project_id: z.string().optional(),
+  agent_id: z.string().uuid().optional(),
+  events: z.array(z.object({
+    event_type: z.string().min(1),
+    title: z.string().min(1),
+    details: z.record(z.string(), z.any()).optional(),
+    timestamp: z.string().optional(),
+    created_at: z.string().optional(),
+  })).min(1).max(100)
+})
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization')
-    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
-    const body = await req.json().catch(() => ({}))
-    
-    if (!token && body.key) token = body.key
+export const OPTIONS = handleSdkOptions
 
-    const auth: any = await validateConnectKey(token)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+export const POST = withSdkAuth(
+  {
+    schema: timelineBatchPostSchema,
+    requireProjectId: true,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { agentId, supabase, body, project } = ctx
+    const { events } = body
 
-    const { supabaseAdmin, agentId } = auth as any
-    const { project, events } = body
-
-    if (!project || !Array.isArray(events) || events.length === 0) {
-      return NextResponse.json({ error: 'Missing required fields or empty events array' }, { status: 400 })
-    }
-
-    // 1. Resolve project_id
-    const { data: projectRecord } = await supabaseAdmin
-      .from('projects')
-      .select('id')
-      .or(`id.eq.${project},name.eq.${project}`)
-      .limit(1)
-      .single()
-
-    if (!projectRecord) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-    // 2. Format batch for insertion
     const timelineEvents = events.map(event => ({
-      project_id: projectRecord.id,
+      project_id: project!.id,
       agent_id: agentId,
       event_type: event.event_type || 'custom',
       title: event.title || 'Agent Event',
       details: event.details || {},
-      created_at: event.timestamp || new Date().toISOString()
+      created_at: event.timestamp || event.created_at || new Date().toISOString()
     }))
 
-    // 3. Batch insert
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await supabase
       .from('ai_timeline_events')
       .insert(timelineEvents)
 
     if (insertError) throw insertError
 
     return NextResponse.json({ success: true, count: timelineEvents.length })
-
-  } catch (err) {
-    console.error('Timeline batch error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

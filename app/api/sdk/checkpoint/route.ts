@@ -1,28 +1,36 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 import crypto from 'crypto'
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const checkpointPostSchema = z.object({
+  agent_id: z.string().uuid(),
+  task_id: z.string().min(1),
+  step_index: z.number().int().min(0),
+  step_name: z.string().optional(),
+  status: z.enum(['pending', 'running', 'completed', 'failed']).default('completed'),
+  state_snapshot: z.any().optional(),
+  state_delta: z.any().optional(),
+  state_hash: z.string().optional(),
+  input_data: z.any().optional(),
+  output_data: z.any().optional(),
+  tokens_used: z.number().int().min(0).default(0),
+  latency_ms: z.number().int().min(0).optional(),
+  error_data: z.any().optional(),
+})
 
-// ─── POST: Save a checkpoint ──────────────────────────────────────────────────
+export const OPTIONS = handleSdkOptions
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
+export const POST = withSdkAuth(
+  {
+    schema: checkpointPostSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
     const {
-      key,
-      agent_id,
       task_id,
       step_index,
       step_name,
@@ -37,32 +45,6 @@ export async function POST(req: Request) {
       error_data,
     } = body
 
-    if (!task_id || step_index === undefined || step_index === null) {
-      return NextResponse.json(
-        { error: 'task_id and step_index are required' },
-        { status: 400 }
-      )
-    }
-
-    const auth: AuthResult = await validateConnectKey(key)
-    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
-
-    // Verify agent belongs to user
-    if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin
-        .from('agents')
-        .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-      }
-    }
-
     // Cap state_snapshot size to 500KB
     if (state_snapshot) {
       const bytes = new TextEncoder().encode(JSON.stringify(state_snapshot)).length
@@ -74,17 +56,43 @@ export async function POST(req: Request) {
       }
     }
 
-    // Cap state_delta size to 500KB
-    const deltaSize = Buffer.byteLength(JSON.stringify(body.state_delta || {}))
-    if (deltaSize > 500 * 1024) {
-      return NextResponse.json(
-        { error: 'state_delta exceeds 500KB limit' },
-        { status: 413 }
-      )
+    if (state_delta) {
+      const deltaBytes = new TextEncoder().encode(JSON.stringify(state_delta)).length
+      if (deltaBytes > 500_000) {
+        return NextResponse.json(
+          { error: 'state_delta exceeds 500KB limit' },
+          { status: 413 }
+        )
+      }
     }
 
-    // Upsert checkpoint (task_id + step_index is the logical key)
-    const { data: existing } = await supabaseAdmin!
+    // Ensure task exists
+    const { data: taskExists } = await supabase
+      .from('agent_tasks')
+      .select('id')
+      .eq('id', task_id)
+      .maybeSingle()
+
+    if (!taskExists) {
+      const { error: taskError } = await supabase
+        .from('agent_tasks')
+        .insert({
+          id: task_id,
+          agent_id: agentId,
+          user_id: userId,
+          task_description: step_name || 'Local Task',
+          status: 'running',
+          source: 'dashboard',
+          started_at: new Date().toISOString()
+        })
+      if (taskError) {
+        console.error('[Checkpoint Route] Task creation failed:', taskError)
+        return NextResponse.json({ error: taskError.message }, { status: 400 })
+      }
+    }
+
+    // Upsert checkpoint
+    const { data: existing } = await supabase
       .from('agent_checkpoints')
       .select('id')
       .eq('task_id', task_id)
@@ -93,7 +101,7 @@ export async function POST(req: Request) {
 
     const row = {
       task_id,
-      agent_id,
+      agent_id: agentId,
       step_index,
       step_name: step_name || null,
       status,
@@ -107,86 +115,47 @@ export async function POST(req: Request) {
       state_hash: state_hash || null,
     }
 
-    // Ensure task exists
-    const { data: taskExists } = await supabaseAdmin
-      .from('agent_tasks')
-      .select('id')
-      .eq('id', task_id)
-      .maybeSingle()
-
-    if (!taskExists) {
-      // Create a transient task for local execution tracking
-      const { error: taskError } = await supabaseAdmin
-        .from('agent_tasks')
-        .insert({
-          id: task_id,
-          agent_id,
-          user_id: userId,
-          task_description: step_name || 'Local Task',
-          status: 'running',
-          source: 'dashboard',
-          started_at: new Date().toISOString()
-        })
-      if (taskError) {
-        console.error('[Checkpoint Route] Task creation failed:', taskError)
-        return NextResponse.json({ error: taskError.message }, { status: 400 })
-      }
-    }
-
     if (existing && existing.length > 0) {
-      // Update existing checkpoint
-      const { error } = await supabaseAdmin
+      const { error } = await supabase
         .from('agent_checkpoints')
         .update(row)
-        .eq('id', (existing[0] as any).id)
+        .eq('id', existing[0].id)
 
-      if (error) {
-         console.error('[Checkpoint Route] Update failed:', error)
-         throw error
-      }
+      if (error) throw error
     } else {
-      // Insert new checkpoint
-      const { error } = await supabaseAdmin
+      const { error } = await supabase
         .from('agent_checkpoints')
         .insert(row)
 
-      if (error) {
-         console.error('[Checkpoint Route] Insert failed:', error)
-         throw error
-      }
+      if (error) throw error
     }
 
-    // If checkpoint status is 'running', mark the task as running too
     if (status === 'running') {
-      await supabaseAdmin
+      await supabase
         .from('agent_tasks')
         .update({ status: 'running', started_at: new Date().toISOString() })
         .eq('id', task_id)
         .in('status', ['pending', 'running'])
     }
 
-    // If checkpoint failed, mark the task as failed
     if (status === 'failed') {
-      await supabaseAdmin
+      await supabase
         .from('agent_tasks')
         .update({ status: 'failed', completed_at: new Date().toISOString() })
         .eq('id', task_id)
     }
 
     return NextResponse.json({ success: true, step_index })
-
-  } catch (err: unknown) {
-    console.error('Checkpoint POST error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)
 
-// ─── GET: Retrieve last successful checkpoint for resume ──────────────────────
-
-export async function GET(req: Request) {
-  try {
+export const GET = withSdkAuth(
+  {
+    isWrite: false
+  },
+  async (ctx, req) => {
+    const { supabase } = ctx
     const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
     const task_id = searchParams.get('task_id')
     const step_index = searchParams.get('step_index')
 
@@ -194,25 +163,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'task_id is required' }, { status: 400 })
     }
 
-    const auth: AuthResult = await validateConnectKey(key)
-    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin } = auth
-
-    let query = supabaseAdmin
+    let query = supabase
       .from('agent_checkpoints')
       .select('*')
       .eq('task_id', task_id)
       .eq('status', 'completed')
       .order('step_index', { ascending: false })
 
-    if (step_index) {
-      // Get a specific step
-      query = query.eq('step_index', parseInt(step_index, 10))
+    if (step_index !== null && step_index !== undefined) {
+      const parsedStep = parseInt(step_index, 10)
+      if (Number.isInteger(parsedStep) && parsedStep >= 0) {
+        query = query.eq('step_index', parsedStep)
+      }
     }
 
     const { data: checkpoints, error } = await query.limit(1)
-
     if (error) throw error
     const checkpoint = checkpoints?.[0]
 
@@ -224,20 +189,6 @@ export async function GET(req: Request) {
         .digest('hex')
 
       integrityVerified = computedHash === checkpoint.state_hash
-      
-      if (!integrityVerified) {
-        // Log corrupted state to agent_logs
-        await supabaseAdmin
-          .from('agent_logs')
-          .insert({
-            agent_id: checkpoint.agent_id,
-            task_id,
-            type: 'error',
-            level: 'error',
-            message: `Corrupted checkpoint detected at step ${checkpoint.step_index}. Hash mismatch.`,
-            metadata: { expected: checkpoint.state_hash, actual: computedHash }
-          })
-      }
     }
 
     return NextResponse.json({
@@ -245,9 +196,5 @@ export async function GET(req: Request) {
       has_checkpoint: !!checkpoint,
       integrity_verified: integrityVerified,
     })
-
-  } catch (err: unknown) {
-    console.error('Checkpoint GET error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

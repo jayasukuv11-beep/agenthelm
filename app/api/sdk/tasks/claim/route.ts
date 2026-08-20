@@ -1,39 +1,28 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const taskClaimSchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  title: z.string().min(1),
+  description: z.string().optional()
+})
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization')
-    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
-    const body = await req.json().catch(() => ({}))
-    
-    if (!token && body.key) token = body.key
+export const OPTIONS = handleSdkOptions
 
-    const auth: any = await validateConnectKey(token)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin, agentId } = auth as any
+export const POST = withSdkAuth(
+  {
+    schema: taskClaimSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
     const { title, description } = body
 
-    if (!title) {
-      return NextResponse.json({ error: 'Task title is required' }, { status: 400 })
-    }
-
     // Check for existing running/pending task with same title
-    // Including agents relation to get owner name
-    const { data: existingTasks, error: checkError } = await supabaseAdmin
+    const { data: existingTasks, error: checkError } = await supabase
       .from('agent_tasks')
       .select('id, status, agent_id, agents(name)')
       .eq('user_id', userId)
@@ -45,20 +34,19 @@ export async function POST(req: Request) {
     if (checkError) throw checkError
 
     const existingTask = existingTasks?.[0]
-    
     if (existingTask) {
-      const ownerName = Array.isArray(existingTask.agents) 
-        ? existingTask.agents[0]?.name 
+      const ownerName = Array.isArray(existingTask.agents)
+        ? (existingTask.agents[0] as any)?.name
         : (existingTask.agents as any)?.name || 'Unknown Agent'
-        
-      return NextResponse.json({ 
-        claimed: false, 
-        owner: ownerName 
+
+      return NextResponse.json({
+        claimed: false,
+        owner: ownerName
       })
     }
 
-    // Insert new task if not exists
-    const { data: newTask, error: insertError } = await supabaseAdmin
+    // Insert new task
+    const { data: newTask, error: insertError } = await supabase
       .from('agent_tasks')
       .insert({
         agent_id: agentId,
@@ -68,7 +56,6 @@ export async function POST(req: Request) {
         status: 'running',
         started_at: new Date().toISOString(),
         source: 'dashboard',
-        // Optional fields that may exist depending on migration status
         claimed_by: agentId,
         assigned_at: new Date().toISOString()
       })
@@ -76,32 +63,28 @@ export async function POST(req: Request) {
       .single()
 
     if (insertError) {
-        // Fallback insert without the newly mentioned columns if they haven't run migrations
-        if (insertError.code === 'PGRST204' || (insertError.message && insertError.message.includes('claimed_by'))) {
-            const { data: fallbackTask, error: fallbackError } = await supabaseAdmin
-            .from('agent_tasks')
-            .insert({
-                agent_id: agentId,
-                user_id: userId,
-                title: title,
-                task_description: description || null,
-                status: 'running',
-                started_at: new Date().toISOString(),
-                source: 'dashboard'
-            })
-            .select('id')
-            .single()
+      // Fallback if claimed_by column is not present
+      if (insertError.code === 'PGRST204' || (insertError.message && insertError.message.includes('claimed_by'))) {
+        const { data: fallbackTask, error: fallbackError } = await supabase
+          .from('agent_tasks')
+          .insert({
+            agent_id: agentId,
+            user_id: userId,
+            title: title,
+            task_description: description || null,
+            status: 'running',
+            started_at: new Date().toISOString(),
+            source: 'dashboard'
+          })
+          .select('id')
+          .single()
 
-            if (fallbackError) throw fallbackError
-            return NextResponse.json({ claimed: true, task_id: fallbackTask.id })
-        }
-        throw insertError
+        if (fallbackError) throw fallbackError
+        return NextResponse.json({ claimed: true, task_id: fallbackTask.id })
+      }
+      throw insertError
     }
 
     return NextResponse.json({ claimed: true, task_id: newTask.id })
-
-  } catch (err) {
-    console.error('Task claim error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

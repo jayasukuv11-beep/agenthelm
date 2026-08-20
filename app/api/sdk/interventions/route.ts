@@ -1,130 +1,79 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
-import { createClient as createServerSupabase } from '@/app/lib/supabase'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const interventionPostSchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  task_id: z.string().optional(),
+  type: z.string().min(1),
+  payload: z.any().optional()
+})
 
-export async function GET(req: Request) {
-  try {
+const interventionPatchSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1)
+})
+
+export const OPTIONS = handleSdkOptions
+
+export const GET = withSdkAuth(
+  {
+    isWrite: false
+  },
+  async (ctx, req) => {
+    const { supabase, userId } = ctx
     const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
     const agent_id = searchParams.get('agent_id')
     const task_id = searchParams.get('task_id')
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
-
-    // Verify ownership
-    if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin!
-        .from('agents')
-        .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-      }
+    if (!agent_id) {
+      return NextResponse.json({ error: 'agent_id is required' }, { status: 400 })
     }
-
-    // Fetch pending interventions for this task
-    const { data: interventions, error } = await supabaseAdmin!
-      .from('agent_interventions')
-      .select('*')
-      .eq('agent_id', agent_id)
-      .eq('task_id', task_id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-
-    if (error) throw error
-
-    return NextResponse.json({ interventions: interventions || [] })
-
-  } catch (err: any) {
-    console.error('Interventions GET error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { key, agent_id, task_id, type, payload } = body
-
-    // Support both SDK (connect key) and Dashboard (session) requests
-    if (key) {
-      const auth: any = await validateConnectKey(key)
-      if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-      const { userId, supabaseAdmin } = auth as any
-      const { data: agent } = await supabaseAdmin!
-        .from('agents')
-        .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-
-      // Create intervention
-      const { data: intervention, error } = await supabaseAdmin!
-        .from('agent_interventions')
-        .insert({
-          agent_id,
-          task_id,
-          type,
-          payload: payload || {},
-          status: 'pending'
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return NextResponse.json({ success: true, id: intervention.id })
-    }
-
-    // Dashboard UI call
-    const supabase = await createServerSupabase()
-    const { data: authData, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !authData.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: agent } = await supabase
       .from('agents')
       .select('id')
       .eq('id', agent_id)
-      .eq('user_id', authData.user.id)
+      .eq('user_id', userId)
       .single()
 
-    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!agent) {
+      return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
+    }
 
-    // If there is an intervention for this type/task already pending, mark it dismissed before adding a new one
-    await supabase
+    let query = supabase
       .from('agent_interventions')
-      .update({ status: 'dismissed' })
+      .select('*')
       .eq('agent_id', agent_id)
-      .eq('task_id', task_id)
-      .eq('type', type)
       .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+
+    if (task_id) {
+      query = query.eq('task_id', task_id)
+    }
+
+    const { data: interventions, error } = await query
+    if (error) throw error
+
+    return NextResponse.json({ interventions: interventions || [] })
+  }
+)
+
+export const POST = withSdkAuth(
+  {
+    schema: interventionPostSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { agentId, supabase, body } = ctx
+    const { task_id, type, payload } = body
 
     const { data: intervention, error } = await supabase
       .from('agent_interventions')
       .insert({
-        agent_id,
-        task_id,
+        agent_id: agentId,
+        task_id: task_id || null,
         type,
         payload: payload || {},
         status: 'pending'
@@ -134,27 +83,19 @@ export async function POST(req: Request) {
 
     if (error) throw error
     return NextResponse.json({ success: true, id: intervention.id })
-
-  } catch (err: any) {
-    console.error('Interventions POST error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)
 
-// Mark interventions as applied (called by SDK)
-export async function PATCH(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
-    const body = await req.json()
+export const PATCH = withSdkAuth(
+  {
+    schema: interventionPatchSchema,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { supabase, userId, body } = ctx
     const { ids } = body
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin, userId } = auth as any
-
-    const interventionCheck = await supabaseAdmin
+    const interventionCheck = await supabase
       .from('agent_interventions')
       .select('id, agent_id, agents!inner(user_id)')
       .in('id', ids)
@@ -164,16 +105,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const { error } = await supabaseAdmin!
+    const { error } = await supabase
       .from('agent_interventions')
       .update({ status: 'applied' })
       .in('id', ids)
 
     if (error) throw error
     return NextResponse.json({ success: true })
-
-  } catch (err: any) {
-    console.error('Interventions PATCH error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

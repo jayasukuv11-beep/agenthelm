@@ -1,37 +1,40 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
 import { getUpstashConfig } from '@/lib/redis'
+import { z } from 'zod'
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const stateRouteSchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  task: z.any().optional(),
+  progress: z.any().optional(),
+  status: z.string().optional(),
+  current_step: z.any().optional(),
+  current_file: z.any().optional(),
+  state: z.record(z.string(), z.any()).optional(),
+})
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization')
-    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
-    const body = await req.json().catch(() => ({}))
-    
-    // Fallback to body.key if Bearer token is not present
-    if (!token && body.key) {
-        token = body.key
+export const OPTIONS = handleSdkOptions
+
+export const POST = withSdkAuth(
+  {
+    schema: stateRouteSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
+    const { task, progress, status, current_step, current_file, state } = body
+
+    const statePayload = {
+      task,
+      progress,
+      status,
+      current_step,
+      current_file,
+      state,
+      updated_at: Date.now()
     }
-
-    const auth: any = await validateConnectKey(token)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin, agentId } = auth as any
-    const { task, progress, status, current_step, current_file } = body
-
-    const statePayload = { task, progress, status, current_step, current_file, updated_at: Date.now() }
 
     // 1. Write to Upstash Redis
     const cfg = getUpstashConfig()
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Upsert agents table: status, last_seen
-    await supabaseAdmin
+    await supabase
       .from('agents')
       .update({ 
         status: status || 'running', 
@@ -54,7 +57,7 @@ export async function POST(req: Request) {
       .eq('id', agentId)
 
     // 3. Broadcast via Supabase Realtime
-    const channel = supabaseAdmin.channel(`presence:${userId}`)
+    const channel = supabase.channel(`presence:${userId}`)
     channel.subscribe(async (subStatus: string) => {
       if (subStatus === 'SUBSCRIBED') {
         await channel.send({
@@ -62,13 +65,10 @@ export async function POST(req: Request) {
           event: 'agent_state',
           payload: { agent_id: agentId, ...statePayload }
         }).catch((err: any) => console.error('Broadcast error:', err))
-        supabaseAdmin.removeChannel(channel)
+        supabase.removeChannel(channel)
       }
     })
 
     return NextResponse.json({ success: true })
-  } catch (err) {
-    console.error('State error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

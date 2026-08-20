@@ -1,63 +1,46 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
 import { compileProposal } from '@/lib/brain-compiler'
-import { checkRateLimit } from '@/lib/rate-limit'
-import { resolveProject } from '@/lib/project-resolver'
+import { z } from 'zod'
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
+const contractsPostSchema = z.object({
+  project: z.string().optional(),
+  project_id: z.string().optional(),
+  agent_id: z.string().uuid().optional(),
+  content_hash: z.string().min(1),
+  payload: z.object({
+    summary: z.string().min(1),
+    decisions: z.any().optional(),
+    files_modified: z.any().optional(),
+    apis_affected: z.any().optional(),
+    db_changes: z.any().optional(),
+    known_limitations: z.any().optional(),
+    next_steps: z.any().optional(),
+    tests_passed: z.boolean().optional(),
+    commit_sha: z.string().optional(),
+    branch: z.string().optional(),
+    author: z.string().optional(),
   })
-}
+})
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization')
-    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
-    const body = await req.json().catch(() => ({}))
+export const OPTIONS = handleSdkOptions
 
-    if (!token && body.key) token = body.key
+export const POST = withSdkAuth(
+  {
+    schema: contractsPostSchema,
+    requireProjectId: true,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { agentId, supabase, body, project } = ctx
+    const { content_hash, payload } = body
 
-    if (token) {
-      if (!await checkRateLimit(token, 60, 60)) {
-        return NextResponse.json({ error: 'Rate limit exceeded (60 per min)' }, { status: 429 })
-      }
-    }
-
-    const auth = await validateConnectKey(token)
-    if (hasError(auth)) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status })
-    }
-
-    // TypeScript narrowing: after the error check, we know supabaseAdmin exists
-    const { supabaseAdmin, agentId: jwtAgentId } = auth
-    const { project, content_hash, payload } = body
-    const agentId = jwtAgentId ?? body.agent_id
-
-    console.warn(`Deprecation Warning: /api/sdk/contracts called by agent [${agentId || 'unknown'}]. Use /api/sdk/proposals instead.`)
-
-    if (!project || !content_hash || !payload) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // 1. Resolve project_id (supports UUID or Project Name)
-    const { data: projectRecord, error: projectError } = await resolveProject(supabaseAdmin, project)
-
-    if (projectError || !projectRecord) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-    // Backwards-compatible endpoint: legacy "contracts" are now knowledge proposals.
-    const { data: proposal, error: insertError } = await supabaseAdmin
+    const { data: proposal, error: insertError } = await supabase
       .from('knowledge_proposals')
       .insert({
-        project_id: projectRecord.id,
+        project_id: project!.id,
         agent_id: agentId,
         content_hash,
         summary: payload.summary,
@@ -80,9 +63,8 @@ export async function POST(req: Request) {
       .single()
 
     if (insertError) {
-      // Handle unique constraint on content_hash
       if (insertError.code === '23505') {
-        const { data: existing } = await supabaseAdmin
+        const { data: existing } = await supabase
           .from('knowledge_proposals')
           .select('id')
           .eq('content_hash', content_hash)
@@ -99,16 +81,14 @@ export async function POST(req: Request) {
       throw insertError
     }
 
-    // Trigger Brain Compiler asynchronously so the API stays fast.
     setImmediate(() => {
       compileProposal(proposal.id).catch(console.error)
     })
 
-    // Log the event to ai_timeline
-    await supabaseAdmin
+    await supabase
       .from('ai_timeline_events')
       .insert({
-        project_id: projectRecord.id,
+        project_id: project!.id,
         agent_id: agentId,
         event_type: 'proposal_submitted',
         title: `Proposal: ${payload.summary.substring(0, 50)}`,
@@ -123,9 +103,5 @@ export async function POST(req: Request) {
     })
     response.headers.set('X-Deprecation-Warning', '/api/sdk/contracts is deprecated. Use /api/sdk/proposals.')
     return response
-
-  } catch (err) {
-    console.error('Contract publish error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

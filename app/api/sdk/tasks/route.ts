@@ -1,44 +1,26 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey, type AuthResult, hasError } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
 import { resolveProject } from '@/lib/project-resolver'
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+export const OPTIONS = handleSdkOptions
 
-export async function GET(req: Request) {
-  try {
+export const GET = withSdkAuth(
+  {
+    isWrite: false
+  },
+  async (ctx, req) => {
+    const { supabase, userId } = ctx
     const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
     const project = searchParams.get('project')
 
-    if (!key) {
-      return NextResponse.json({ error: 'key is required' }, { status: 400 })
-    }
-
-    const auth: AuthResult = await validateConnectKey(key)
-    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin, userId } = auth
-
-    // Resolve project
     let projectId: string | null = null
     if (project) {
-      const { data: projectRecord } = await resolveProject(supabaseAdmin, project)
+      const { data: projectRecord } = await resolveProject(supabase, project)
       projectId = projectRecord?.id || null
     }
 
-    // Get tasks for this user (and project if specified)
-    let query = supabaseAdmin
+    let query = supabase
       .from('agent_tasks')
       .select(`
         id,
@@ -60,13 +42,11 @@ export async function GET(req: Request) {
     }
 
     const { data: tasks, error } = await query
-
     if (error) throw error
 
-    // For each task, get the latest checkpoint
     const tasksWithCheckpoints = await Promise.all(
       (tasks || []).map(async (task: any) => {
-        const { data: checkpoints } = await supabaseAdmin
+        const { data: checkpoints } = await supabase
           .from('agent_checkpoints')
           .select('step_index, step_name, status, state_snapshot, output_data, updated_at')
           .eq('task_id', task.id)
@@ -82,8 +62,5 @@ export async function GET(req: Request) {
     )
 
     return NextResponse.json({ tasks: tasksWithCheckpoints })
-  } catch (err) {
-    console.error('Tasks API error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

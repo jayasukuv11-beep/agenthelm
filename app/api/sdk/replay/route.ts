@@ -1,68 +1,50 @@
-import { NextResponse } from "next/server";
-import { validateConnectKey } from "@/lib/sdk-auth";
+import { NextResponse } from "next/server"
+import { withSdkAuth, handleSdkOptions } from "@/lib/middleware/sdk-gateway"
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
-/**
- * GET /api/sdk/replay?task_id=xxx
- * 
- * Time-Travel Replay: Generates a runnable Python script from a task's
- * checkpoints and logs, allowing developers to fork and replay from
- * any historical agent state.
- * 
- * Studio plan only.
- */
-export async function GET(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const taskId = url.searchParams.get("task_id");
+export const OPTIONS = handleSdkOptions
+
+export const GET = withSdkAuth(
+  {
+    isWrite: false
+  },
+  async (ctx, req) => {
+    const { supabase, userId } = ctx
+    const url = new URL(req.url)
+    const taskId = url.searchParams.get("task_id")
 
     if (!taskId) {
-      return NextResponse.json({ error: "task_id is required" }, { status: 400 });
+      return NextResponse.json({ error: "task_id is required" }, { status: 400 })
     }
 
-    const key = req.headers.get("x-agent-token") || req.headers.get("authorization")?.replace("Bearer ", "") || null;
-    const auth = await validateConnectKey(key);
-    if ("error" in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status || 401 });
-    }
-
-    const { supabaseAdmin, plan } = auth;
-
-    if (plan !== "studio") {
-      return NextResponse.json(
-        { error: "Trace Replay requires the Studio plan." },
-        { status: 403 }
-      );
-    }
-
-    // Fetch the task metadata
-    const { data: task, error: taskError } = await supabaseAdmin
+    // Fetch the task metadata ensuring user scoping
+    const { data: task, error: taskError } = await supabase
       .from("agent_tasks")
       .select("*")
       .eq("id", taskId)
-      .single();
+      .eq("user_id", userId)
+      .single()
 
     if (taskError || !task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    // Fetch all checkpoints for this task, ordered by step
-    const { data: checkpoints } = await supabaseAdmin
+    // Fetch all checkpoints for this task
+    const { data: checkpoints } = await supabase
       .from("agent_checkpoints")
       .select("step_index, step_name, state_snapshot, state_delta, input_data, output_data, status, latency_ms")
       .eq("task_id", taskId)
-      .order("step_index", { ascending: true });
+      .order("step_index", { ascending: true })
 
     // Fetch reasoning steps if available  
-    const { data: reasoning } = await supabaseAdmin
+    const { data: reasoning } = await supabase
       .from("agent_reasoning_steps")
       .select("step_index, prompt_summary, decision, model, tokens_used, latency_ms")
       .eq("task_id", taskId)
-      .order("step_index", { ascending: true });
+      .order("step_index", { ascending: true })
 
-    // Generate the replay Python script
-    const script = generateReplayScript(task, checkpoints || [], reasoning || []);
+    const script = generateReplayScript(task, checkpoints || [], reasoning || [])
 
     return NextResponse.json({
       task_id: taskId,
@@ -70,27 +52,24 @@ export async function GET(req: Request) {
       checkpoints_count: (checkpoints || []).length,
       reasoning_steps_count: (reasoning || []).length,
       replay_script: script,
-    });
-  } catch (err: any) {
-    console.error("Replay API Error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    })
   }
-}
+)
 
 function generateReplayScript(
   task: any,
   checkpoints: any[],
   reasoning: any[]
 ): string {
-  const taskDesc = task.task_description || task.title || "Unnamed Task";
-  const agentId = task.agent_id;
-  const taskId = task.id;
-  const createdAt = task.created_at;
+  const taskDesc = task.task_description || task.title || "Unnamed Task"
+  const agentId = task.agent_id
+  const taskId = task.id
+  const createdAt = task.created_at
 
-  const checkpointBlock = checkpoints.map((cp, i) => {
+  const checkpointBlock = checkpoints.map((cp) => {
     const stateStr = cp.state_snapshot
       ? JSON.stringify(cp.state_snapshot, null, 2)
-      : JSON.stringify(cp.state_delta || {}, null, 2);
+      : JSON.stringify(cp.state_delta || {}, null, 2)
     return `    # Step ${cp.step_index}: ${cp.step_name} (${cp.status})
     # Latency: ${cp.latency_ms || "N/A"}ms
     checkpoints.append({
@@ -98,8 +77,8 @@ function generateReplayScript(
         "step_name": "${cp.step_name}",
         "status": "${cp.status}",
         "state": ${stateStr.split("\n").join("\n        ")}
-    })`;
-  }).join("\n\n");
+    })`
+  }).join("\n\n")
 
   const reasoningBlock = reasoning.map((r) => {
     return `    # Step ${r.step_index}: ${r.decision} (${r.model}, ${r.latency_ms}ms, ${r.tokens_used} tokens)
@@ -109,8 +88,8 @@ function generateReplayScript(
         "decision": "${r.decision}",
         "model": "${r.model}",
         "tokens_used": ${r.tokens_used}
-    })`;
-  }).join("\n\n");
+    })`
+  }).join("\n\n")
 
   return `#!/usr/bin/env python3
 """
@@ -167,21 +146,13 @@ def replay():
         print("No checkpoints to replay from. Run the agent with dock.checkpoint() calls.")
         return
     
-    # Get the last checkpoint state
     last_state = checkpoints[-1]["state"]
     last_step = checkpoints[-1]["step_name"]
     
     print(f"Forking from checkpoint: '{last_step}' (step {checkpoints[-1]['step_index']})")
     print(f"State snapshot: {last_state}")
-    
-    # === YOUR FORK LOGIC HERE ===
-    # Connect to AgentHelm and resume from the last known state.
-    # dock = agenthelm.connect("ahe_live_YOUR_KEY", name="Replay Agent")
-    # dock.resume_from(TASK_ID, step_index=checkpoints[-1]["step_index"])
-    #
-    # ... your modified agent logic ...
 
 if __name__ == "__main__":
     replay()
-`;
+`
 }

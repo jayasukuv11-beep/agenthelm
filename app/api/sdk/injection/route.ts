@@ -1,80 +1,55 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const injectionPostSchema = z.object({
+  agent_id: z.string().uuid(),
+  task_id: z.string().optional(),
+  input_text: z.string().optional(),
+  trust_score: z.number().optional(),
+  flags: z.array(z.string()).optional(),
+  action_taken: z.string().optional()
+})
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { key, agent_id, task_id, input_text, trust_score, flags, action_taken } = body
+export const OPTIONS = handleSdkOptions
 
-    // Validate request
-    if (!key || !agent_id) {
-      return NextResponse.json({ error: 'Missing key or agent_id' }, { status: 400 })
-    }
+export const POST = withSdkAuth(
+  {
+    schema: injectionPostSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
+    const { task_id, input_text, trust_score, flags, action_taken } = body
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status })
-    }
-
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth
-
-    // Verify agent ownership if jwtAgentId does not match (fallback checking)
-    if (jwtAgentId && jwtAgentId !== agent_id) {
-      return NextResponse.json({ error: 'Agent ID mismatch' }, { status: 403 })
-    } else if (!jwtAgentId) {
-      const { data: dbAgent } = await supabaseAdmin!
-        .from('agents')
+    if (task_id) {
+      const { data: taskExists } = await supabase
+        .from('agent_tasks')
         .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
+        .eq('id', task_id)
+        .maybeSingle()
 
-      if (!dbAgent) {
-        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
+      if (!taskExists) {
+        await supabase
+          .from('agent_tasks')
+          .insert({
+            id: task_id,
+            agent_id: agentId,
+            user_id: userId,
+            task_description: 'Auto-detected Task',
+            status: 'running',
+            source: 'dashboard',
+            started_at: new Date().toISOString()
+          })
       }
     }
 
-    // Ensure task exists if task_id provided
-    if (task_id) {
-        const { data: taskExists } = await supabaseAdmin!
-            .from('agent_tasks')
-            .select('id')
-            .eq('id', task_id)
-            .maybeSingle()
-
-        if (!taskExists) {
-            await supabaseAdmin!
-                .from('agent_tasks')
-                .insert({
-                    id: task_id,
-                    agent_id,
-                    user_id: userId,
-                    task_description: 'Auto-detected Task',
-                    status: 'running',
-                    source: 'dashboard',
-                    started_at: new Date().toISOString()
-                })
-        }
-    }
-
-    // Insert injection event
-    const { error: insertError } = await supabaseAdmin!
+    const { error: insertError } = await supabase
       .from('injection_events')
       .insert({
-        agent_id,
+        agent_id: agentId,
         task_id: task_id || null,
         input_text: input_text ? String(input_text).substring(0, 5000) : null,
         trust_score: typeof trust_score === 'number' ? trust_score : null,
@@ -84,11 +59,10 @@ export async function POST(req: Request) {
 
     if (insertError) throw insertError
 
-    // Also log this as telemetry for the timeline
-    await supabaseAdmin!
+    await supabase
       .from('agent_logs')
       .insert({
-        agent_id,
+        agent_id: agentId,
         type: 'injection',
         level: action_taken === 'blocked' ? 'error' : 'warning',
         message: `Prompt Injection Detected (Score: ${trust_score}) [Action: ${action_taken}]`,
@@ -96,9 +70,5 @@ export async function POST(req: Request) {
       })
 
     return NextResponse.json({ success: true })
-
-  } catch (err: any) {
-    console.error('Injection tracking error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

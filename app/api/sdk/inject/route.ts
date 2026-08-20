@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import { validateConnectKey, hasError } from '@/lib/sdk-auth'
-import { checkRateLimit } from '@/lib/rate-limit'
-import { resolveProject } from '@/lib/project-resolver'
-
-
 export const dynamic = 'force-dynamic'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { semanticReRank } from '@/lib/brain/providers/sarvam-context'
+import { z } from 'zod'
 
 interface BrainEntry {
   id: string
@@ -27,16 +25,16 @@ interface RankedEntry extends BrainEntry {
 
 type ContextPayload = Record<string, Array<Record<string, unknown>>>
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
+const injectRouteSchema = z.object({
+  project: z.string().optional(),
+  project_id: z.string().optional(),
+  agent_id: z.string().uuid().optional(),
+  task_hint: z.string().optional(),
+  trusted_only: z.boolean().default(true),
+  max_context_tokens: z.number().int().min(100).max(32000).default(3000),
+})
+
+export const OPTIONS = handleSdkOptions
 
 function tokenize(input: string) {
   return input
@@ -49,7 +47,7 @@ function estimateTokens(value: unknown) {
   return Math.ceil(JSON.stringify(value).length / 4)
 }
 
-function scoreEntry(entry: BrainEntry, taskHint: string | null): RankedEntry {
+function scoreEntryDeterministic(entry: BrainEntry, taskHint: string | null): RankedEntry {
   const taskTokens = new Set(tokenize(taskHint || ''))
   const searchable = `${entry.category} ${entry.title} ${JSON.stringify(entry.content)}`.toLowerCase()
   let relevance = 0
@@ -66,7 +64,6 @@ function scoreEntry(entry: BrainEntry, taskHint: string | null): RankedEntry {
     relevance += 5
   }
 
-  // Penalize entries that need review
   if (entry.validity_status === 'NEEDS_REVIEW') {
     relevance -= 10
   }
@@ -140,43 +137,21 @@ function buildContext(entries: RankedEntry[], tokenBudget: number) {
   return { context, selected, usedTokens }
 }
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization')
-    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
-    const body = await req.json().catch(() => ({}))
-    
-    if (!token && body.key) token = body.key
+export const POST = withSdkAuth(
+  {
+    schema: injectRouteSchema,
+    requireProjectId: true,
+    isWrite: false
+  },
+  async (ctx) => {
+    const { agentId, supabase, body, project } = ctx
+    const { task_hint, trusted_only = true, max_context_tokens = 3000 } = body
+    const tokenBudget = Math.min(Math.max(Number(max_context_tokens), 500), 12000)
 
-    if (token) {
-      if (!await checkRateLimit(token, 120, 60)) {
-        return NextResponse.json({ error: 'Rate limit exceeded (120 per min)' }, { status: 429 })
-      }
-    }
-
-    const auth = await validateConnectKey(token)
-    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin } = auth
-    const agentId = 'agentId' in auth ? auth.agentId : body.agent_id
-    const { project, task_hint, trusted_only = true } = body
-    const tokenBudget = Math.min(Math.max(Number(body.max_context_tokens || 3000), 500), 12000)
-
-    if (!project) {
-      return NextResponse.json({ error: 'Project is required' }, { status: 400 })
-    }
-
-    const { data: projectRecord, error: projectError } = await resolveProject(supabaseAdmin, project)
-
-    if (projectError || !projectRecord) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-
-    let query = supabaseAdmin
+    let query = supabase
       .from('brain_entries')
       .select('id, category, title, content, confidence, evidence_score, source_type, source_path, content_hash, created_at, validity_status')
-      .eq('project_id', projectRecord.id)
+      .eq('project_id', project!.id)
       .eq('status', 'active')
 
     if (trusted_only) {
@@ -189,33 +164,81 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    const ranked = dedupeEntries(
+    // 1. Deterministic scoring
+    const deterministicRanked = dedupeEntries(
       ((entries || []) as BrainEntry[])
-        .map((entry) => scoreEntry(entry, typeof task_hint === 'string' ? task_hint : null))
+        .map((entry) => scoreEntryDeterministic(entry, typeof task_hint === 'string' ? task_hint : null))
         .sort((a, b) => b.relevance_score - a.relevance_score)
     )
 
-    const { context, selected, usedTokens } = buildContext(ranked, tokenBudget)
+    let finalRanked = deterministicRanked
 
-    await supabaseAdmin
-      .from('ai_timeline_events')
-      .insert({
-        project_id: projectRecord.id,
-        agent_id: agentId,
-        event_type: 'context_injected',
-        title: `Injected v${projectRecord.brain_version} Brain Context`,
-        details: {
-          task_hint,
-          total_entries_considered: entries?.length || 0,
-          total_entries_selected: selected.length,
-          token_budget: tokenBudget,
-          estimated_tokens: usedTokens
+    // 2. Sarvam Semantic Re-ranking for top 20 candidates (if task_hint provided)
+    if (task_hint && deterministicRanked.length > 0) {
+      const top20 = deterministicRanked.slice(0, 20)
+      try {
+        const semanticRankings = await semanticReRank(task_hint, top20)
+        if (semanticRankings && semanticRankings.length > 0) {
+          const scoreMap = new Map<string, number>()
+          semanticRankings.forEach(r => scoreMap.set(r.entry_id, r.semantic_score))
+
+          // Blend: 70% semantic score + 30% deterministic score
+          finalRanked = deterministicRanked.map(entry => {
+            const semScore = scoreMap.get(entry.id)
+            if (semScore !== undefined) {
+              const blended = Math.round(0.7 * semScore + 0.3 * entry.relevance_score)
+              return { ...entry, relevance_score: blended }
+            }
+            return entry
+          }).sort((a, b) => b.relevance_score - a.relevance_score)
         }
-      })
+      } catch {
+        // Fallback to deterministic ranking
+      }
+    }
+
+    const { context, selected, usedTokens } = buildContext(finalRanked, tokenBudget)
+
+    // Fire-and-forget: log timeline event and record time-saved metrics
+    setImmediate(async () => {
+      try {
+        await supabase
+          .from('ai_timeline_events')
+          .insert({
+            project_id: project!.id,
+            agent_id: agentId,
+            event_type: 'context_injected',
+            title: `Injected v${project!.brain_version} Brain Context`,
+            details: {
+              task_hint,
+              total_entries_considered: entries?.length || 0,
+              total_entries_selected: selected.length,
+              token_budget: tokenBudget,
+              estimated_tokens: usedTokens
+            }
+          })
+
+        // Record context injection for "Time Saved" ROI
+        if (agentId) {
+          void supabase
+            .from('context_injections')
+            .insert({
+              project_id: project!.id,
+              agent_id: agentId,
+              task_hint: task_hint || null,
+              entries_returned: selected.length,
+              tokens_returned: usedTokens,
+              estimated_seconds_saved: selected.length * 45
+            })
+        }
+      } catch (err) {
+        console.error('Failed to log context injection telemetry:', err)
+      }
+    })
 
     return NextResponse.json({
       context,
-      brain_version: projectRecord.brain_version,
+      brain_version: project!.brain_version,
       selection: {
         entries_considered: entries?.length || 0,
         entries_selected: selected.length,
@@ -232,9 +255,5 @@ export async function POST(req: Request) {
         }))
       }
     })
-
-  } catch (err) {
-    console.error('Context inject error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

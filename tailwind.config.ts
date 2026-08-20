@@ -9,7 +9,6 @@ const config: Config = {
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
   ],
-  prefix: "",
   theme: {
     container: {
       center: true,
@@ -20,47 +19,59 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "#09090b",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "#10b981",
-          foreground: "hsl(var(--primary-foreground))",
+        paper: {
+          DEFAULT: "#F4F1EA",
+          dim: "#EBE7DD",
+          card: "#FFFFFF",
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+        ink: {
+          DEFAULT: "#1A1916",
+          soft: "#3D3A33",
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+        line: {
+          DEFAULT: "#D5D0C4",
+          soft: "#E2DED3",
         },
+        vermilion: {
+          DEFAULT: "#DC4A2A",
+          dark: "#B83B1F",
+          soft: "#F9E8E2",
+        },
+        moss: {
+          DEFAULT: "#4A6B3A",
+          soft: "#E8EFE2",
+        },
+        amber: {
+          DEFAULT: "#B8862A",
+          soft: "#F5EDDA",
+        },
+        sarvam: {
+          DEFAULT: "#6B2FA0",
+          soft: "#F0EAF5",
+        },
+        border: "var(--line)",
+        input: "var(--line)",
+        ring: "var(--vermilion)",
+        background: "var(--paper)",
+        foreground: "var(--ink)",
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--ink-soft)",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "var(--paper-card)",
+          foreground: "var(--ink)",
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "0.5rem",
+        md: "0.375rem",
+        sm: "0.25rem",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["var(--font-sans)", "Inter", "sans-serif"],
+        display: ["var(--font-display)", "Space Grotesk", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
       },
     },
   },

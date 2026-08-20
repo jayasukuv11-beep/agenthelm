@@ -1,26 +1,21 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
 import { getCostPerToken } from '@/lib/pricing'
 import { sendTelegramToUser } from '@/lib/telegram'
+import { z } from 'zod'
 
-// ✅ USD to INR conversion
 const USD_TO_INR = 84.5
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
-}
-
-
+const outputRouteSchema = z.object({
+  agent_id: z.string().uuid(),
+  label: z.string().optional(),
+  data: z.any().optional(),
+  output: z.any().optional(),
+  tokens_used: z.number().int().min(0).default(0),
+  model: z.string().optional(),
+})
 
 function formatOutputSummary(data: Record<string, unknown>, maxFields = 5): string {
   const entries = Object.entries(data)
@@ -72,63 +67,42 @@ async function completeDispatchTask(args: {
   await sendTelegramToUser(userId, message)
 }
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { key, agent_id, label, data, tokens_used = 0, model } = body
+export const OPTIONS = handleSdkOptions
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { userId, supabaseAdmin, agentId: jwtAgentId } = auth as any
-    const { getUserUsage } = await import('@/lib/usage')
-    const usage = await getUserUsage(userId)
-
-    if (usage.monthlyTokens >= usage.tokensLimit) {
-      return NextResponse.json({ 
-        error: 'quota_exceeded', 
-        message: `Monthly token limit reached for ${usage.plan} plan (${usage.tokensLimit.toLocaleString()}). Upgrade for more capacity.`,
-        upgrade_url: '/dashboard/settings'
-      }, { status: 402 })
-    }
-
-    // Verify agent belongs to user (skip DB hit if valid JWT connects them)
-    if (!jwtAgentId || jwtAgentId !== agent_id) {
-      const { data: agent } = await supabaseAdmin!
-        .from('agents')
-        .select('id')
-        .eq('id', agent_id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found or unauthorized' }, { status: 403 })
-      }
-    }
+export const POST = withSdkAuth(
+  {
+    schema: outputRouteSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { userId, agentId, supabase, body } = ctx
+    const { label, tokens_used = 0, model } = body
+    const outputContent = body.data || body.output || {}
 
     // Store output log
-    await supabaseAdmin!
+    await supabase
       .from('agent_logs')
       .insert({
-        agent_id,
+        agent_id: agentId,
         type: 'output',
         level: 'success',
         message: label ? `Output: ${label}` : 'Task output generated',
-        data: data || {},
+        data: outputContent,
         tokens_used,
         model: model || null
       })
 
-    // ✅ Track cost in INR
+    // Track cost in INR/USD
     if (tokens_used > 0) {
-      const cost_usd     = tokens_used * getCostPerToken(model)
-      const cost_inr     = cost_usd * USD_TO_INR  // ✅ convert to ₹
+      const cost_usd = tokens_used * getCostPerToken(model ?? null)
+      const cost_inr = cost_usd * USD_TO_INR
 
-      await supabaseAdmin!
+      await supabase
         .from('credit_usage')
         .insert({
           user_id: userId,
-          agent_id,
+          agent_id: agentId,
           tokens_used,
           model,
           cost_usd,
@@ -136,21 +110,19 @@ export async function POST(req: Request) {
         })
     }
 
-    // Dispatch task completion → update task + Telegram (only for active telegram-sourced tasks)
-    const outputData = (data as Record<string, unknown>) || {}
+    const outputData = (typeof outputContent === 'object' && outputContent !== null)
+      ? outputContent as Record<string, unknown>
+      : { value: outputContent }
+
     setImmediate(() => {
       completeDispatchTask({
-        agent_id,
+        agent_id: agentId!,
         userId,
         outputData,
-        supabaseAdmin: supabaseAdmin!,
+        supabaseAdmin: supabase,
       }).catch((err) => console.error('Dispatch completion error:', err))
     })
 
     return NextResponse.json({ success: true })
-
-  } catch (err: any) {
-    console.error('Output error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

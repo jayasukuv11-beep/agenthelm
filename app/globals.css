@@ -1,27 +1,66 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
+  --background: #F4F1EA;
+  --foreground: #1A1916;
 
-  --helm-void: #09090b;
-  --helm-surface: #121215;
-  --helm-surface-card: #18181b;
-  --helm-line: #27272a;
-  --helm-text-primary: #f4f4f5;
-  --helm-text-muted: #a1a1aa;
-  --helm-indigo: #6366f1;
-  --helm-indigo-glow: rgba(99, 102, 241, 0.15);
-  --helm-cyan: #06b6d4;
-  --helm-emerald: #10b981;
+  /* Warm Paper Palette */
+  --paper: #F4F1EA;
+  --paper-dim: #EBE7DD;
+  --paper-card: #FFFFFF;
+  --ink: #1A1916;
+  --ink-soft: #3D3A33;
+  --muted: #8B877C;
+  --line: #D5D0C4;
+  --line-soft: #E2DED3;
+  --vermilion: #DC4A2A;
+  --vermilion-dark: #B83B1F;
+  --vermilion-soft: #F9E8E2;
+  --moss: #4A6B3A;
+  --moss-soft: #E8EFE2;
+  --amber: #B8862A;
+  --amber-soft: #F5EDDA;
+  --sarvam: #6B2FA0;
+  --sarvam-soft: #F0EAF5;
+
+  /* Dashboard compatibility aliases */
+  --helm-void: #141311;
+  --helm-surface: #1C1A17;
+  --helm-surface-card: #262420;
+  --helm-line: #3D3A33;
+  --helm-text-primary: #F4F1EA;
+  --helm-text-muted: #8B877C;
+  --helm-indigo: #DC4A2A;
+  --helm-indigo-glow: rgba(220, 74, 42, 0.15);
+  --helm-cyan: #6B2FA0;
+  --helm-emerald: #4A6B3A;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Inter", var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", var(--font-geist-mono), monospace;
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-display: var(--font-display), system-ui, sans-serif;
+  --font-mono: var(--font-mono), monospace;
   
+  --color-paper: var(--paper);
+  --color-paper-dim: var(--paper-dim);
+  --color-paper-card: var(--paper-card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-vermilion: var(--vermilion);
+  --color-vermilion-dark: var(--vermilion-dark);
+  --color-vermilion-soft: var(--vermilion-soft);
+  --color-moss: var(--moss);
+  --color-moss-soft: var(--moss-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-sarvam: var(--sarvam);
+  --color-sarvam-soft: var(--sarvam-soft);
+
   --color-helm-void: var(--helm-void);
   --color-helm-surface: var(--helm-surface);
   --color-helm-surface-card: var(--helm-surface-card);
@@ -43,20 +82,20 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--helm-void);
+  background: var(--paper-dim);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--helm-line);
+  background: var(--line);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--helm-indigo);
+  background: var(--vermilion);
 }
 
 /* Accessibility Focus States */
 a:focus-visible,
 button:focus-visible {
-  outline: 2px solid var(--helm-indigo);
+  outline: 2px solid var(--vermilion);
   outline-offset: 2px;
 }
 

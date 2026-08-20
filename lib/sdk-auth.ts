@@ -1,9 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import * as jose from 'jose'
+import crypto from 'crypto'
 
-const secretSource = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+const secretSource = process.env.AGENTHELM_JWT_SECRET || process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!secretSource && process.env.NEXT_PHASE !== 'phase-production-build') {
-  throw new Error('FATAL: ENCRYPTION_KEY or SUPABASE_SERVICE_ROLE_KEY is required but not set.');
+  throw new Error('FATAL: ENCRYPTION_KEY or SUPABASE_SERVICE_ROLE_KEY or AGENTHELM_JWT_SECRET is required but not set.');
 }
 const JWT_SECRET = new TextEncoder().encode(secretSource || 'temporary-build-secret-key-for-nextjs-build-phase')
 
@@ -12,6 +13,9 @@ export interface AuthSuccess {
   plan: string
   supabaseAdmin: SupabaseClient
   agentId?: string
+  projectId?: string
+  keyId?: string
+  scope?: string
 }
 
 export interface AuthError {
@@ -37,11 +41,6 @@ export function hasError(result: AuthResult): result is AuthError {
 
 /**
  * Authorize an SDK request against the exact agent it is acting on.
- *
- * SDK routes use the service-role client after authentication, so every
- * caller-supplied resource ID must be checked here before it is queried or
- * mutated. A JWT is still checked against the database to support revocation
- * and to prevent stale/deleted agent tokens from retaining access.
  */
 export async function authorizeSdkAgent(
   keyOrToken: string | null,
@@ -97,10 +96,12 @@ export async function authorizeSdkTask(
 }
 
 export async function issueAgentToken(userId: string, agentId: string, plan: string) {
+  const jti = crypto.randomUUID()
   const jwt = await new jose.SignJWT({ userId, plan, agentId })
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: 'HS256', kid: 'agenthelm-v1' })
+    .setJti(jti)
     .setIssuedAt()
-    .setExpirationTime('12h')
+    .setExpirationTime('1h')
     .sign(JWT_SECRET)
 
   return jwt
@@ -117,7 +118,7 @@ export async function validateAgentToken(token: string): Promise<AuthResult> {
     return {
       userId: payload.userId as string,
       agentId: payload.agentId as string,
-      plan: payload.plan as string,
+      plan: (payload.plan as string) || 'free',
       supabaseAdmin: createClient(
         supabaseUrl || 'https://placeholder.supabase.co',
         supabaseKey || 'placeholder',
@@ -128,7 +129,6 @@ export async function validateAgentToken(token: string): Promise<AuthResult> {
     return { error: 'Invalid or expired agent token', status: 401 }
   }
 }
-
 
 export async function validateConnectKey(keyOrToken: string | null): Promise<AuthResult> {
   if (!keyOrToken) {
@@ -141,17 +141,14 @@ export async function validateConnectKey(keyOrToken: string | null): Promise<Aut
   }
 
   const key = keyOrToken
-  if (!key.startsWith('ahe_') && !key.startsWith('agd_')) {
+  if (!key.startsWith('ahe_') && !key.startsWith('agd_') && !key.startsWith('ak_')) {
     return { error: 'Invalid connect key format', status: 401 }
   }
 
-  // Bypass for local testing ONLY in development mode
-  if (process.env.NODE_ENV === 'development' && process.env.TEST_MODE === 'true' && key === 'ahe_live_testkey12345') {
+  // Bypass for local testing ONLY in development/test mode
+  if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && process.env.TEST_MODE === 'true' && key === 'ahe_live_testkey12345') {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if ((!supabaseUrl || !supabaseKey) && process.env.NEXT_PHASE !== 'phase-production-build') {
-      throw new Error('FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required but not set.');
-    }
     return {
       userId: '00000000-0000-0000-0000-000000000000',
       plan: 'studio',
@@ -163,7 +160,6 @@ export async function validateConnectKey(keyOrToken: string | null): Promise<Aut
     }
   }
 
-  // Using service role key for SDK API routes bypassing RLS
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if ((!supabaseUrl || !supabaseKey) && process.env.NEXT_PHASE !== 'phase-production-build') {
@@ -182,6 +178,46 @@ export async function validateConnectKey(keyOrToken: string | null): Promise<Aut
   )
 
   try {
+    // 1. Hash incoming key with SHA-256 and look up in api_keys table
+    const keyHash = crypto.createHash('sha256').update(key).digest('hex')
+
+    const { data: apiKeyRecord, error: apiKeyError } = await supabaseAdmin
+      .from('api_keys')
+      .select('id, user_id, scope, agent_id, project_id, expires_at, revoked_at')
+      .eq('key_hash', keyHash)
+      .is('revoked_at', null)
+      .single()
+
+    if (!apiKeyError && apiKeyRecord) {
+      if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at).getTime() < Date.now()) {
+        return { error: 'API key has expired', status: 401 }
+      }
+
+      // Fire-and-forget update of last_used_at
+      void supabaseAdmin
+        .from('api_keys')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('id', apiKeyRecord.id)
+
+      // Fetch user profile plan
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('plan')
+        .eq('id', apiKeyRecord.user_id)
+        .single()
+
+      return {
+        userId: apiKeyRecord.user_id,
+        plan: profile?.plan || 'free',
+        agentId: apiKeyRecord.agent_id || undefined,
+        projectId: apiKeyRecord.project_id || undefined,
+        keyId: apiKeyRecord.id,
+        scope: apiKeyRecord.scope,
+        supabaseAdmin
+      }
+    }
+
+    // 2. Legacy Dual-Auth fallback during transition period: check profiles.connect_key
     const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('id, plan')
@@ -194,7 +230,7 @@ export async function validateConnectKey(keyOrToken: string | null): Promise<Aut
 
     return {
       userId: profile.id,
-      plan: profile.plan,
+      plan: profile.plan || 'free',
       supabaseAdmin
     }
   } catch (err: unknown) {

@@ -1,25 +1,33 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { validateConnectKey } from '@/lib/sdk-auth'
+import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { z } from 'zod'
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { eval_set_id, agent_id, current_version, baseline_version, threshold = 0.10, key } = body
+const regressionPostSchema = z.object({
+  eval_set_id: z.string().uuid(),
+  agent_id: z.string().uuid(),
+  current_version: z.string().min(1),
+  baseline_version: z.string().min(1),
+  threshold: z.number().optional().default(0.10)
+})
 
-    if (!eval_set_id || !agent_id || !current_version || !baseline_version) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
+const regressionPatchSchema = z.object({
+  regression_id: z.string().uuid()
+})
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status })
-    }
+export const OPTIONS = handleSdkOptions
 
-    const { supabaseAdmin } = auth
+export const POST = withSdkAuth(
+  {
+    schema: regressionPostSchema,
+    requireAgentId: true,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { agentId, supabase, body } = ctx
+    const { eval_set_id, current_version, baseline_version, threshold = 0.10 } = body
 
-    // 1. Fetch latest result for current version
-    const { data: currentResult, error: currentError } = await supabaseAdmin
+    const { data: currentResult } = await supabase
       .from('agent_eval_results')
       .select('*')
       .eq('eval_set_id', eval_set_id)
@@ -28,8 +36,7 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle()
 
-    // 2. Fetch latest result for baseline version
-    const { data: baselineResult, error: baselineError } = await supabaseAdmin
+    const { data: baselineResult } = await supabase
       .from('agent_eval_results')
       .select('*')
       .eq('eval_set_id', eval_set_id)
@@ -46,27 +53,24 @@ export async function POST(req: Request) {
     }
 
     const regressions = []
-
-    // Compare pass rate (binary 1 or 0)
     const currentPass = currentResult.passed ? 1 : 0
     const baselinePass = baselineResult.passed ? 1 : 0
     const passDelta = currentPass - baselinePass
 
-    if (passDelta < -0.1) { // If it flipped from pass to fail
-       regressions.push({
-         agent_id,
-         eval_set_id,
-         baseline_version,
-         current_version,
-         metric: 'pass_rate',
-         baseline_value: baselinePass,
-         current_value: currentPass,
-         delta: passDelta,
-         threshold_used: threshold
-       })
+    if (passDelta < -0.1) {
+      regressions.push({
+        agent_id: agentId,
+        eval_set_id,
+        baseline_version,
+        current_version,
+        metric: 'pass_rate',
+        baseline_value: baselinePass,
+        current_value: currentPass,
+        delta: passDelta,
+        threshold_used: threshold
+      })
     }
 
-    // Compare average semantic scores
     const getAvgScore = (scores: any) => {
       if (!scores || Object.keys(scores).length === 0) return 0
       const vals = Object.values(scores) as number[]
@@ -79,21 +83,20 @@ export async function POST(req: Request) {
 
     if (scoreDelta < -threshold) {
       regressions.push({
-         agent_id,
-         eval_set_id,
-         baseline_version,
-         current_version,
-         metric: 'semantic_score',
-         baseline_value: baselineScore,
-         current_value: currentScore,
-         delta: scoreDelta,
-         threshold_used: threshold
+        agent_id: agentId,
+        eval_set_id,
+        baseline_version,
+        current_version,
+        metric: 'semantic_score',
+        baseline_value: baselineScore,
+        current_value: currentScore,
+        delta: scoreDelta,
+        threshold_used: threshold
       })
     }
 
-    // 3. Insert regressions if any detected
     if (regressions.length > 0) {
-      const { data: inserted, error: insertError } = await supabaseAdmin
+      const { data: inserted, error: insertError } = await supabase
         .from('eval_regressions')
         .insert(regressions)
         .select()
@@ -107,27 +110,21 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ regression_detected: false })
-
-  } catch (err: any) {
-    console.error('Regression POST Error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)
 
-export async function GET(req: Request) {
-  try {
+export const GET = withSdkAuth(
+  {
+    isWrite: false
+  },
+  async (ctx, req) => {
+    const { supabase } = ctx
     const { searchParams } = new URL(req.url)
     const agent_id = searchParams.get('agent_id')
-    const key = searchParams.get('key')
 
     if (!agent_id) return NextResponse.json({ error: 'agent_id required' }, { status: 400 })
 
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin } = auth
-
-    const { data: regressions, error } = await supabaseAdmin
+    const { data: regressions, error } = await supabase
       .from('eval_regressions')
       .select('*, agent_eval_sets(name)')
       .eq('agent_id', agent_id)
@@ -137,26 +134,19 @@ export async function GET(req: Request) {
     if (error) throw error
 
     return NextResponse.json(regressions)
-
-  } catch (err: any) {
-    console.error('Regression GET Error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)
 
-export async function PATCH(req: Request) {
-  try {
-    const body = await req.json()
-    const { regression_id, key } = body
+export const PATCH = withSdkAuth(
+  {
+    schema: regressionPatchSchema,
+    isWrite: true
+  },
+  async (ctx) => {
+    const { supabase, body } = ctx
+    const { regression_id } = body
 
-    if (!regression_id) return NextResponse.json({ error: 'regression_id required' }, { status: 400 })
-
-    const auth: any = await validateConnectKey(key)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-    const { supabaseAdmin } = auth
-
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('eval_regressions')
       .update({ acknowledged: true })
       .eq('id', regression_id)
@@ -164,9 +154,5 @@ export async function PATCH(req: Request) {
     if (error) throw error
 
     return NextResponse.json({ success: true })
-
-  } catch (err: any) {
-    console.error('Regression PATCH Error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-}
+)

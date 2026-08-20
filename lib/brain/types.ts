@@ -8,7 +8,14 @@ export interface EvidenceFactors {
 
 export type JsonRecord = Record<string, unknown>
 
-export type BrainCategory = 'decisions' | 'apis' | 'database' | 'architecture'
+export type BrainCategory =
+  | 'decisions'
+  | 'apis'
+  | 'database'
+  | 'architecture'
+  | 'standards'
+  | 'infrastructure'
+  | 'notes'
 
 export interface KnowledgeProposal {
   id: string
@@ -27,9 +34,12 @@ export interface KnowledgeProposal {
   branch?: string | null
   content_hash?: string | null
   evidence_score?: number | null
+  sarvam_category?: string | null
+  sarvam_risk_level?: string | null
+  sarvam_confidence?: number | null
+  sarvam_summary?: string | null
+  semantic_tags?: string[] | null
 }
-
-// -- Sprint 4 -- Brain Entry and Analysis Types --
 
 export interface BrainEntry {
   id: string
@@ -42,6 +52,11 @@ export interface BrainEntry {
   updated_at?: string | null
   confidence?: number
   evidence_score?: number
+  validity_status?: string
+  original_text?: string | null
+  translated_text?: string | null
+  source_language?: string | null
+  is_translated?: boolean
 }
 
 export interface KnowledgeConflict {
@@ -112,8 +127,6 @@ export interface AnalysisMetrics {
   requires_human_review: boolean
   review_reasons: string[]
 }
-
-// -- Sprint 1-3 Types (unchanged) --
 
 export interface BrainConflict {
   type: BrainCategory
