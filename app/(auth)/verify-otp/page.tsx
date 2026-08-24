@@ -144,18 +144,18 @@ function VerifyOTPContent() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#050505] px-4 font-mono">
-      <Card className="w-full max-w-md bg-[#111] border-zinc-800 rounded-none shadow-xl">
-        <CardHeader className="space-y-1 text-center border-b border-zinc-800/50 pb-6 mb-4">
+    <div className="flex items-center justify-center min-h-screen bg-paper px-4">
+      <Card className="w-full max-w-md bg-paper-card border-line rounded-2xl shadow-sm">
+        <CardHeader className="space-y-1 text-center border-b border-line pb-6 mb-4">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+            <div className="w-12 h-12 bg-vermilion rounded-xl flex items-center justify-center shadow-sm">
               <Shield className="w-6 h-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-[20px] font-black text-white uppercase tracking-widest mb-2">
+          <CardTitle className="font-display text-[22px] font-bold text-ink tracking-tight mb-2">
             Verify your email
           </CardTitle>
-          <CardDescription className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+          <CardDescription className="text-[12px] text-muted">
             We sent a 6-digit code or magic link to {email || "your email"}
           </CardDescription>
         </CardHeader>
@@ -174,27 +174,27 @@ function VerifyOTPContent() {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
                   disabled={loading}
-                  className="w-12 h-14 text-center text-[20px] font-bold bg-[#0a0a0a] border border-zinc-800 rounded-none text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono disabled:opacity-50 transition-all"
+                  className="w-12 h-14 text-center text-[20px] font-bold bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-vermilion/40 focus:border-vermilion transition-all disabled:opacity-50"
                 />
               ))}
             </div>
-            <div className="text-center text-[10px] uppercase tracking-widest text-zinc-600 mt-4 leading-relaxed font-bold">
+            <div className="text-center text-[12px] text-muted leading-relaxed">
               Got a magic link? Just click the link in your email to sign in directly!
             </div>
-            
-            {error && <p className="text-[11px] uppercase tracking-widest text-red-500 text-center font-bold bg-red-500/10 p-2 border border-red-500/30">{error}</p>}
-            
+
+            {error && <p className="text-[12px] text-red-600 text-center bg-red-500/10 p-2 border border-red-500/30 rounded-lg">{error}</p>}
+
             <div className="flex justify-center h-6">
-              {loading && <Loader2 className="h-6 w-6 text-orange-500 animate-spin" />}
+              {loading && <Loader2 className="h-6 w-6 text-vermilion animate-spin" />}
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center border-t border-zinc-800 pt-6 pb-6 gap-2">
-          <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold">Didn't get the code?</span>
+        <CardFooter className="flex justify-center border-t border-line pt-6 pb-6 gap-2">
+          <span className="text-[12px] text-muted">Didn't get the code?</span>
           <button
             onClick={handleResend}
             disabled={resendCooldown > 0 || loading}
-            className="text-[11px] uppercase tracking-widest text-orange-500 hover:text-orange-400 disabled:text-zinc-600 disabled:cursor-not-allowed font-bold"
+            className="text-[12px] font-semibold text-vermilion hover:text-vermilion-dark disabled:text-muted disabled:cursor-not-allowed"
           >
             {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
           </button>
@@ -207,8 +207,8 @@ function VerifyOTPContent() {
 export default function VerifyOtpPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center font-mono">
-        <div className="text-zinc-500 text-[11px] uppercase tracking-widest font-bold">Loading...</div>
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <div className="text-muted text-[12px]">Loading...</div>
       </div>
     }>
       <VerifyOTPContent />

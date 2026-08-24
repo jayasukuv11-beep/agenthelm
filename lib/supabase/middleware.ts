@@ -2,8 +2,9 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  // TEST MODE: bypass auth redirects for UI testing
-  if (process.env.TEST_MODE === 'true') {
+  // TEST MODE: bypass auth redirects for UI testing.
+  // Only allowed outside production — never let this disable auth in prod.
+  if (process.env.TEST_MODE === 'true' && process.env.NODE_ENV !== 'production') {
     return NextResponse.next({
       request: { headers: request.headers },
     })
