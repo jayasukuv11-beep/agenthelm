@@ -3,16 +3,16 @@ import LandingPageClient from "./page-client";
 
 // ── Page-level metadata (overrides layout defaults) ────────────────────────
 export const metadata: Metadata = {
-  title: "AgentHelm | The Project Brain for AI Engineering",
+  title: "AgentHelm | The Control Plane for AI Agents",
   description:
-    "AgentHelm gives every AI coding agent a shared Project Brain so they remember architecture, APIs, decisions, and project knowledge instead of starting from scratch. One Project. One Brain. Unlimited AI Agents.",
+    "AgentHelm keeps autonomous AI agents safe in production: human-in-the-loop approvals, audit trails, budget guardrails, and a shared Project Brain — wrapped around any agent framework.",
   alternates: {
     canonical: "https://agenthelm.online",
   },
   openGraph: {
-    title: "AgentHelm | The Project Brain for AI Engineering",
+    title: "AgentHelm | The Control Plane for AI Agents",
     description:
-      "One Project. One Brain. Unlimited AI Agents. AgentHelm gives every AI coding agent a shared Project Brain so they remember architecture, APIs, decisions, and project knowledge instead of starting from scratch.",
+      "Fail-closed governance for autonomous agents. HITL approvals, audit trail, budget guardrails, and a shared Project Brain — wrapped around any framework.",
     url: "https://agenthelm.online",
     type: "website",
     videos: [
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
         url: "/agenthelm_cover_1777099941437.png",
         width: 1200,
         height: 630,
-        alt: "AgentHelm — The Project Brain for AI Engineering",
+        alt: "AgentHelm — The Control Plane for AI Agents",
       },
     ],
   },
@@ -38,9 +38,9 @@ export const metadata: Metadata = {
 const videoJsonLd = {
   "@context": "https://schema.org",
   "@type": "VideoObject",
-  name: "AgentHelm — The Project Brain for AI Engineering Demo",
+  name: "AgentHelm — The Control Plane for AI Agents Demo",
   description:
-    "See AgentHelm in action: project brain pipeline, context injection, knowledge proposals, security pipeline, and observability for production AI engineering.",
+    "See AgentHelm in action: governance controls, Project Brain pipeline, context injection, knowledge proposals, security pipeline, and observability for production AI agents.",
   thumbnailUrl: "https://agenthelm.online/agenthelm_cover_1777099941437.png",
   uploadDate: "2026-05-11",
   contentUrl: "https://agenthelm.online/agenthelm-demo.mp4",

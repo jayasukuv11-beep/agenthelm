@@ -45,19 +45,32 @@ export function getCurrencySymbol(currency: CurrencyCode = 'USD'): string {
 }
 
 /**
- * Fixed tiers for Indie and Studio plans.
+ * Fixed tiers for Pro and Team plans.
  * We do not use dynamic conversion to keep prices steady for users.
+ *
+ * IMPORTANT: These amounts must match the publicly advertised pricing
+ * (landing page PricingSection + lib/billing/plans.ts DEFAULT_PLANS):
+ *   Pro = ₹499/mo, Team = ₹1,999/mo.
+ * Regional USD pricing ($19/$99) is intentional purchasing-power pricing.
+ *
+ * `pro`/`team` are the canonical ids; legacy `indie`/`studio` remain as
+ * aliases because existing dashboard components and webhook handlers use them.
  */
 export const MULTI_CURRENCY_PLANS: Record<
   CurrencyCode,
   Record<string, { amount: number; name: string }>
 > = {
   INR: {
-    indie: { amount: 1499, name: 'AgentHelm Pro (Monthly)' },
-    studio: { amount: 8499, name: 'AgentHelm Studio (Monthly)' },
+    pro: { amount: 499, name: 'AgentHelm Pro (Monthly)' },
+    team: { amount: 1999, name: 'AgentHelm Team (Monthly)' },
+    // Legacy aliases (same product, historical ids)
+    indie: { amount: 499, name: 'AgentHelm Pro (Monthly)' },
+    studio: { amount: 1999, name: 'AgentHelm Team (Monthly)' },
   },
   USD: {
+    pro: { amount: 19, name: 'AgentHelm Pro (Monthly)' },
+    team: { amount: 99, name: 'AgentHelm Team (Monthly)' },
     indie: { amount: 19, name: 'AgentHelm Pro (Monthly)' },
-    studio: { amount: 99, name: 'AgentHelm Studio (Monthly)' },
+    studio: { amount: 99, name: 'AgentHelm Team (Monthly)' },
   },
 }

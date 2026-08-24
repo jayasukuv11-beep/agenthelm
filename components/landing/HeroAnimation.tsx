@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { Brain, Zap, Terminal, GitBranch, Server, Users, ArrowRight, FileText, CheckCircle2, Search, GitMerge, Package } from "lucide-react"
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
+import { useEffect, useRef, useState } from "react";
+import { Brain, Zap, Terminal, GitBranch, Server, Users, ArrowRight, FileText, CheckCircle2, Search, GitMerge, Package } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 const agents = [
-  { name: "Claude Code", icon: Terminal, color: "text-indigo-400", bg: "bg-indigo-500/10" },
-  { name: "Cursor", icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10" },
-  { name: "Codex", icon: GitBranch, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-  { name: "OpenAI SDK", icon: Server, color: "text-purple-400", bg: "bg-purple-500/10" },
-  { name: "CrewAI", icon: Users, color: "text-blue-400", bg: "bg-blue-500/10" },
-]
+  { name: "Claude Code", icon: Terminal },
+  { name: "Cursor", icon: Zap },
+  { name: "Codex", icon: GitBranch },
+  { name: "OpenAI SDK", icon: Server },
+  { name: "CrewAI", icon: Users },
+];
 
 const pipelineStages = [
   { name: "Proposal", icon: FileText, desc: "Agent submits knowledge" },
@@ -20,55 +20,55 @@ const pipelineStages = [
   { name: "Publish", icon: Package, desc: "Version & deploy" },
   { name: "Brain", icon: Brain, desc: "Shared knowledge" },
   { name: "Context", icon: Zap, desc: "Inject to agents" },
-]
+];
 
 export default function HeroAnimation() {
-  const [phase, setPhase] = useState<"agents" | "pipeline" | "brain" | "context">("agents")
-  const [pipelineIndex, setPipelineIndex] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const shouldReduceMotion = useReducedMotion()
+  const [phase, setPhase] = useState<"agents" | "pipeline" | "brain" | "context">("agents");
+  const [pipelineIndex, setPipelineIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (shouldReduceMotion) {
       const t = setTimeout(() => {
-        setPhase("context")
-        setPipelineIndex(pipelineStages.length - 1)
-      }, 0)
-      return () => clearTimeout(t)
+        setPhase("context");
+        setPipelineIndex(pipelineStages.length - 1);
+      }, 0);
+      return () => clearTimeout(t);
     }
 
     const sequence = async () => {
       // Phase 1: Agents flow in
-      setPhase("agents")
+      setPhase("agents");
       for (let i = 0; i < agents.length; i++) {
-        await new Promise(r => setTimeout(r, 400))
+        await new Promise((r) => setTimeout(r, 400));
       }
-      await new Promise(r => setTimeout(r, 600))
+      await new Promise((r) => setTimeout(r, 600));
 
       // Phase 2: Pipeline stages animate
-      setPhase("pipeline")
+      setPhase("pipeline");
       for (let i = 0; i < pipelineStages.length; i++) {
-        setPipelineIndex(i)
-        await new Promise(r => setTimeout(r, 350))
+        setPipelineIndex(i);
+        await new Promise((r) => setTimeout(r, 350));
       }
-      await new Promise(r => setTimeout(r, 600))
+      await new Promise((r) => setTimeout(r, 600));
 
       // Phase 3: Brain forms
-      setPhase("brain")
-      await new Promise(r => setTimeout(r, 1000))
+      setPhase("brain");
+      await new Promise((r) => setTimeout(r, 1000));
 
       // Phase 4: Context injection
-      setPhase("context")
-      await new Promise(r => setTimeout(r, 1000))
+      setPhase("context");
+      await new Promise((r) => setTimeout(r, 1000));
 
       // Loop
-      setPipelineIndex(0)
-      sequence()
-    }
+      setPipelineIndex(0);
+      sequence();
+    };
 
-    const timer = setTimeout(sequence, 500)
-    return () => clearTimeout(timer)
-  }, [shouldReduceMotion])
+    const timer = setTimeout(sequence, 500);
+    return () => clearTimeout(timer);
+  }, [shouldReduceMotion]);
 
   return (
     <div
@@ -77,7 +77,7 @@ export default function HeroAnimation() {
       style={{ minHeight: 420 }}
     >
       {/* Background grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
 
       {/* Flow lines connecting agents to pipeline */}
       <AnimatePresence mode="wait">
@@ -92,8 +92,8 @@ export default function HeroAnimation() {
           >
             <defs>
               <linearGradient id="flowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.4" />
+                <stop offset="0%" stopColor="#DC4A2A" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#6B2FA0" stopOpacity="0.4" />
               </linearGradient>
             </defs>
             <path
@@ -129,16 +129,15 @@ export default function HeroAnimation() {
                   delay: i * 0.1,
                   type: "spring",
                   stiffness: 100,
-                  damping: 15
+                  damping: 15,
                 }}
-                className={`group ${agent.bg} border border-current/20 px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:scale-105 hover:border-current/40 cursor-default`}
-                style={{ borderColor: agent.color }}
+                className="group bg-paper-card border border-line px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:scale-105 hover:border-ink-soft cursor-default"
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${agent.bg} ${agent.color}`}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-vermilion-soft text-vermilion">
                   <agent.icon className="w-5 h-5" />
                 </div>
-                <span className="font-mono text-sm font-bold text-white">{agent.name}</span>
-                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
+                <span className="font-mono text-sm font-bold text-ink">{agent.name}</span>
+                <ArrowRight className="w-4 h-4 text-muted group-hover:text-vermilion transition-colors" />
               </motion.div>
             ))}
           </motion.div>
@@ -157,10 +156,10 @@ export default function HeroAnimation() {
             transition={{ duration: 0.4 }}
           >
             {/* Connecting line */}
-            <div className="absolute top-6 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-zinc-700 to-transparent -z-10" />
+            <div className="absolute top-6 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-line to-transparent -z-10" />
 
             {pipelineStages.map((stage, i) => {
-              const StageIcon = stage.icon
+              const StageIcon = stage.icon;
               return (
                 <motion.div
                   key={stage.name}
@@ -168,44 +167,57 @@ export default function HeroAnimation() {
                   animate={{
                     opacity: i <= pipelineIndex ? 1 : 0.3,
                     y: 0,
-                    scale: i <= pipelineIndex ? 1 : 0.9
+                    scale: i <= pipelineIndex ? 1 : 0.9,
                   }}
                   exit={{ opacity: 0, y: -40, scale: 0.8 }}
                   transition={{
                     delay: i * 0.05,
                     type: "spring",
                     stiffness: 100,
-                    damping: 15
+                    damping: 15,
                   }}
                   className="flex flex-col items-center gap-2 px-2"
                 >
                   <motion.div
                     className={`w-14 h-14 rounded-xl flex items-center justify-center border-2 transition-all ${
                       i <= pipelineIndex
-                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-400 shadow-[0_0_30px_-5px_rgba(99,102,241,0.4)]"
-                        : "border-zinc-700 bg-zinc-900/50 text-zinc-600"
+                        ? "border-vermilion bg-vermilion-soft text-vermilion shadow-[0_0_30px_-5px_rgba(220,74,42,0.35)]"
+                        : "border-line bg-paper-card text-muted"
                     }`}
                     animate={{
                       scale: i === pipelineIndex && phase === "pipeline" ? [1, 1.1, 1] : 1,
-                      boxShadow: i === pipelineIndex && phase === "pipeline"
-                        ? ["0 0 30px -5px rgba(99,102,241,0.4)", "0 0 50px -5px rgba(99,102,241,0.6)", "0 0 30px -5px rgba(99,102,241,0.4)"]
-                        : "0 0 30px -5px rgba(99,102,241,0.4)"
+                      boxShadow:
+                        i === pipelineIndex && phase === "pipeline"
+                          ? [
+                              "0 0 30px -5px rgba(220,74,42,0.35)",
+                              "0 0 50px -5px rgba(220,74,42,0.55)",
+                              "0 0 30px -5px rgba(220,74,42,0.35)",
+                            ]
+                          : "0 0 30px -5px rgba(220,74,42,0.2)",
                     }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
                     <StageIcon className="w-6 h-6" />
                   </motion.div>
-                  <span className={`font-mono text-xs uppercase tracking-wider text-center w-20 ${
-                    i <= pipelineIndex ? "text-white" : "text-zinc-600"
-                  }`}>{stage.name}</span>
-                  <span className={`font-mono text-[10px] text-center w-24 ${
-                    i <= pipelineIndex ? "text-zinc-500" : "text-zinc-700"
-                  }`}>{stage.desc}</span>
+                  <span
+                    className={`font-mono text-xs uppercase tracking-wider text-center w-20 ${
+                      i <= pipelineIndex ? "text-ink" : "text-muted"
+                    }`}
+                  >
+                    {stage.name}
+                  </span>
+                  <span
+                    className={`font-mono text-[10px] text-center w-24 ${
+                      i <= pipelineIndex ? "text-ink-soft" : "text-muted"
+                    }`}
+                  >
+                    {stage.desc}
+                  </span>
 
                   {/* Arrow between stages */}
                   {i < pipelineStages.length - 1 && (
                     <motion.div
-                      className="absolute top-6 left-[calc(100%_-_8px)] w-16 h-0.5 bg-gradient-to-r from-zinc-700 to-transparent -z-10"
+                      className="absolute top-6 left-[calc(100%_-_8px)] w-16 h-0.5 bg-gradient-to-r from-line to-transparent -z-10"
                       initial={{ scaleX: 0 }}
                       animate={{ scaleX: i < pipelineIndex ? 1 : 0 }}
                       transition={{ delay: i * 0.05 + 0.2, duration: 0.3 }}
@@ -213,7 +225,7 @@ export default function HeroAnimation() {
                     />
                   )}
                 </motion.div>
-              )
+              );
             })}
           </motion.div>
         )}
@@ -232,52 +244,56 @@ export default function HeroAnimation() {
           >
             {/* Outer pulse rings */}
             <motion.div
-              className="absolute inset-0 border-2 border-indigo-500/20 rounded-full"
+              className="absolute inset-0 border-2 border-vermilion/20 rounded-full"
               animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.2, 0.6] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             />
             <motion.div
-              className="absolute inset-0 border-2 border-cyan-500/15 rounded-full"
+              className="absolute inset-0 border-2 border-sarvam/15 rounded-full"
               animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.1, 0.4] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
             />
             <motion.div
-              className="absolute inset-0 border-2 border-emerald-500/10 rounded-full"
+              className="absolute inset-0 border-2 border-moss/10 rounded-full"
               animate={{ scale: [1, 1.35, 1], opacity: [0.3, 0.05, 0.3] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
             />
 
             {/* Brain core */}
             <motion.div
-              className="relative w-32 h-32 rounded-2xl bg-gradient-to-br from-indigo-500/20 via-cyan-500/10 to-emerald-500/20 border border-indigo-500/30 flex items-center justify-center shadow-[0_0_60px_-10px_rgba(99,102,241,0.3)]"
+              className="relative w-32 h-32 rounded-2xl bg-gradient-to-br from-vermilion/20 via-sarvam/10 to-moss/20 border border-vermilion/30 flex items-center justify-center shadow-[0_0_60px_-10px_rgba(220,74,42,0.3)]"
               animate={{
                 rotate: [0, 0, 2, -2, 0],
-                boxShadow: ["0 0 60px -10px rgba(99,102,241,0.3)", "0 0 80px -5px rgba(6,182,212,0.4)", "0 0 60px -10px rgba(99,102,241,0.3)"]
+                boxShadow: [
+                  "0 0 60px -10px rgba(220,74,42,0.3)",
+                  "0 0 80px -5px rgba(107,47,160,0.4)",
+                  "0 0 60px -10px rgba(220,74,42,0.3)",
+                ],
               }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Brain className="w-16 h-16 text-indigo-400" />
+              <Brain className="w-16 h-16 text-vermilion" />
 
               {/* Data particles orbiting */}
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-2 h-2 bg-indigo-400/60 rounded-full"
+                  className="absolute w-2 h-2 bg-vermilion/60 rounded-full"
                   style={{
                     top: "50%",
                     left: "50%",
-                    transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-48px) rotate(${-i * 60}deg)`
+                    transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-48px) rotate(${-i * 60}deg)`,
                   }}
                   animate={{
                     rotate: `${i * 60}deg`,
                     scale: [1, 0.5, 1],
-                    opacity: [0.8, 0.3, 0.8]
+                    opacity: [0.8, 0.3, 0.8],
                   }}
                   transition={{
                     duration: 3,
                     repeat: Infinity,
                     delay: i * 0.3,
-                    ease: "easeInOut"
+                    ease: "easeInOut",
                   }}
                 />
               ))}
@@ -290,8 +306,8 @@ export default function HeroAnimation() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              <p className="font-mono text-lg font-bold text-white uppercase tracking-widest">Project Brain</p>
-              <p className="font-mono text-xs text-zinc-500 uppercase tracking-wider mt-1">Active Memory · Sync Active · v3.2.1</p>
+              <p className="font-mono text-lg font-bold text-ink uppercase tracking-widest">Project Brain</p>
+              <p className="font-mono text-xs text-muted uppercase tracking-wider mt-1">Active Memory · Sync Active · v1.0</p>
             </motion.div>
           </motion.div>
         )}
@@ -314,23 +330,22 @@ export default function HeroAnimation() {
                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ delay: i * 0.1 + 0.2, type: "spring", stiffness: 100, damping: 15 }}
-                className={`relative ${agent.bg} border border-current/30 px-3 py-3 rounded-xl flex flex-col items-center gap-2 transition-all`}
-                style={{ borderColor: agent.color }}
+                className="relative bg-paper-card border border-line px-3 py-3 rounded-xl flex flex-col items-center gap-2 transition-all"
               >
                 <motion.div
-                  className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-indigo-500 rounded-full"
+                  className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-vermilion rounded-full"
                   animate={{
                     scale: [0, 1.5, 0],
                     opacity: [1, 0, 0],
-                    y: [0, -20, -40]
+                    y: [0, -20, -40],
                   }}
                   transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
                 />
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${agent.bg} ${agent.color}`}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-vermilion-soft text-vermilion">
                   <agent.icon className="w-4 h-4" />
                 </div>
-                <span className="font-mono text-xs font-bold text-white">{agent.name}</span>
-                <span className="font-mono text-[10px] text-indigo-400 uppercase tracking-wider">INJECTED</span>
+                <span className="font-mono text-xs font-bold text-ink">{agent.name}</span>
+                <span className="font-mono text-[10px] text-vermilion uppercase tracking-wider">Injected</span>
               </motion.div>
             ))}
           </motion.div>
@@ -339,11 +354,11 @@ export default function HeroAnimation() {
 
       {/* Loop indicator */}
       <motion.div
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-zinc-500 font-mono text-xs uppercase tracking-widest"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-muted font-mono text-xs uppercase tracking-widest"
         animate={{ opacity: [0.3, 1, 0.3] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
-        <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+        <div className="w-4 h-4 border-2 border-vermilion/30 border-t-vermilion rounded-full animate-spin" />
         <span>Continuous sync</span>
       </motion.div>
 
@@ -354,5 +369,5 @@ export default function HeroAnimation() {
         }
       `}</style>
     </div>
-  )
+  );
 }

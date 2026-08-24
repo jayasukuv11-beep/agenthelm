@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://agenthelm.online/logo.png" width="120" alt="AgentHelm Logo" />
   <h1>AgentHelm</h1>
-  <p><strong>Shared Memory and Governance Control Plane for Autonomous AI Agent Fleets</strong></p>
+  <p><strong>The Control Plane for Autonomous AI Agent Fleets</strong></p>
 
   <p>
     <a href="https://pypi.org/project/agenthelm-sdk"><img src="https://img.shields.io/pypi/v/agenthelm-sdk?color=orange&style=flat-square" alt="PyPI SDK" /></a>
@@ -14,7 +14,7 @@
 
 ---
 
-> **AgentHelm** gives AI coding agents (Claude Code, Cursor, Windsurf, custom Python/Node fleets) a shared, versioned **Project Brain**. Agents remember architecture, API conventions, schemas, and trade-offs across sessions instead of starting from zero.
+> **AgentHelm** is the control plane that keeps autonomous AI agents safe in production. It wraps any agent framework (LangGraph, CrewAI, custom Python/Node fleets, Claude Code, Cursor) with human-in-the-loop approvals, audit trails, budget guardrails, fail-closed safety, and a shared, versioned **Project Brain** so agents stay accountable, on-budget, and recoverable.
 
 ---
 

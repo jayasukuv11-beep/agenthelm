@@ -9,7 +9,7 @@ const docSections = [
   {
     name: "Getting Started",
     icon: Zap,
-    color: "text-indigo-400",
+    color: "text-vermilion",
     href: "/docs",
     items: [
       "Quickstart installation",
@@ -21,7 +21,7 @@ const docSections = [
   {
     name: "Project Brain",
     icon: BookOpen,
-    color: "text-cyan-400",
+    color: "text-vermilion",
     href: "/docs",
     items: [
       "Brain entry categories",
@@ -33,7 +33,7 @@ const docSections = [
   {
     name: "SDK Reference",
     icon: Terminal,
-    color: "text-emerald-400",
+    color: "text-vermilion",
     href: "/docs",
     items: [
       "Python SDK integration",
@@ -45,7 +45,7 @@ const docSections = [
   {
     name: "Governance",
     icon: GitBranch,
-    color: "text-purple-400",
+    color: "text-vermilion",
     href: "/docs",
     items: [
       "Tool scopes decorators",
@@ -60,7 +60,7 @@ const codeExamples = [
   {
     lang: "Python",
     icon: Terminal,
-    color: "text-indigo-400",
+    color: "text-vermilion",
     code: `# pip install agenthelm-sdk
 import agenthelm
 
@@ -87,7 +87,7 @@ context = dock.inject(
   {
     lang: "Node.js",
     icon: Zap,
-    color: "text-emerald-400",
+    color: "text-vermilion",
     code: `// npm install agenthelm-node-sdk
 const { AgentHelm } = require('agenthelm-node-sdk')
 
@@ -113,10 +113,10 @@ const context = await dock.inject({
   {
     lang: "cURL (REST)",
     icon: GitBranch,
-    color: "text-cyan-400",
+    color: "text-vermilion",
     code: `# Submit proposal
 curl -X POST https://api.agenthelm.online/api/sdk/proposals \\
-  -H "Authorization: Bearer ahe_live_..." \\
+  -H "Authorization: Bearer ***" \\
   -H "Content-Type: application/json" \\
   -d '{
     "project": "my-project",
@@ -130,7 +130,7 @@ curl -X POST https://api.agenthelm.online/api/sdk/proposals \\
 
 # Inject context
 curl -X POST https://api.agenthelm.online/api/sdk/inject \\
-  -H "Authorization: Bearer ahe_live_..." \\
+  -H "Authorization: Bearer ***" \\
   -H "Content-Type: application/json" \\
   -d '{
     "project": "my-project",
@@ -150,14 +150,14 @@ export default function DocumentationCTA() {
   }
 
   return (
-    <section id="docs" className="py-24 px-6 bg-[#08080a] border-y border-zinc-900">
+    <section id="docs" className="py-24 px-6 bg-paper-dim/40 border-y border-line">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <span className="text-[11px] font-mono text-indigo-400 uppercase tracking-[0.3em] block mb-3">DOCUMENTATION</span>
-          <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
-            Start Building in <span className="text-indigo-400">Minutes</span>
+          <span className="text-[11px] font-mono text-vermilion uppercase tracking-[0.3em] block mb-3">DOCUMENTATION</span>
+          <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight text-ink mb-4">
+            Start Building in <span className="text-vermilion">Minutes</span>
           </h2>
-          <p className="text-zinc-400 font-mono text-sm max-w-xl mx-auto">
+          <p className="text-ink-soft text-sm max-w-xl mx-auto">
             Explore standard guides, integration specs, and copy-paste examples to wire up your agents.
           </p>
         </div>
@@ -175,25 +175,25 @@ export default function DocumentationCTA() {
             >
               <Link
                 href={section.href}
-                className="block p-6 bg-[#111113] border border-zinc-800 rounded-2xl hover:border-zinc-700 hover:shadow-[0_0_30px_-10px_rgba(99,102,241,0.1)] transition-all h-full"
+                className="block p-6 bg-paper-card border border-line rounded-2xl hover:border-ink-soft transition-all h-full"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-current/10 border border-current/25 ${section.color}`}>
+                  <div className="w-10 h-10 rounded-xl bg-vermilion-soft border border-vermilion/20 flex items-center justify-center text-vermilion">
                     <section.icon className="w-5 h-5" />
                   </div>
-                  <h3 className={`font-mono text-sm font-bold uppercase tracking-wider ${section.color}`}>
+                  <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
                     {section.name}
                   </h3>
                 </div>
                 <ul className="space-y-2 mb-6">
                   {section.items.map((item) => (
-                    <li key={item} className="font-mono text-[10px] text-zinc-500 group-hover:text-zinc-400 transition-colors flex items-center gap-2">
-                      <span className="w-1 h-1 bg-zinc-700 rounded-full flex-shrink-0" />
+                    <li key={item} className="text-[10px] text-muted group-hover:text-ink-soft transition-colors flex items-center gap-2">
+                      <span className="w-1 h-1 bg-line rounded-full flex-shrink-0" />
                       {item}
                     </li>
                   ))}
                 </ul>
-                <div className="flex items-center gap-1.5 text-indigo-400 font-mono text-[10px] font-bold uppercase tracking-widest group-hover:gap-2.5 transition-all">
+                <div className="flex items-center gap-1.5 text-vermilion font-mono text-[10px] font-bold uppercase tracking-widest group-hover:gap-2.5 transition-all">
                   <ArrowRight className="w-4 h-4" />
                   Read Guide
                 </div>
@@ -208,25 +208,25 @@ export default function DocumentationCTA() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h3 className="font-mono text-lg font-bold text-white uppercase tracking-wider mb-6 text-center">
+          <h3 className="font-display text-lg font-bold text-ink uppercase tracking-wider mb-6 text-center">
             Copy-Paste Quickstarts
           </h3>
           <div className="grid md:grid-cols-3 gap-4">
             {codeExamples.map((example, i) => (
               <div key={example.lang} className="group">
-                <div className="bg-[#111113] border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 transition-colors h-full flex flex-col justify-between">
+                <div className="bg-paper-card border border-line rounded-2xl overflow-hidden hover:border-ink-soft transition-colors h-full flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-[#161619]/60">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-line-soft bg-paper-dim/60">
                       <div className="flex items-center gap-2">
                         <example.icon className={`w-4 h-4 ${example.color}`} />
-                        <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">{example.lang}</span>
+                        <span className="font-mono text-xs font-bold text-ink uppercase tracking-wider">{example.lang}</span>
                       </div>
                       <button
                         onClick={() => handleCopy(example.code, i)}
-                        className="text-zinc-500 hover:text-indigo-400 transition-colors p-1"
+                        className="text-muted hover:text-vermilion transition-colors p-1"
                         title="Copy code snippet"
                       >
-                        {copiedIndex === i ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                        {copiedIndex === i ? <Check className="w-4 h-4 text-moss" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
                     <pre className="p-4 overflow-x-auto max-h-72 bg-[#08080a] font-mono text-[11px] leading-relaxed text-zinc-300">
@@ -241,29 +241,28 @@ export default function DocumentationCTA() {
 
         {/* Final CTA */}
         <motion.div
-          className="mt-20 p-10 md:p-16 bg-gradient-to-br from-indigo-950/20 via-zinc-900/50 to-[#08080a] border border-indigo-500/20 rounded-2xl text-center relative overflow-hidden"
+          className="mt-20 p-10 md:p-16 bg-vermilion-soft border border-vermilion/20 rounded-2xl text-center relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.06),transparent_70%)] pointer-events-none" />
           <div className="relative z-10">
-            <h3 className="font-mono text-2xl md:text-3xl font-black text-white uppercase tracking-wider mb-4">
+            <h3 className="font-display text-2xl md:text-3xl font-bold text-ink uppercase tracking-wider mb-4">
               Ready to build your Project Brain?
             </h3>
-            <p className="text-zinc-400 font-mono text-xs mb-8 max-w-xl mx-auto uppercase tracking-widest leading-relaxed">
+            <p className="text-ink-soft text-xs mb-8 max-w-xl mx-auto uppercase tracking-widest leading-relaxed">
               Start free forever for up to 3 agents · Integrate in 5 minutes
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/login"
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(99,102,241,0.3)] rounded-lg"
+                className="bg-vermilion hover:bg-vermilion-dark text-white font-mono font-bold text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 rounded-lg"
               >
                 Get Started Free <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/docs"
-                className="border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900/60 font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 rounded-lg"
+                className="border border-line text-ink-soft hover:text-ink hover:border-ink-soft font-mono text-sm px-8 py-4 transition-all flex items-center justify-center gap-2 rounded-lg"
               >
                 Read Full Docs <BookOpen className="w-4 h-4" />
               </Link>

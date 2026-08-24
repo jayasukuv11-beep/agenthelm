@@ -10,11 +10,15 @@
   --paper-card: #FFFFFF;
   --ink: #1A1916;
   --ink-soft: #3D3A33;
-  --muted: #8B877C;
+  /* Muted text: darkened from #8B877C to meet WCAG AA 4.5:1 on --paper
+     (HIG Color: insufficient contrast makes content hard to read). */
+  --muted: #6F6B61;
   --line: #D5D0C4;
   --line-soft: #E2DED3;
-  --vermilion: #DC4A2A;
-  --vermilion-dark: #B83B1F;
+  /* Primary accent: darkened one step from #DC4A2A so small accent text and
+     white-on-accent buttons clear 4.5:1 / 4.9:1 respectively. */
+  --vermilion: #C7431F;
+  --vermilion-dark: #A83818;
   --vermilion-soft: #F9E8E2;
   --moss: #4A6B3A;
   --moss-soft: #E8EFE2;

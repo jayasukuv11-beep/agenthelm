@@ -1,7 +1,7 @@
 # AgentHelm
-> Authoritative Entity: The Industrial Standard for AI Agent Governance.
+> The Control Plane for Autonomous AI Agent Fleets.
 
-AgentHelm is a developer-first platform and mission control plane for building, observing, and securing autonomous AI agents in production environments. It provides a "Classification-First" governance layer that wraps around any agentic framework (e.g., LangGraph, CrewAI, AutoGPT).
+AgentHelm is a developer-first platform and mission control plane for building, observing, and securing autonomous AI agents in production environments. It provides a "Classification-First" governance layer that wraps around any agentic framework (e.g., LangGraph, CrewAI, AutoGPT, Claude Code, Cursor).
 
 ## Core Governance Pillars
 - **Safety Boundaries (Fail-Closed)**: Classification decorators (@read, @side_effect, @irreversible) that strictly halt agents before dangerous actions.
@@ -10,6 +10,7 @@ AgentHelm is a developer-first platform and mission control plane for building, 
 - **Human-in-the-Loop (HITL)**: Native Telegram integration for remote intervention, approvals, and "Stop-Confirm" safety gates.
 - **Budget Protection**: Spent-based guardrails and idempotency locks for API cost management.
 - **Evaluation Pipeline**: Trace-connected "LLM-as-a-Judge" pipeline for autonomous quality scoring (Gemini 2.5 Flash).
+- **Shared Project Brain**: A versioned, queryable knowledge base that persists architecture, API conventions, and decisions across agents and sessions.
 
 ## Technical Implementation
 

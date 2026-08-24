@@ -33,8 +33,8 @@ const config: Config = {
           soft: "#E2DED3",
         },
         vermilion: {
-          DEFAULT: "#DC4A2A",
-          dark: "#B83B1F",
+          DEFAULT: "#C7431F",
+          dark: "#A83818",
           soft: "#F9E8E2",
         },
         moss: {

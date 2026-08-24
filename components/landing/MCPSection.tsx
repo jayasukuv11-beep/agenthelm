@@ -105,41 +105,40 @@ export default function MCPSection() {
   }, [terminalLine])
 
   return (
-    <section id="mcp" className="py-24 px-6 bg-[#08080a] border-y border-zinc-900 relative overflow-hidden">
+    <section id="mcp" className="py-24 px-6 bg-paper border-y border-line relative overflow-hidden">
       {/* Glow highlight */}
-      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-y-1/2 w-[40rem] h-96 bg-vermilion/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <span className="text-[11px] font-mono text-indigo-400 uppercase tracking-[0.3em] block mb-3">Model Context Protocol</span>
-          <h2 className="text-3xl md:text-5xl font-black font-mono uppercase tracking-tight text-white mb-4">
-            Zero-Plugin setup with <span className="text-indigo-400">MCP</span>
+          <span className="text-[11px] font-mono text-vermilion uppercase tracking-[0.3em] block mb-3">Model Context Protocol</span>
+          <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight text-ink mb-4">
+            Zero-Plugin setup with <span className="text-vermilion">MCP</span>
           </h2>
-          <p className="text-zinc-400 font-mono text-sm max-w-2xl mx-auto">
+          <p className="text-ink-soft text-sm max-w-2xl mx-auto">
             Expose the Project Brain directly to your IDE agents. AgentHelm is natively compatible with Claude Code, Cursor, Windsurf, and Claude Desktop using the Model Context Protocol.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8 items-stretch">
           {/* Left Column - Setup Config */}
-          <div className="lg:col-span-5 flex flex-col justify-between bg-[#111113] border border-zinc-800 p-6 rounded-2xl">
+          <div className="lg:col-span-5 flex flex-col justify-between bg-paper-card border border-line p-6 rounded-2xl">
             <div>
-              <h3 className="font-mono text-lg font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-indigo-400" />
+              <h3 className="font-display text-lg font-bold text-ink uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Cpu className="w-5 h-5 text-vermilion" />
                 Connection Config
               </h3>
               
               {/* Tab headers */}
-              <div className="flex border-b border-zinc-800 mb-6">
+              <div className="flex border-b border-line mb-6">
                 {tabData.map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`pb-3 font-mono text-xs uppercase tracking-widest border-b-2 px-3 transition-colors ${
                       activeTab === tab.id
-                        ? "border-indigo-500 text-white font-bold"
-                        : "border-transparent text-zinc-500 hover:text-zinc-300"
+                        ? "border-vermilion text-ink font-bold"
+                        : "border-transparent text-muted hover:text-ink-soft"
                     }`}
                   >
                     {tab.name}
@@ -147,18 +146,18 @@ export default function MCPSection() {
                 ))}
               </div>
 
-              <p className="font-mono text-xs text-zinc-400 mb-4">
+              <p className="font-mono text-xs text-ink-soft mb-4">
                 {tabData.find(t => t.id === activeTab)?.desc}
               </p>
 
               {/* Code display */}
-              <div className="relative bg-[#08080a] border border-zinc-800/80 rounded-xl p-4 font-mono text-xs text-zinc-300 max-h-72 overflow-y-auto">
+              <div className="relative bg-[#08080a] border border-line rounded-xl p-4 font-mono text-xs text-zinc-300 max-h-72 overflow-y-auto">
                 <button
                   onClick={handleCopy}
-                  className="absolute top-3 right-3 text-zinc-500 hover:text-indigo-400 transition-colors p-1"
+                  className="absolute top-3 right-3 text-muted hover:text-vermilion transition-colors p-1"
                   aria-label="Copy code block"
                 >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-moss" /> : <Copy className="w-4 h-4" />}
                 </button>
                 <pre className="whitespace-pre overflow-x-auto text-[11px] leading-relaxed">
                   <code>{activeCode}</code>
@@ -166,10 +165,10 @@ export default function MCPSection() {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-zinc-800/50">
+            <div className="mt-8 pt-6 border-t border-line-soft">
               <a
                 href="/docs"
-                className="inline-flex items-center gap-2 font-mono text-xs text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-widest group"
+                className="inline-flex items-center gap-2 font-mono text-xs text-vermilion hover:text-vermilion-dark font-bold uppercase tracking-widest group"
               >
                 Learn more in Docs
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -178,9 +177,9 @@ export default function MCPSection() {
           </div>
 
           {/* Right Column - The Agent Timeline Terminal */}
-          <div className="lg:col-span-7 flex flex-col bg-[#111113] border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="lg:col-span-7 flex flex-col bg-paper-card border border-line rounded-2xl overflow-hidden">
             {/* Terminal Window Header */}
-            <div className="px-4 py-3 border-b border-zinc-800 bg-[#161619] flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-line bg-[#161619] flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-red-500/30 border border-red-500/50" />
                 <span className="w-3 h-3 rounded-full bg-yellow-500/30 border border-yellow-500/50" />
@@ -194,7 +193,7 @@ export default function MCPSection() {
             </div>
 
             {/* Terminal Screen */}
-            <div className="flex-1 p-6 font-mono text-xs bg-[#08080a] min-h-[380px] overflow-y-auto leading-relaxed relative selection:bg-indigo-500/30">
+            <div className="flex-1 p-6 font-mono text-xs bg-[#08080a] min-h-[380px] overflow-y-auto leading-relaxed relative selection:bg-vermilion/30">
               {/* Scanline pattern overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.003)_50%,rgba(0,0,0,0.05)_50%)] bg-[size:100%_4px] pointer-events-none" />
               
@@ -210,7 +209,7 @@ export default function MCPSection() {
                   let className = "text-zinc-400"
                   if (isPrompt) className = "text-cyan-400 font-bold"
                   else if (isHeader) className = "text-white border-b border-zinc-900 pb-0.5 mt-4 block"
-                  else if (isDecision) className = "text-indigo-400"
+                  else if (isDecision) className = "text-vermilion"
                   else if (isAffected) className = "text-zinc-500"
                   else if (isReason) className = "text-zinc-300 pl-4 border-l border-zinc-800"
 
@@ -222,7 +221,7 @@ export default function MCPSection() {
                   )
                 })}
                 {/* Typing cursor */}
-                <span className="inline-block w-2 h-4 bg-indigo-500 animate-pulse ml-1 align-middle" />
+                <span className="inline-block w-2 h-4 bg-vermilion animate-pulse ml-1 align-middle" />
               </div>
             </div>
           </div>

@@ -217,22 +217,11 @@ export async function validateConnectKey(keyOrToken: string | null): Promise<Aut
       }
     }
 
-    // 2. Legacy Dual-Auth fallback during transition period: check profiles.connect_key
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id, plan')
-      .eq('connect_key', key)
-      .single()
-
-    if (error || !profile) {
-      return { error: 'Invalid connect key', status: 401 }
-    }
-
-    return {
-      userId: profile.id,
-      plan: profile.plan || 'free',
-      supabaseAdmin
-    }
+    // 2. Legacy fallback removed: connect keys must be hashed in the `api_keys`
+    //    table (key_hash). A plaintext `profiles.connect_key` equality comparison
+    //    is a credential-leak vector (raw secrets in DB, comparable in logs), so it
+    //    no longer authenticates. Existing accounts were migrated to hashed api_keys.
+    return { error: 'Invalid connect key', status: 401 }
   } catch (err: unknown) {
     console.error('validateConnectKey error:', err instanceof Error ? err.message : String(err))
     return { error: 'Internal server error validating key', status: 500 }

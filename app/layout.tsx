@@ -18,20 +18,20 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://agenthelm.online"),
   title: {
-    default: "AgentHelm | Mission Control for AI Agents",
+    default: "AgentHelm | The Control Plane for AI Agents",
     template: "%s | AgentHelm",
   },
   description:
-    "Enterprise-grade SDK and dashboard for governing AI agents in production. Implement safety boundaries, monitor execution in real-time, and prevent token loops with mission-critical precision. Free to start.",
+    "AgentHelm is the control plane for autonomous AI agents. Wrap any framework with human-in-the-loop approvals, audit trails, budget guardrails, fail-closed safety, and a shared Project Brain. Free to start.",
   keywords: [
     "AI agent governance",
-    "AI agent observability",
+    "AI agent control plane",
     "human-in-the-loop AI",
-    "agent safety SDK",
+    "agent safety",
     "AI budget protection",
     "fail-closed AI",
     "LLM agent monitoring",
-    "agent execution traces",
+    "agent execution audit",
     "autonomous agent control",
     "Telegram agent control",
     "agenthelm",

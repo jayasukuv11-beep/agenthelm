@@ -2,15 +2,28 @@
 -- Closes permissive policies and locks down SECURITY DEFINER execution permissions
 
 -- 1. Fix agent_handoffs permissive policy
+-- NOTE: agent_handoffs has no user_id column in this deployment; ownership is
+-- enforced at the API layer (authorizeSdkAgent). We enable RLS to close the
+-- permissive USING(true) policy and only create a user-scoped policy if the
+-- column exists (fresh installs get it via later migrations).
 DROP POLICY IF EXISTS "Allow all on agent_handoffs" ON agent_handoffs;
 DROP POLICY IF EXISTS "Public handoffs" ON agent_handoffs;
 DROP POLICY IF EXISTS "agent_handoffs_policy" ON agent_handoffs;
+DROP POLICY IF EXISTS "users_own_agent_handoffs" ON agent_handoffs;
 ALTER TABLE agent_handoffs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "users_own_agent_handoffs" ON agent_handoffs
-  FOR ALL
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'agent_handoffs' AND column_name = 'user_id'
+  ) THEN
+    CREATE POLICY "users_own_agent_handoffs" ON agent_handoffs
+      FOR ALL
+      USING (user_id = auth.uid())
+      WITH CHECK (user_id = auth.uid());
+  END IF;
+END $$;
 
 -- 2. Fix subscriptions permissive policy
 DROP POLICY IF EXISTS "Allow all on subscriptions" ON subscriptions;

@@ -2,27 +2,41 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { authorizeSdkAgent, hasError } from '@/lib/sdk-auth'
 import { createClient as createServerSupabase } from '@/app/lib/supabase'
+import { getCorsHeaders } from '@/lib/middleware/sdk-gateway'
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  })
+// Handle CORS preflight (no wildcard origin — scoped to known hosts)
+export async function OPTIONS(req: Request) {
+  return new Response(null, { status: 204, headers: getCorsHeaders(req) })
+}
+
+function authHeader(req: Request, body?: any): string | null {
+  // Credentials MUST come from the Authorization header (or x-connect-key),
+  // never from query parameters — query strings leak into logs, proxies, history.
+  const headerKey =
+    req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() ||
+    req.headers.get('x-connect-key')?.trim() ||
+    null
+  if (headerKey) return headerKey
+  // For POST bodies that carry `key` (SDK convenience), read it from the parsed body.
+  if (body && typeof body.key === 'string') return body.key
+  return null
 }
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
-    const agent_id = searchParams.get('agent_id')
+    // Reject query-parameter credentials outright.
+    const url = new URL(req.url)
+    if (url.searchParams.has('key')) {
+      return NextResponse.json({ error: 'Credentials must be sent in the Authorization header, not the URL.' }, { status: 401, headers: getCorsHeaders(req) })
+    }
+    const key = authHeader(req)
+    const agent_id = url.searchParams.get('agent_id')
+    if (!key || !agent_id) {
+      return NextResponse.json({ error: 'Missing authentication or agent_id' }, { status: 401, headers: getCorsHeaders(req) })
+    }
 
     const auth = await authorizeSdkAgent(key, agent_id)
-    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
+    if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status, headers: getCorsHeaders(req) })
 
     const { supabaseAdmin } = auth
 
@@ -44,25 +58,24 @@ export async function GET(req: Request) {
         .in('id', commandIds)
     }
 
-    return NextResponse.json({ commands: commands || [] })
+    return NextResponse.json({ commands: commands || [] }, { headers: getCorsHeaders(req) })
 
   } catch (err: any) {
     console.error('Command GET error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: getCorsHeaders(req) })
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const key = authHeader(req, body)
     const { agent_id, command_type, payload } = body
 
     // If called from SDK (connect_key auth), keep existing behavior
     if (key) {
       const auth = await authorizeSdkAgent(key, agent_id)
-      if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status })
+      if (hasError(auth)) return NextResponse.json({ error: auth.error }, { status: auth.status, headers: getCorsHeaders(req) })
 
       const { supabaseAdmin } = auth
 
@@ -78,7 +91,7 @@ export async function POST(req: Request) {
         .single()
 
       if (error) throw error
-      return NextResponse.json({ success: true, command_id: command.id })
+      return NextResponse.json({ success: true, command_id: command.id }, { headers: getCorsHeaders(req) })
     }
 
     // Dashboard UI call: require session, rely on RLS
@@ -127,12 +140,12 @@ export async function PATCH(req: Request) {
     const { key, command_id, agent_id, status } = body
 
     if (!command_id || !agent_id || status !== 'delivered') {
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400, headers: getCorsHeaders(req) })
     }
 
     const auth = await authorizeSdkAgent(key, agent_id)
     if (hasError(auth)) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status })
+      return NextResponse.json({ error: auth.error }, { status: auth.status, headers: getCorsHeaders(req) })
     }
 
     const { supabaseAdmin } = auth
@@ -152,13 +165,13 @@ export async function PATCH(req: Request) {
 
     if (error) throw error
     if (!command) {
-      return NextResponse.json({ error: 'Command not found or unavailable' }, { status: 404 })
+      return NextResponse.json({ error: 'Command not found or unavailable' }, { status: 404, headers: getCorsHeaders(req) })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true }, { headers: getCorsHeaders(req) })
 
   } catch (err: any) {
     console.error('Command PATCH error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: getCorsHeaders(req) })
   }
 }

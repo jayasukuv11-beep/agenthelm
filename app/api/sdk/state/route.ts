@@ -37,14 +37,16 @@ export const POST = withSdkAuth(
     }
 
     // 1. Write to Upstash Redis
+    // NOTE: redisKey is scoped by userId as well as agentId so a state cache
+    // entry can never be read/written cross-tenant even if agentId is guessed.
     const cfg = getUpstashConfig()
     if (cfg) {
-      const redisKey = `agent:${agentId}:state`
+      const redisKey = `agent:${userId}:${agentId}:state`
       await fetch(`${cfg.url}/set/${encodeURIComponent(redisKey)}?EX=30`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${cfg.token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(statePayload)
-      }).catch(err => console.error('Redis write error:', err))
+      }).catch(err => console.error('Redis state write error:', err))
     }
 
     // 2. Upsert agents table: status, last_seen
