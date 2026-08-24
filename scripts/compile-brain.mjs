@@ -5,6 +5,27 @@
  */
 
 import { execSync } from 'child_process';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+
+// Minimal .env.local loader so the script is runnable locally (CI still uses
+// real env / GitHub secrets). Does not override variables already set.
+function loadEnvLocal() {
+  const p = resolve(process.cwd(), '.env.local');
+  if (!existsSync(p)) return;
+  for (const raw of readFileSync(p, 'utf-8').split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || !line.includes('=')) continue;
+    const eq = line.indexOf('=');
+    const key = line.slice(0, eq).trim();
+    let val = line.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (!(key in process.env)) process.env[key] = val;
+  }
+}
+loadEnvLocal();
 
 const BASE_URL = process.env.AGENTHELM_BASE_URL || 'https://agenthelm.online';
 const CONNECT_KEY = process.env.AGENTHELM_CONNECT_KEY;
@@ -12,6 +33,9 @@ const PROJECT_ID = process.env.AGENTHELM_PROJECT;
 
 if (!CONNECT_KEY || !PROJECT_ID) {
   console.error('❌ Error: AGENTHELM_CONNECT_KEY and AGENTHELM_PROJECT must be set.');
+  console.error('   • For local runs: add them to .env.local');
+  console.error('   • For CI: configure them as GitHub repo secrets (Settings → Secrets → Actions)');
+  console.error('   The Connect Key and Project ID are shown in the AgentHelm dashboard (Settings → API).');
   process.exit(1);
 }
 
