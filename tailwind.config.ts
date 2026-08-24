@@ -49,6 +49,23 @@ const config: Config = {
           DEFAULT: "#6B2FA0",
           soft: "#F0EAF5",
         },
+        primary: {
+          DEFAULT: "#C7431F",
+          dark: "#A83818",
+          foreground: "#FFFFFF",
+        },
+        secondary: {
+          DEFAULT: "#EBE7DD",
+          foreground: "#1A1916",
+        },
+        accent: {
+          DEFAULT: "#EBE7DD",
+          foreground: "#1A1916",
+        },
+        destructive: {
+          DEFAULT: "#B91C1C",
+          foreground: "#FFFFFF",
+        },
         border: "var(--line)",
         input: "var(--line)",
         ring: "var(--vermilion)",
