@@ -30,8 +30,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Server-side price lookup
-    const validCurrency = (currency.toUpperCase() === "INR" ? "INR" : "USD") as CurrencyCode;
+    // India-first billing: the Cashfree merchant account only has INR enabled,
+    // so all orders are created in INR regardless of the incoming currency hint.
+    const validCurrency: CurrencyCode = 'INR';
     const planData = MULTI_CURRENCY_PLANS[validCurrency][plan.toLowerCase()];
     
     if (!planData) {
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     const createOrderRequest = {
       order_amount: amount,
-      order_currency: currency,
+      order_currency: 'INR',
       order_id: orderId,
       customer_details: {
         customer_id,

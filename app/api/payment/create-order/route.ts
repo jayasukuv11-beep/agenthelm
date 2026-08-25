@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { MULTI_CURRENCY_PLANS, getCurrencyForCountry, type CurrencyCode } from '@/lib/currency'
+import { MULTI_CURRENCY_PLANS, type CurrencyCode } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -34,11 +34,10 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determine currency: 1. Profile preference, 2. Geo-IP header, 3. Default USD
-    const { data: profile } = await supabase.from('profiles').select('preferred_currency').eq('id', user.id).single();
-    
-    const currency: CurrencyCode = (profile?.preferred_currency as CurrencyCode) || 
-      getCurrencyForCountry(req.headers.get('x-vercel-ip-country'));
+    // India-first billing: AgentHelm is priced in INR (₹499 / ₹1,999) and the
+    // connected Cashfree merchant account only has INR enabled. Force INR so
+    // orders never fail with "Currency not enabled for this merchant account".
+    const currency: CurrencyCode = 'INR'
 
     const planData = MULTI_CURRENCY_PLANS[currency]?.[plan];
 

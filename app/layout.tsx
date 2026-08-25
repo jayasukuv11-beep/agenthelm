@@ -181,7 +181,7 @@ export default function RootLayout({
           />
         ))}
       </head>
-      <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans bg-background text-foreground antialiased selection:bg-[#ff5722] selection:text-white`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans bg-background text-foreground antialiased selection:bg-vermilion/20 selection:text-ink`}>
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe
