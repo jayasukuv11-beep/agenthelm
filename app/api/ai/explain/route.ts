@@ -2,48 +2,16 @@ import { NextResponse } from "next/server"
 export const dynamic = "force-dynamic"
 
 import { createClient } from "@/app/lib/supabase"
+import { callSarvamText } from "@/lib/llm/sarvam-text"
 
-async function callNvidia(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
-  const model = fast
-    ? 'meta/llama-3.1-8b-instruct'
-    : 'meta/llama-3.3-70b-instruct'
-
-  const res = await fetch(
-    'https://integrate.api.nvidia.com/v1/chat/completions',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert AI agent analyst. Be concise and helpful.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 1024,
-        temperature: 0.7,
-        stream: false,
-      }),
-    }
-  )
-
-  const data = await res.json()
-
-  if (!res.ok) {
-    throw new Error(data.detail || data.message || 'NVIDIA API error')
-  }
-
-  const text = data.choices?.[0]?.message?.content || ''
-  const tokens = data.usage?.total_tokens || 0
-  return { text, tokens }
+async function callLlm(prompt: string, fast = false): Promise<{ text: string; tokens: number }> {
+  const result = await callSarvamText(prompt, {
+    system: 'You are an expert AI agent analyst. Be concise and helpful.',
+    fast,
+    maxTokens: 1024,
+  })
+  if (!result) throw new Error('Sarvam API error')
+  return result
 }
 
 type ExplainBody = { agent_id: string; log_id: string }
@@ -156,7 +124,7 @@ No markdown. No bullet points. Plain text only.
 
     let explanation: string
     try {
-      const { text } = await callNvidia(prompt, false) // fast=false for Llama-3.3-70b
+      const { text } = await callLlm(prompt, false) // fast=false for Sarvam
       explanation = text
     } catch (e) {
       explanation =

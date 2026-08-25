@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { withSdkAuth, handleSdkOptions } from '@/lib/middleware/sdk-gateway'
+import { callSarvamText } from '@/lib/llm/sarvam-text'
 import { z } from 'zod'
 
 const evalsJudgeSchema = z.object({
@@ -30,17 +31,8 @@ export const POST = withSdkAuth(
 
     for (const [criterion, description] of Object.entries(judge_rubric)) {
       try {
-        const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyBLtJbWM0NbIXi4KwI6e-pT-wDTfT6ex_c'
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `You are an evaluation judge. Score this agent output.
-              
+        const prompt = `You are an evaluation judge. Score this agent output.
+        
 Rubric criterion: ${criterion} - ${description}
 Actual output: ${JSON.stringify(output)}
 
@@ -50,20 +42,11 @@ Respond with ONLY valid JSON in this exact format:
   "score": 0.0 to 1.0,
   "reasoning": "one sentence explanation"
 }`
-              }]
-            }],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
-        })
 
-        if (!response.ok) {
-          throw new Error(`Gemini API error: ${response.status}`)
-        }
+        const result = await callSarvamText(prompt, { maxTokens: 512 })
+        if (!result) throw new Error('Sarvam API error')
 
-        const result = await response.json()
-        const content = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+        const content = result.text
         const jsonMatch = content.match(/\{[\s\S]*?\}/)
         const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content)
         
