@@ -12,6 +12,7 @@ import SolutionSection from '@/components/landing/SolutionSection'
 import MCPSection from '@/components/landing/MCPSection'
 import PricingSection from '@/components/landing/PricingSection'
 import HeroAnimation from '@/components/landing/HeroAnimation'
+import FAQSection from '@/components/landing/FAQSection'
 import { ArrowRight, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 
@@ -29,6 +30,7 @@ export default function LandingPage() {
             <a href="#how-it-works" className="hover:text-ink transition-colors">How it works</a>
             <a href="#security" className="hover:text-ink transition-colors">Security</a>
             <a href="#pricing" className="hover:text-ink transition-colors">Pricing</a>
+            <a href="#faq" className="hover:text-ink transition-colors">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
             <a href="/login" className="text-sm text-ink-soft hover:text-ink transition-colors hidden sm:block">Sign in</a>
@@ -44,7 +46,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-vermilion-soft border border-vermilion/20 text-vermilion text-xs font-medium mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-vermilion" />
-            v1.0 — Control plane for AI agents, live
+            v1.0 — India-first control plane for AI agents, live
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight text-ink leading-[1.05] max-w-4xl">
@@ -148,6 +150,9 @@ export default function LandingPage() {
       {/* ── Documentation CTA ─────────────────────────────────── */}
       <DocumentationCTA />
 
+      {/* ── FAQ ───────────────────────────────────────────────── */}
+      <FAQSection />
+
       {/* ── Footer ────────────────────────────────────────────── */}
       <footer className="bg-ink text-paper-dim pt-16 pb-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-8">
@@ -156,6 +161,18 @@ export default function LandingPage() {
             <p className="text-paper-dim/70 text-sm mt-2 max-w-xs leading-relaxed">
               The control plane for autonomous AI agent fleets.
             </p>
+            {/* Sarvam AI Startup Program badge */}
+            <a
+              href="https://www.sarvam.ai/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-4 px-3 py-2 rounded-lg border border-paper/15 hover:border-vermilion/40 transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-vermilion" />
+              <span className="text-xs text-paper-dim/80">
+                Selected for the <span className="text-paper font-medium">Sarvam AI Startup Program</span>
+              </span>
+            </a>
           </div>
           <div className="flex flex-wrap gap-12 text-sm">
             <div className="space-y-2">
@@ -163,6 +180,7 @@ export default function LandingPage() {
               <a href="#how-it-works" className="block text-paper-dim/70 hover:text-paper transition-colors">How it works</a>
               <a href="#security" className="block text-paper-dim/70 hover:text-paper transition-colors">Security</a>
               <a href="#pricing" className="block text-paper-dim/70 hover:text-paper transition-colors">Pricing</a>
+              <a href="#faq" className="block text-paper-dim/70 hover:text-paper transition-colors">FAQ</a>
             </div>
             <div className="space-y-2">
               <p className="text-paper font-semibold mb-1">Resources</p>
@@ -178,9 +196,14 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-12 pt-6 border-t border-paper/10 flex flex-col md:flex-row justify-between gap-3 text-xs text-paper-dim/50">
+        <div className="max-w-6xl mx-auto mt-12 pt-6 border-t border-paper/10 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-paper-dim/50">
           <p>© {new Date().getFullYear()} AgentHelm. All rights reserved.</p>
-          <p className="font-mono">Engineered for production-scale agent governance</p>
+          <p className="font-mono flex items-center gap-2">
+            Powered by
+            <a href="https://www.sarvam.ai/" target="_blank" rel="noopener noreferrer" className="text-paper-dim/80 hover:text-vermilion transition-colors font-medium">
+              Sarvam AI
+            </a>
+          </p>
         </div>
       </footer>
     </div>

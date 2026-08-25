@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   BookOpen,
@@ -19,6 +19,61 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import DashboardErrorBoundary from "@/components/dashboard/DashboardErrorBoundary";
+
+/** Detects ?payment=success&order_id=... after Cashfree redirect and
+ *  provisions access immediately (webhook remains source of truth). */
+function PaymentSuccessHandler() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "verifying" | "done" | "error">("idle");
+
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    const orderId = searchParams.get("order_id");
+    if (payment !== "success" || !orderId || state !== "idle") return;
+
+    setState("verifying");
+    fetch("/api/payment/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setState(data?.paid ? "done" : "error");
+        // Clean the URL so refresh doesn't re-trigger verification
+        window.history.replaceState({}, "", window.location.pathname);
+        if (!data?.paid) return;
+        router.refresh();
+      })
+      .catch(() => {
+        setState("error");
+        window.history.replaceState({}, "", window.location.pathname);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  if (state === "idle") return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-line bg-paper-card shadow-lg px-5 py-4">
+      {state === "verifying" && (
+        <p className="text-[13px] text-ink">Verifying your payment…</p>
+      )}
+      {state === "done" && (
+        <p className="text-[13px] text-ink">
+          ✅ Payment confirmed — your plan is now active.
+        </p>
+      )}
+      {state === "error" && (
+        <p className="text-[13px] text-ink">
+          We couldn't verify your payment yet. If you were charged, it will activate
+          automatically within a few minutes.
+        </p>
+      )}
+    </div>
+  );
+}
 
 const navGroups = [
   {
@@ -126,7 +181,9 @@ export default function DashboardLayout({
       <main className="flex-1 pb-20 md:pb-0 overflow-y-auto bg-paper min-h-screen">
         <div className="p-6 md:p-8 max-w-7xl mx-auto">
           <DashboardErrorBoundary>
-            {children}
+            <Suspense fallback={<div className="py-12 text-center text-ink-soft">Loading…</div>}>
+              {children}
+            </Suspense>
           </DashboardErrorBoundary>
         </div>
       </main>
@@ -182,6 +239,10 @@ export default function DashboardLayout({
           </div>
         )}
       </nav>
+
+      <Suspense fallback={null}>
+        <PaymentSuccessHandler />
+      </Suspense>
     </div>
   );
 }

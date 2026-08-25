@@ -27,24 +27,9 @@ export async function POST(req: Request) {
       authData.user.email || 'user@agenthelm.online'
     )
 
-    // Update user_subscriptions table
-    await supabase
-      .from('user_subscriptions')
-      .upsert({
-        user_id: authData.user.id,
-        plan_id,
-        status: 'active',
-        cashfree_subscription_id: subscriptionId,
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        credits_used_this_period: 0
-      }, { onConflict: 'user_id' })
-
-    // Also update profiles table for backwards compatibility
-    await supabase
-      .from('profiles')
-      .update({ plan: plan_id })
-      .eq('id', authData.user.id)
+    // SECURITY: do NOT activate the plan here. Activation happens only after
+    // Cashfree confirms payment — via the signed webhook or /api/payment/verify.
+    // Writing 'active' before payment would let users skip paying entirely.
 
     return NextResponse.json({
       success: true,

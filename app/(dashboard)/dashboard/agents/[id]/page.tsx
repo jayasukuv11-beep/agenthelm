@@ -268,7 +268,10 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
     }
 
     setAgent(agentData as AgentRow);
-    setPlan(((profileErr ? null : profileData) as ProfileRow | null)?.plan ?? "free");
+    const rawPlan = String(((profileErr ? null : profileData) as ProfileRow | null)?.plan ?? "free");
+    // Canonical ids (pro/team) from billing → legacy display ids (indie/studio)
+    const normalizedPlan = rawPlan === "team" ? "studio" : rawPlan === "pro" ? "indie" : rawPlan;
+    setPlan(normalizedPlan as "free" | "indie" | "studio");
     setLastPingLabel(formatAgo((agentData as AgentRow).last_ping));
 
     // Phase 5: Initial fetch of permissions

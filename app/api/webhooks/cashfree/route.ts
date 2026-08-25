@@ -7,6 +7,7 @@ import { acquireLock } from "@/lib/redis";
 export const dynamic = "force-dynamic";
 
 import { MULTI_CURRENCY_PLANS, type CurrencyCode } from "@/lib/currency";
+import { provisionPaidPlan } from "@/lib/billing/plans";
  
 export async function POST(req: Request) {
   try {
@@ -97,12 +98,19 @@ export async function POST(req: Request) {
           })
           .eq('order_id', orderId);
 
-        // 3. Update Profile plan
+        // 3. Provision full access (user_subscriptions + profiles + credits)
+        //    via the shared billing path.
+        const provision = await provisionPaidPlan(supabaseAdmin as never, userId, subData.plan, orderId);
+        if (provision.error) {
+          console.error(`[Webhook] provisioning failed for ${orderId}:`, provision.error);
+          break;
+        }
+
+        // 4. Fetch profile for the confirmation email
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from('profiles')
-          .update({ plan: subData.plan })
-          .eq('id', userId)
           .select('email, full_name')
+          .eq('id', userId)
           .single();
 
         if (profileError || !profileData) {

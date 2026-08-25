@@ -123,7 +123,12 @@ export default function SettingsPage() {
         .single();
 
       if (data) {
-        setProfile(data as Profile);
+        // Canonical billing ids (pro/team) → legacy display ids (indie/studio)
+        const p = { ...(data as Profile) };
+        const rawPlan = String(p.plan ?? "free");
+        if (rawPlan === "team") (p as Profile).plan = "studio";
+        else if (rawPlan === "pro") (p as Profile).plan = "indie";
+        setProfile(p);
         setFullName(data.full_name || "");
         setPrefs(data.notifications_prefs || {
           agent_error: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { MULTI_CURRENCY_PLANS, type CurrencyCode } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/server'
+import { normalizePlanId, planName } from '@/lib/billing/plans'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,11 +19,12 @@ export async function OPTIONS() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { plan, name, phone } = body as {
-      plan: string
+    const { name, phone } = body as {
       name?: string
       phone?: string
     }
+    // Accept legacy ids (indie/studio) and canonical ids (pro/team)
+    const plan = normalizePlanId((body as { plan?: string }).plan)
 
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
 
     if (!plan || !planData) {
       return NextResponse.json(
-        { error: 'Invalid plan. Must be indie or studio' },
+        { error: 'Invalid plan. Must be pro or team' },
         { status: 400 }
       )
     }
@@ -66,7 +68,7 @@ export async function POST(req: Request) {
         return_url: `${appUrl}/dashboard?payment=success&order_id=${orderId}&plan=${plan}`,
         notify_url: `${appUrl}/api/payment/webhook`,
       },
-      order_note: planData.name,
+      order_note: planData.name || planName(plan),
     }
 
     const baseUrl = process.env.CASHFREE_ENVIRONMENT === "PRODUCTION" 

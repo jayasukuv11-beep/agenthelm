@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { normalizePlanId } from '@/lib/billing/plans'
 
 interface UpgradeButtonProps {
-  plan: 'indie' | 'studio'
+  /** Accepts legacy ids (indie/studio) and canonical ids (pro/team). */
+  plan: 'indie' | 'studio' | 'pro' | 'team'
   label: string
   className?: string
 }
@@ -32,12 +34,12 @@ export function UpgradeButton({
         return
       }
 
-      // Step 1: Create Cashfree order
+      // Step 1: Create Cashfree order (canonical plan id)
       const res = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan,
+          plan: normalizePlanId(plan),
           userId: user.id,
           email: user.email,
           name: user.user_metadata?.full_name || 'User',

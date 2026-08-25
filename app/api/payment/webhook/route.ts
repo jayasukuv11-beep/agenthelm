@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { normalizePlanId, provisionPaidPlan } from '@/lib/billing/plans'
 export const dynamic = 'force-dynamic'
 
 function verifySignature(
@@ -52,6 +53,9 @@ export async function POST(req: Request) {
             customer_id?: string
           }
         }
+        payment?: {
+          payment_id?: string
+        }
       }
     }
     console.log('Webhook received:', body.type, body.data?.order?.order_id)
@@ -61,79 +65,78 @@ export async function POST(req: Request) {
     const orderId: string = body.data?.order?.order_id || ''
     const customerId: string =
       body.data?.order?.customer_details?.customer_id || ''
+    const cashfreePaymentId = body.data?.payment?.payment_id || ''
 
-    if (
-      (eventType === 'PAYMENT_SUCCESS_WEBHOOK' ||
-       eventType === 'payment_success') &&
+    // Only act on verified successful payments
+    const isSuccess =
+      (eventType === 'PAYMENT_SUCCESS_WEBHOOK' || eventType === 'payment_success') &&
       orderStatus === 'PAID'
-    ) {
-      // Extract plan from orderId: ahelm_{plan}_{userId}_{timestamp}
-      const parts = orderId.split('_')
-      const plan = parts[1]
 
-      if (!plan || !['indie', 'studio'].includes(plan)) {
-        console.error('Invalid plan in order:', orderId)
-        return NextResponse.json({ received: true })
+    if (!isSuccess) {
+      if (eventType.includes('FAILED')) {
+        console.log(`❌ Payment failed: ${orderId}`)
       }
+      return NextResponse.json({ received: true })
+    }
 
-      const supabase = getSupabaseAdmin()
+    // Order id format: ahelm_{plan}_{userPrefix}_{timestamp}
+    // plan may be a legacy id (indie/studio) or canonical (pro/team).
+    const parts = orderId.split('_')
+    const rawPlan = parts[1]
+    const userPrefix = parts[2] || ''
+    const canonicalPlan = normalizePlanId(rawPlan)
 
-      // Find user by customer_id (which is userId.slice(0,50))
-      const { data: profile } = await supabase
+    if (!rawPlan || canonicalPlan === 'free') {
+      console.error('Invalid or free plan in paid order:', orderId)
+      return NextResponse.json({ received: true })
+    }
+
+    const supabase = getSupabaseAdmin()
+
+    // Resolve the user: customer_id is userId.slice(0, 50); fall back to the
+    // order-id prefix for robustness.
+    let userId: string | null = null
+
+    if (customerId) {
+      const { data: byCustomer } = await supabase
         .from('profiles')
         .select('id')
         .ilike('id', `${customerId}%`)
-        .single()
+        .limit(1)
+      if (byCustomer && byCustomer.length > 0) userId = byCustomer[0].id
+    }
 
-      const userId = profile?.id || customerId
-
-      // Upsert subscription
-      const { error: subError } = await supabase
-        .from('subscriptions')
-        .upsert(
-          {
-            user_id: userId,
-            plan,
-            status: 'active',
-            order_id: orderId,
-            activated_at: new Date().toISOString(),
-            expires_at: new Date(
-              Date.now() + 30 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id' }
-        )
-
-      if (subError) {
-        console.error('Subscription upsert error:', subError)
-      }
-
-      // Update profile plan
-      const { error: profileError } = await supabase
+    if (!userId && userPrefix) {
+      const { data: byOrderPrefix } = await supabase
         .from('profiles')
-        .update({
-          plan,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-
-      if (profileError) {
-        console.error('Profile update error:', profileError)
-      }
-
-      console.log(`✅ Payment success: ${userId} → ${plan} (${orderId})`)
+        .select('id')
+        .ilike('id', `${userPrefix}%`)
+        .limit(1)
+      if (byOrderPrefix && byOrderPrefix.length > 0) userId = byOrderPrefix[0].id
     }
 
-    if (
-      eventType === 'PAYMENT_FAILED_WEBHOOK' ||
-      eventType === 'payment_failed'
-    ) {
-      console.log(`❌ Payment failed: ${orderId}`)
+    if (!userId) {
+      console.error(
+        `Webhook could not resolve user for order ${orderId} (customer=${customerId}, prefix=${userPrefix})`
+      )
+      // 200 so Cashfree doesn't retry forever on an unresolvable order;
+      // reconciliation happens via /api/payment/verify.
+      return NextResponse.json({ received: true })
     }
+
+    // Grant access via the shared provisioning path (user_subscriptions +
+    // profiles + legacy subscriptions — idempotent).
+    const result = await provisionPaidPlan(supabase as never, userId, rawPlan, orderId)
+    if (result.error) {
+      console.error(`Provisioning failed for ${orderId}:`, result.error)
+      return NextResponse.json({ error: 'Provisioning failed' }, { status: 500 })
+    }
+
+    console.log(
+      `✅ Payment success: ${userId} → ${canonicalPlan} (${orderId}${cashfreePaymentId ? `, payment=${cashfreePaymentId}` : ''})`
+    )
 
     return NextResponse.json({ received: true })
-
   } catch (err: unknown) {
     console.error('Webhook processing error:', err)
     return NextResponse.json(

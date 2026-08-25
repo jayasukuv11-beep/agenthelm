@@ -194,7 +194,8 @@ export default function CreditsPage() {
       setPlan(
         profileRow
           ? {
-              plan: (profileRow as any).plan ?? "free",
+              // Canonical ids (pro/team) from billing → legacy display ids
+              plan: ((raw: string) => raw === "team" ? "studio" : raw === "pro" ? "indie" : raw)((profileRow as any).plan ?? "free") as PlanInfo["plan"],
               tokens_limit_monthly: Number((profileRow as any).tokens_limit_monthly ?? 100_000),
               preferred_currency: (profileRow as any).preferred_currency ?? "USD",
             }
